@@ -221,80 +221,82 @@ function Router() {
 
 module.exports = Router;
 
-// // Usage
+// // # Router
+// // nodejs backend router
 
-// const routerA = Router();
-// routerA.use((req, res, next) => {
-//     next();
-// });
-// routerA.get("/", (req, res, next) => {
-//     res.json({ message: "routerA > get > OK" });
-// });
-// // routerA(req, res);
-// const routerB = Router();
-// routerB.use((req, res, next) => {
-//     next();
-// });
-// routerB.post("/", (req, res, next) => {
-//     res.json({ message: "routerB > post > OK" });
-// });
-// routerB.get("/", (req, res, next) => {
-//     res.json({ message: "routerB > get > OK" });
-// });
-// routerB.patch("/:id", (req, res, next) => {
-//     const data = {
-//         params: req.params,
-//         query: req.query,
-//         cookie: req.cookie,
-//         body: req.body,
-//     };
-//     res.cookie("name1", "value1");
-//     res.cookie("name2", "value2");
-//     res.cookie("name3", "value3");
-//     res.cookie("name4", "value4");
-//     res.json(data);
-// });
-// routerB.delete("/", (req, res, next) => {
-//     res.json({ message: "routerB > delete > OK" });
-// });
-// // routerB(req, res);
-// const router1 = Router();
-// router1.use((req, res, next) => {
-//     next();
-// });
-// router1.use("/routerA", routerA);
-// router1.use("/routerB", routerB);
-// router1.get("/", (req, res, next) => {
-//     res.json({ message: "router1 > get > OK" });
-// });
-// // router1(req, res);
-// const router2 = Router();
-// router2.use((req, res, next) => {
-//     next();
-// });
-// router2.post("/", (req, res, next) => {
-//     res.json({ message: "router2 > post > OK" });
-// });
-// router2.get("/", (req, res, next) => {
-//     res.json({ message: "router2 > get > OK" });
-// });
-// router2.patch("/", (req, res, next) => {
-//     res.json({ message: "router2 > patch > OK" });
-// });
-// router2.delete("/", (req, res, next) => {
-//     res.json({ message: "router2 > delete > OK" });
-// });
-// // router2(req, res);
-// const app = Router();
-// app.use((req, res, next) => {
-//     next();
-// });
-// app.get("/router1", router1);
-// app.get("/router2", router2);
-// app.get("/", (req, res, next) => {
-//     res.json({ message: "app > get > OK" });
-// });
-// // app(req, res);
+// // ### Install
+// // ```
+// // npm install @ndiing/router
+// // ```
+
+// // ### Usage
+// // const Router = require('@ndiing/router')
+
+// const router1 = Router()
+
+// // Adding middleware in router1
+// router1.use((req,res,next) => {
+//     // When finish call next()
+//     next()
+// })
+// router1.get('/',(req,res,next) => {
+//     res.json({message:'This from router1'})
+// })
+
+// const app = Router()
+// app.use((req,res,next) => {
+//     // Set header
+//     // for security reason
+//     // and cors
+//     const headers = {}
+//     for(const name in headers){
+//         res.setHeader(name,headers[name])
+//     }
+
+//     // when finish call next()
+//     next()
+// })
+// app.get('/',(req,res,next) => {
+//     res.json({message:'get app'})
+// })
+// app.post('/',(req,res,next) => {
+//     res.json({message:'post app'})
+// })
+// app.patch('/:id',(req,res,next) => {
+//     // Get params data
+//     console.log(req.params)
+
+//     // Get query data
+//     console.log(req.query)
+
+//     // Get cookie data
+//     console.log(req.cookie)
+
+//     // Get body data
+//     console.log(req.body)
+
+//     // Send cookie data
+//     res.cookie('name','value')
+
+//     // Send multiple cookie data
+//     res.cookie('name','value')
+//     res.cookie('name2','value2')
+
+//     // Remove cookie by name
+//     res.cookie('name')
+
+//     // Remove all cookie
+//     res.cookie()
+
+//     res.json({message:'patch app'})
+// })
+// app.delete('/:id',(req,res,next) => {
+//     res.json({message:'delete app'})
+// })
+
+// // Running server
 // app.listen(5555, () => {
-//     console.log("app listen 5555");
-// });
+//     console.log('App listen on port 5555')
+//     // then open
+//     // http://localhost:5555
+// })
