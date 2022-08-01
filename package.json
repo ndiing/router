@@ -1,0 +1,26 @@
+{
+  "name": "@ndiing/router",
+  "version": "1.0.0",
+  "description": "nodejs router",
+  "main": "index.js",
+  "scripts": {
+    "test": "exit 0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ndiing/router.git"
+  },
+  "keywords": [
+    "nodejs",
+    "router"
+  ],
+  "author": "ndiing",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ndiing/router/issues"
+  },
+  "homepage": "https://github.com/ndiing/router#readme",
+  "publishConfig":{
+    "@ndiing:registry": "https://npm.pkg.github.com"
+  }
+}
