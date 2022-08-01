@@ -35,6 +35,10 @@ app.use((req,res,next) => {
     // when finish call next()
     next()
 })
+
+// Register router
+app.use('/api/game/v1',router1)
+
 app.get('/',(req,res,next) => {
     res.json({message:'get app'})
 })
