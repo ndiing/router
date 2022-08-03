@@ -21,6 +21,6 @@
   },
   "homepage": "https://github.com/ndiing/router#readme",
   "publishConfig":{
-    "@ndiing:registry": "https://npm.pkg.github.com"
+    "registry": "https://npm.pkg.github.com"
   }
 }
