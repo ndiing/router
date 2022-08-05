@@ -39,8 +39,8 @@ function Router() {
      * @param {Object} req.mimeType -
      * @param {Object} req.body -
      * @param {Object} res -
-     * @param {Object} res.cookie - (name,value,options)
-     * @param {Object} res.json - (object)
+     * @param {Function} res.cookie - (name,value,options)
+     * @param {Function} res.json - (object)
      * @memberof module:router
      */
     async function app(req, res) {
