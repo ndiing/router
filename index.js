@@ -1,8 +1,14 @@
 const http = require("http");
 const url = require("url");
+
 /**
- * Create Router/App
- * @returns {Function/Object}
+ * Nodejs router module
+ *
+ * ### Install
+ * ```
+ * npm install @ndiing/router
+ * ```
+ * @module router
  */
 
 function Router() {
@@ -24,29 +30,27 @@ function Router() {
         return cookie;
     }
 
+    /**
+     * 
+     * @param {Object} req -
+     * @param {Object} req.Url -
+     * @param {Object} req.query -
+     * @param {Object} req.cookie -
+     * @param {Object} req.mimeType -
+     * @param {Object} req.body -
+     * @param {Object} res -
+     * @param {Object} res.cookie - (name,value,options)
+     * @param {Object} res.json - (object)
+     * @memberof module:router
+     */
     async function app(req, res) {
         try {
             // beforeRender
-            /**
-             * URL Object
-             */
-            req.Url = url.parse(req.url);
-            /**
-             * Query Object
-             */
-            req.query = parseQuery(new URLSearchParams(req.Url.query));
-            /**
-             * Cookie Object
-             */
-            req.cookie = parseCookie(req.headers.cookie);
-            /**
-             * Mime Type
-             */
-            req.mimeType = req.headers?.["content-type"] ?? "";
-            /**
-             * Body Object
-             */
 
+            req.Url = url.parse(req.url);
+            req.query = parseQuery(new URLSearchParams(req.Url.query));
+            req.cookie = parseCookie(req.headers.cookie);
+            req.mimeType = req.headers?.["content-type"] ?? "";
             if (req.method !== "GET" && req.method !== "DELETE" && req.method !== "HEAD") {
                 if (req.mimeType) {
                     const buffer = [];
@@ -57,9 +61,6 @@ function Router() {
                     else req.body = body;
                 }
             }
-            /**
-             * Send Cookie
-             */
 
             res.cookie = function (name, value, options = {}) {
                 if (!name) {
@@ -90,11 +91,6 @@ function Router() {
                 res.setHeader("Set-Cookie", [...cookies, cookieString]);
             };
 
-            /**
-             * Send JSON message
-             * @param {Object} value -
-             */
-
             res.json = function (value) {
                 res.setHeader("Content-Type", "application/json");
                 res.end(JSON.stringify(value));
@@ -105,9 +101,6 @@ function Router() {
                 const { method, regexp, functions } = app.routes[i];
                 const matches = (method == null || method == req.method) && regexp.test(req.Url.pathname);
                 if (!matches) continue;
-                /**
-                 * Params Object
-                 */
                 // /api/google/v1/:id
                 // /api/google/v1/1
                 // {id:1}
@@ -172,29 +165,37 @@ function Router() {
             });
         }
     };
+
     /**
      * Add middleware
-     * @param  {String} path - Optinal
-     * @param  {Function} middleware -
+     * @param  {String} path  - 
+     * @param  {Function} middleware  - 
+     * @memberof module:router
      */
-
     app.use = function (...args) {
         app.add(1, null, ...args);
     };
 
+    /**
+     * Add middleware
+     * @param  {String} path  - 
+     * @param  {Function} middleware  - 
+     * @method {get/post/put/patch/delete}
+     * @memberof module:router
+     */
     for (const method of http.METHODS) {
         app[method.toLowerCase()] = function (...args) {
             app.add(1, method, ...args);
         };
     }
-    /**
-     * Create HTTP server
-     * @param {Number} port -
-     * @param {String} hostname - Optinal
-     * @param {Function} backlog -
-     * @returns
-     */
 
+    /**
+     * 
+     * @param {Number} port  - 
+     * @param {String} hostname  - 
+     * @param {Function} backlog  - 
+     * @memberof module:router
+     */
     app.listen = function (port, hostname, backlog) {
         const options = {
             insecureHTTPParser: true,
@@ -220,87 +221,3 @@ function Router() {
 }
 
 module.exports = Router;
-
-// // # Router
-// // nodejs backend router
-
-// // ### Install
-// // ```
-// // npm install @ndiing/router
-// // ```
-
-// // ### Usage
-// // const Router = require('@ndiing/router')
-
-// const router1 = Router()
-
-// // Adding middleware in router1
-// router1.use((req,res,next) => {
-//     // When finish call next()
-//     next()
-// })
-// router1.get('/',(req,res,next) => {
-//     res.json({message:'This from router1'})
-// })
-
-// const app = Router()
-// app.use((req,res,next) => {
-//     // Set header
-//     // for security reason
-//     // and cors
-//     const headers = {}
-//     for(const name in headers){
-//         res.setHeader(name,headers[name])
-//     }
-
-//     // when finish call next()
-//     next()
-// })
-
-// // Register router
-// app.use('/api/game/v1',router1)
-
-// app.get('/',(req,res,next) => {
-//     res.json({message:'get app'})
-// })
-// app.post('/',(req,res,next) => {
-//     res.json({message:'post app'})
-// })
-// app.patch('/:id',(req,res,next) => {
-//     // Get params data
-//     console.log(req.params)
-
-//     // Get query data
-//     console.log(req.query)
-
-//     // Get cookie data
-//     console.log(req.cookie)
-
-//     // Get body data
-//     console.log(req.body)
-
-//     // Send cookie data
-//     res.cookie('name','value')
-
-//     // Send multiple cookie data
-//     res.cookie('name','value')
-//     res.cookie('name2','value2')
-
-//     // Remove cookie by name
-//     res.cookie('name')
-
-//     // Remove all cookie
-//     res.cookie()
-
-//     res.json({message:'patch app'})
-// })
-// app.delete('/:id',(req,res,next) => {
-//     res.json({message:'delete app'})
-// })
-
-// // Running server
-// app.listen(5555, () => {
-//     console.log('App listen on port 5555')
-//     // then open
-//     // http://localhost:5555
-// })
