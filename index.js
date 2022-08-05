@@ -30,8 +30,52 @@ function Router() {
         return cookie;
     }
 
+    function setCookie(req, res) {
+        return function (name, value, options = {}) {
+            if (!name) {
+                for (const name in req.cookie) res.cookie(name);
+                return;
+            }
+            const cookies = res.getHeader("Set-Cookie") || [];
+
+            if (!value) {
+                options.expires = new Date(0);
+                options.maxAge = 0;
+            }
+            value = value || "";
+            const cookie = [`${name}=${value}`];
+
+            if (options.expires) {
+                if (options.maxAge) {
+                    const maxAge = options.expires.getTime() - Date.now() + 1000 * options.maxAge;
+                    cookie.push(`Max-Age=${maxAge}`);
+                } else cookie.push(`Expires=${options.expires.toUTCString()}`);
+            } else if (options.maxAge) cookie.push(`Max-Age=${1000 * options.maxAge}`);
+            if (options.domain) cookie.push(`Domain=${options.domain}`);
+            if (options.path) cookie.push(`Path=${options.path}`);
+            if (options.secure) cookie.push(`Secure`);
+            if (options.httpOnly) cookie.push(`HttpOnly`);
+            if (options.sameSite) cookie.push(`SameSite=${options.sameSite}`);
+            const cookieString = cookie.join("; ");
+            res.setHeader("Set-Cookie", [...cookies, cookieString]);
+        };
+    }
+
+    async function parseBody(req) {
+        if (req.method !== "GET" && req.method !== "DELETE" && req.method !== "HEAD") {
+            if (req.mimeType) {
+                const buffer = [];
+                for await (const chunk of req) buffer.push(chunk);
+                const body = Buffer.concat(buffer).toString();
+                if (req.mimeType.includes("json")) req.body = JSON.parse(body);
+                else if (req.mimeType.includes("urlencoded")) req.body = parseQuery(new URLSearchParams(body));
+                else req.body = body;
+            }
+        }
+    }
+
     /**
-     * 
+     *
      * @param {Object} req -
      * @param {Object} req.Url -
      * @param {Object} req.query -
@@ -46,51 +90,12 @@ function Router() {
     async function app(req, res) {
         try {
             // beforeRender
-
             req.Url = url.parse(req.url);
             req.query = parseQuery(new URLSearchParams(req.Url.query));
             req.cookie = parseCookie(req.headers.cookie);
             req.mimeType = req.headers?.["content-type"] ?? "";
-            if (req.method !== "GET" && req.method !== "DELETE" && req.method !== "HEAD") {
-                if (req.mimeType) {
-                    const buffer = [];
-                    for await (const chunk of req) buffer.push(chunk);
-                    const body = Buffer.concat(buffer).toString();
-                    if (req.mimeType.includes("json")) req.body = JSON.parse(body);
-                    else if (req.mimeType.includes("urlencoded")) req.body = parseQuery(new URLSearchParams(body));
-                    else req.body = body;
-                }
-            }
-
-            res.cookie = function (name, value, options = {}) {
-                if (!name) {
-                    for (const name in req.cookie) res.cookie(name);
-                    return;
-                }
-                const cookies = res.getHeader("Set-Cookie") || [];
-
-                if (!value) {
-                    options.expires = new Date(0);
-                    options.maxAge = 0;
-                }
-                value = value || "";
-                const cookie = [`${name}=${value}`];
-
-                if (options.expires) {
-                    if (options.maxAge) {
-                        const maxAge = options.expires.getTime() - Date.now() + 1000 * options.maxAge;
-                        cookie.push(`Max-Age=${maxAge}`);
-                    } else cookie.push(`Expires=${options.expires.toUTCString()}`);
-                } else if (options.maxAge) cookie.push(`Max-Age=${1000 * options.maxAge}`);
-                if (options.domain) cookie.push(`Domain=${options.domain}`);
-                if (options.path) cookie.push(`Path=${options.path}`);
-                if (options.secure) cookie.push(`Secure`);
-                if (options.httpOnly) cookie.push(`HttpOnly`);
-                if (options.sameSite) cookie.push(`SameSite=${options.sameSite}`);
-                const cookieString = cookie.join("; ");
-                res.setHeader("Set-Cookie", [...cookies, cookieString]);
-            };
-
+            await parseBody(req);
+            res.cookie = setCookie(req, res);
             res.json = function (value) {
                 res.setHeader("Content-Type", "application/json");
                 res.end(JSON.stringify(value));
@@ -121,15 +126,7 @@ function Router() {
                 }
             }
         } catch (err) {
-            const [
-                {
-                    functions: [userError],
-                },
-                ,
-                {
-                    functions: [systemError],
-                },
-            ] = app.routes.slice(-3);
+            const [{ functions: [userError] = [] }, , { functions: [systemError] = [] }] = app.routes.slice(-3);
             try {
                 userError(err, req, res, (next) => {});
             } catch (error) {
@@ -168,8 +165,8 @@ function Router() {
 
     /**
      * Add middleware
-     * @param  {String} path  - 
-     * @param  {Function} middleware  - 
+     * @param  {String} path  -
+     * @param  {Function} middleware  -
      * @memberof module:router
      */
     app.use = function (...args) {
@@ -178,8 +175,8 @@ function Router() {
 
     /**
      * Add middleware
-     * @param  {String} path  - 
-     * @param  {Function} middleware  - 
+     * @param  {String} path  -
+     * @param  {Function} middleware  -
      * @method {get/post/put/patch/delete}
      * @memberof module:router
      */
@@ -190,10 +187,10 @@ function Router() {
     }
 
     /**
-     * 
-     * @param {Number} port  - 
-     * @param {String} hostname  - 
-     * @param {Function} backlog  - 
+     *
+     * @param {Number} port  -
+     * @param {String} hostname  -
+     * @param {Function} backlog  -
      * @memberof module:router
      */
     app.listen = function (port, hostname, backlog) {
@@ -207,11 +204,13 @@ function Router() {
         }
         return http.createServer(options, app).listen(port, hostname, backlog);
     };
-    app.add(2, null, (req, res, next) => {
+
+    app.add(2, null, function (req, res, next) {
         res.statusCode = 400;
         next({ message: http.STATUS_CODES[404] });
     });
-    app.add(2, null, (err, req, res, next) => {
+
+    app.add(2, null, function (err, req, res, next) {
         err = JSON.stringify(err, Object.getOwnPropertyNames(err));
         err = JSON.parse(err);
         if (res.statusCode < 500) res.statusCode = 500;
@@ -219,5 +218,4 @@ function Router() {
     });
     return app;
 }
-
 module.exports = Router;
