@@ -1,60 +1,99 @@
-const router = require('../index.js')
+const Router = require('../index.js')
 
-// create router
-const router1 = router()
-router1.use((req,res,next) => {
-    console.log('hi im middleware from router1')
-    next()
-})
-router1.get('/',(req,res,next) => {
-    res.json({message:'hello message from router1'})
-})
+// Create router 1
+var router1 = Router();
+router1.use((req, res, next) => {
+    next();
+});
+// Using HTTP method POST
+router1.post("/", (req, res, next) => {
+    res.json({ message: "from router1 post" });
+});
+// Using HTTP method GET
+router1.get("/", (req, res, next) => {
+    res.json({ message: "from router1 get" });
+});
+// Using HTTP method PATCH
+router1.patch("/:id", (req, res, next) => {
 
-// create app
-const app = router()
+    console.log(req.Url)// Get URL info
+    console.log(req.params)// Get parameters from path
+    console.log(req.query)// Get query object
+    console.log(req.mimeType)// Get content-type
+    console.log(req.cookie)// Get cookie object
+    console.log(req.body)// Get request message/data
 
-// register router1
-// in app
-app.use('/router1',router1)
-
-app.get('/',(req,res,next) => {
-    res.json({welcome:'welcome app'})
-})
-
-// using patch method
-// or another method are the same
-app.patch('/:id',(req,res,next) => {
-    
-    // get Url > new URL()
-    console.log(req.Url)
-    
-    // get params
-    console.log(req.params)
-    
-    // get query
-    console.log(req.query)
-    
-    // get mimeType
-    console.log(req.mimeType)
-    
-    // get body
-    console.log(req.body)
-    
-    // get cookie
-    console.log(req.cookie)
-
-    // send cookie
+    // Send cookie
     res.cookie('name1','value1')
+    // another
+    res.cookie('name2','value2')
+    // another
+    res.cookie('name3','value3')
+    // and remove one
+    // from previous cookie
+    res.cookie('name')
 
-    // send json
-    res.json({welcome:'patch data from app'})
-})
+    // Send json output
+    res.json({ message: "from router1 patch" });
+});
+// Using HTTP method DELETE
+router1.delete("/:id", (req, res, next) => {
+    res.json({ message: "from router1 delete" });
+});
+// console.log(router1.routes);
 
-// create server
-app.listen(5555, () => {
-    console.log('server listen on port 5555')
-})
+// Create another example router A
+const routerA = Router();
+routerA.use((req, res, next) => {
+    next();
+});
+routerA.get("/", (req, res, next) => {
+    res.json({ message: "from routerA get" });
+});
 
-// open
-// http://127.0.0.1:5555/
-// http://127.0.0.1:5555/router1
+// Create another example router B
+const routerB = Router();
+routerB.use((req, res, next) => {
+    next();
+});
+routerB.get("/", (req, res, next) => {
+    res.json({ message: "from routerB get" });
+});
+
+const router2 = Router();
+router2.use((req, res, next) => {
+    next();
+});
+// Register router A
+// Register router B
+router2.get("/routerA", routerA);
+router2.get("/routerB", routerB);
+router2.get("/", (req, res, next) => {
+    res.json({ message: "from router2 get" });
+});
+
+// Create app
+const app = Router();
+app.use((req, res, next) => {
+    next();
+});
+// Register router 1
+// Register router 2
+app.get("/router1", router1);
+app.get("/router2", router2);
+app.get("/", (req, res, next) => {
+    res.json({ message: "from app get" });
+});
+
+// Custom not found handler
+app.use((req, res, next) => {
+    next({message:'page not found'});
+});
+
+// Custom global error handler
+app.use((err, req, res, next) => {
+    res.json({ err });
+});
+
+// Create server and listen on port 80
+app.listen(80);
