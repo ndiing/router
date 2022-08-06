@@ -113,7 +113,19 @@ const url = require("url");
  * @returns {Object}
  * @module Router
  */
-function Router() {
+function Router(options = {}) {
+    options = {
+        queryParser,
+        mimeTypeParser,
+        cookieParser,
+        bodyParser,
+        cookieHandler,
+        jsonHandler,
+        paramsParser,
+        missingHandler,
+        errorHandler,
+        ...options,
+    };
     /**
      * requestListener
      * @param {Object} req - IncomingMessage
@@ -130,70 +142,12 @@ function Router() {
     async function app(req, res) {
         try {
             req.Url = url.parse(req.url);
-            // console.log(req.Url)
-
-            const query = {};
-            for (const [name, value] of new URLSearchParams(req.Url.query)) {
-                if (query[name]) {
-                    if (Array.isArray(query[name])) query[name].push(value);
-                    else query[name] = [query[name], value];
-                } else query[name] = value;
-            }
-            req.query = query;
-            // console.log(req.query);
-
-            req.mimeType = req.headers["content-type"];
-            // console.log(req.mimeType)
-
-            req.cookie = {};
-            const cookieString = req.headers["cookie"];
-            const cookie = {};
-            if (cookieString) for (const [, name, value] of cookieString.matchAll(/([\s\S]+?)\=([\s\S]+?)(; ?|$)/g)) cookie[name] = value;
-            req.cookie = cookie;
-            // console.log(req.cookie);
-
-            if (!/\b(GET|DELETE|HEAD)\b/.test(req.method)) {
-                const body = [];
-                for await (const chunk of req) body.push(chunk);
-                body = Buffer.concat(body);
-                if (/json/.test(req.mimeType)) req.body = JSON.parse(body);
-                else req.body = body.toString();
-                // console.log(req.body)
-            }
-
-            res.cookie = function (name, value, options = {}) {
-                // expires=new Date()
-                // maxAge=1
-                const setCookie = res.getHeaders()["set-cookie"] || [];
-                let { expires, maxAge, domain, path, secure, httpOnly, sameSite } = options;
-                const cookie = [`${name}=${value}`];
-                if (!value) {
-                    expires = new Date(0);
-                    maxAge = 0;
-                }
-                // new Date().toUTCString()//Sat, 06 Aug 2022 04:55:22 GMT
-                if (expires) cookie.push(`Expires=${expires.toUTCString()}`);
-                if (maxAge) cookie.push(`Max-Age=${maxAge}`);
-                if (domain) cookie.push(`Domain=${domain}`);
-                if (path) cookie.push(`Path=${path}`);
-                if (secure) cookie.push(`Secure`);
-                if (httpOnly) cookie.push(`HttpOnly`);
-                if (sameSite) cookie.push(`SameSite=${sameSite}`);
-                const cookieString = cookie.join("; ");
-                setCookie.push(cookieString);
-                res.setHeader("Set-Cookie", setCookie);
-            };
-            // res.cookie("name1", "value1",{
-            //     expires:new Date(Date.now()+1000*5)
-            // });
-            // res.cookie("name2", "value2");
-            // res.cookie("name3", "value3");
-
-            res.json = function (value) {
-                res.setHeader("Content-Type", "application/json");
-                res.end(JSON.stringify(value));
-            };
-            // res.json({message:'test'})
+            options.queryParser(req);
+            options.mimeTypeParser(req);
+            options.cookieParser(req);
+            await options.bodyParser(req);
+            options.cookieHandler(res);
+            options.jsonHandler(res);
 
             for (let i = 0; i < app.routes.length; i++) {
                 const { method, regexp, fns } = app.routes[i];
@@ -201,9 +155,7 @@ function Router() {
 
                 if (!passed) continue;
 
-                req.params = { ...req.Url.pathname.match(regexp)?.groups };
-                // console.log(req.params);
-
+                options.paramsParser(req, regexp);
                 for (let j = 0; j < fns.length; j++) {
                     const fn = fns[j];
                     try {
@@ -220,17 +172,15 @@ function Router() {
                     }
                 }
             }
-
-            res.statusCode = 404;
-            throw new Error(http.STATUS_CODES[res.statusCode]);
+            
+            options.missingHandler(res);
         } catch (err) {
-            err = JSON.parse(JSON.stringify(err, Object.getOwnPropertyNames(err)));
             const { fns: [fnError] = [] } = app.routes[app.routes.length - 1];
+            
             try {
                 fnError(err, req, res, (next) => {});
             } catch (error) {
-                if (res.statusCode == 200) res.statusCode = 500;
-                res.json(err);
+                err = options.errorHandler(err, res);
             }
         }
     }
@@ -239,7 +189,6 @@ function Router() {
 
     app.add = function (method, path, ...fns) {
         if (typeof method == "object") ({ method, path, fns } = method);
-
         if (typeof path == "function") {
             fns = [path, ...fns];
             path = ".*";
@@ -299,6 +248,83 @@ function Router() {
     };
 
     return app;
+
+    function errorHandler(err, res) {
+        err = JSON.parse(JSON.stringify(err, Object.getOwnPropertyNames(err)));
+        if (res.statusCode == 200) res.statusCode = 500;
+        res.json(err);
+        return err;
+    }
+
+    function missingHandler(res) {
+        res.statusCode = 404;
+        throw new Error(http.STATUS_CODES[res.statusCode]);
+    }
+
+    function paramsParser(req, regexp) {
+        req.params = { ...req.Url.pathname.match(regexp)?.groups };
+    }
+
+    function jsonHandler(res) {
+        res.json = function (value) {
+            res.setHeader("Content-Type", "application/json");
+            res.end(JSON.stringify(value));
+        };
+    }
+
+    function cookieHandler(res) {
+        res.cookie = function (name, value, options = {}) {
+            const setCookie = res.getHeaders()["set-cookie"] || [];
+            let { expires, maxAge, domain, path, secure, httpOnly, sameSite } = options;
+            const cookie = [`${name}=${value ?? ""}`];
+            if (!value) {
+                expires = new Date(0);
+                maxAge = 0;
+            }
+            if (expires) cookie.push(`Expires=${expires.toUTCString()}`);
+            if (maxAge) cookie.push(`Max-Age=${maxAge}`);
+            if (domain) cookie.push(`Domain=${domain}`);
+            if (path) cookie.push(`Path=${path}`);
+            if (secure) cookie.push(`Secure`);
+            if (httpOnly) cookie.push(`HttpOnly`);
+            if (sameSite) cookie.push(`SameSite=${sameSite}`);
+            const cookieString = cookie.join("; ");
+            setCookie.push(cookieString);
+            res.setHeader("Set-Cookie", setCookie);
+        };
+    }
+
+    async function bodyParser(req) {
+        if (!/\b(GET|DELETE|HEAD)\b/.test(req.method)) {
+            const body = [];
+            for await (const chunk of req) body.push(chunk);
+            if (/json/.test(req.mimeType)) req.body = JSON.parse(body);
+            else req.body = Buffer.concat(body).toString();
+        }
+    }
+
+    function cookieParser(req) {
+        req.cookie = {};
+        const cookieString = req.headers["cookie"];
+        const cookie = {};
+        if (cookieString) for (const [, name, value] of cookieString.matchAll(/([\s\S]+?)\=([\s\S]+?)(; ?|$)/g)) cookie[name] = value;
+        req.cookie = cookie;
+    }
+
+    function mimeTypeParser(req) {
+        req.mimeType = req.headers["content-type"];
+    }
+
+    function queryParser(req) {
+        const query = {};
+        for (const [name, value] of new URLSearchParams(req.Url.query)) {
+            if (query[name]) {
+                if (Array.isArray(query[name])) query[name].push(value);
+                else query[name] = [query[name], value];
+            } else query[name] = value;
+        }
+        req.query = query;
+    }
 }
 
 module.exports = Router;

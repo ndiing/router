@@ -81,6 +81,18 @@ app.use((req, res, next) => {
 // Register router 2
 app.get("/router1", router1);
 app.get("/router2", router2);
+app.use((req, res, next) => {
+    console.log('app+middleware')
+    next()
+});
+app.use('/book',(req, res, next) => {
+    console.log('prefix+middleware')
+    next()
+});
+app.get("/", (req, res, next) => {
+    console.log('method+middleware')
+    next()
+});
 app.get("/", (req, res, next) => {
     res.json({ message: "from app get" });
 });

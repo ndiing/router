@@ -1,2 +1,6 @@
 ###
-GET http://localhost/api/sidompul/v1
+GET http://localhost/
+###
+GET http://localhost/book
+###
+PATCH http://localhost/router1/1
