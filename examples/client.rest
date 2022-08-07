@@ -1,6 +1,0 @@
-###
-GET http://localhost/
-###
-GET http://localhost/book
-###
-PATCH http://localhost/router1/1

@@ -1,0 +1,25 @@
+###
+GET http://localhost:5555
+
+###
+GET http://localhost:5555/book
+Accept-Encoding: gzip
+
+###
+GET http://localhost:5555/error
+Accept-Encoding: gzip
+
+###
+GET http://localhost:5555/router1
+Accept-Encoding: gzip
+
+###
+GET http://localhost:5555/router2
+Accept-Encoding: gzip
+
+###
+PATCH http://localhost:5555/router2/1?name=1&name=2&name=3&group=b
+Accept-Encoding: gzip
+Content-Type: application/json
+
+{"user":"name","pass":"word"}

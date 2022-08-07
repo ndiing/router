@@ -1,168 +1,476 @@
 const http = require("http");
 const url = require("url");
+const zlib = require("zlib");
 
 /**
- * Nodejs router
+ * Nodejs backend router
  * ### Install
  * ```
  * npm install @ndiing/router
  * ```
- * ### Usage
- * ```js
- * const Router = require('../index.js')
- *
- * // Create router 1
- * var router1 = Router();
- * router1.use((req, res, next) => {
- *     next();
- * });
- * // Using HTTP method POST
- * router1.post("/", (req, res, next) => {
- *     res.json({ message: "from router1 post" });
- * });
- * // Using HTTP method GET
- * router1.get("/", (req, res, next) => {
- *     res.json({ message: "from router1 get" });
- * });
- * // Using HTTP method PATCH
- * router1.patch("/:id", (req, res, next) => {
- *
- *     console.log(req.Url)// Get URL info
- *     console.log(req.params)// Get parameters from path
- *     console.log(req.query)// Get query object
- *     console.log(req.mimeType)// Get content-type
- *     console.log(req.cookie)// Get cookie object
- *     console.log(req.body)// Get request message/data
- *
- *     // Send cookie
- *     res.cookie('name1','value1')
- *     // another
- *     res.cookie('name2','value2')
- *     // another
- *     res.cookie('name3','value3')
- *     // and remove one
- *     // from previous cookie
- *     res.cookie('name')
- *
- *     // Send json output
- *     res.json({ message: "from router1 patch" });
- * });
- * // Using HTTP method DELETE
- * router1.delete("/:id", (req, res, next) => {
- *     res.json({ message: "from router1 delete" });
- * });
- * // console.log(router1.routes);
- *
- * // Create another example router A
- * const routerA = Router();
- * routerA.use((req, res, next) => {
- *     next();
- * });
- * routerA.get("/", (req, res, next) => {
- *     res.json({ message: "from routerA get" });
- * });
- *
- * // Create another example router B
- * const routerB = Router();
- * routerB.use((req, res, next) => {
- *     next();
- * });
- * routerB.get("/", (req, res, next) => {
- *     res.json({ message: "from routerB get" });
- * });
- *
- * const router2 = Router();
- * router2.use((req, res, next) => {
- *     next();
- * });
- * // Register router A
- * // Register router B
- * router2.get("/routerA", routerA);
- * router2.get("/routerB", routerB);
- * router2.get("/", (req, res, next) => {
- *     res.json({ message: "from router2 get" });
- * });
- *
- * // Create app
- * const app = Router();
- * app.use((req, res, next) => {
- *     next();
- * });
- * // Register router 1
- * // Register router 2
- * app.get("/router1", router1);
- * app.get("/router2", router2);
- * app.get("/", (req, res, next) => {
- *     res.json({ message: "from app get" });
- * });
- *
- * // Custom not found handler
- * app.use((req, res, next) => {
- *     next({message:'page not found'});
- * });
- *
- * // Custom global error handler
- * app.use((err, req, res, next) => {
- *     res.json({ err });
- * });
- *
- * // Create server and listen on port 80
- * app.listen(80);
- *
- * ```
- * @returns {Object}
- * @module Router
+ * @see {@link ./examples/server.js}
+ * @see {@link ./examples/server-express-like-style.js}
+ * @module router
  */
-function Router(options = {}) {
-    options = {
-        queryParser,
-        mimeTypeParser,
-        cookieParser,
-        bodyParser,
-        cookieHandler,
-        jsonHandler,
-        paramsParser,
-        missingHandler,
-        errorHandler,
-        ...options,
-    };
+
+/**
+ *
+ */
+class Headers {
     /**
-     * requestListener
-     * @param {Object} req - IncomingMessage
-     * @param {Object} req.Url -
-     * @param {Object} req.query -
-     * @param {String} req.mimeType -
-     * @param {Object} req.cookie -
-     * @param {Object/String} req.body -
-     * @param {Object} res - ServerResponse
-     * @param {Function} res.cookie - (name,value,options={})
-     * @param {Function} res.json - (value)
-     * @memberof module:Router
+     * Create headers
+     * @param {Any} init
      */
-    async function app(req, res) {
+    constructor(init = {}) {
+        for (const name in init) {
+            this.append(name, init[name]);
+        }
+    }
+
+    /**
+     * Append value by name, if exists it's create an array of values
+     * @param {Any} name
+     * @param {Any} value
+     */
+    append(name, value) {
+        name = name.toLowerCase();
+        if (this[name]) {
+            if (Array.isArray(this[name])) {
+                this[name].push(value);
+            } else {
+                this[name] = [this[name], value];
+            }
+        } else {
+            this[name] = value;
+        }
+    }
+
+    /**
+     * Delete headers by name
+     * @param {Any} name
+     */
+    delete(name) {
+        name = name.toLowerCase();
+        delete this[name];
+    }
+
+    /**
+     * Get array of [name,value]
+     * @returns {Array}
+     */
+    entries() {
+        const keys = this.keys();
+        const values = [];
+        for (let i = 0; i < keys.length; i++) {
+            const name = keys[i];
+            values.push([name.replace(/(^|[^\w])(\w)/g, ($, $1, $2) => $1 + $2.toUpperCase()), this[name]]);
+        }
+        return values;
+    }
+
+    /**
+     * Get headers by name
+     * @param {Any} name
+     * @returns {Any}
+     */
+    get(name) {
+        name = name.toLowerCase();
+        return this[name];
+    }
+
+    /**
+     * Check headers name exists
+     * @param {Any} name
+     * @returns {Boolean}
+     */
+    has(name) {
+        name = name.toLowerCase();
+        return !!this[name];
+    }
+
+    /**
+     * Get array of headers names
+     * @returns {Array}
+     */
+    keys() {
+        return Object.getOwnPropertyNames(this);
+    }
+
+    /**
+     * Set value by name
+     * @param {Any} name
+     * @param {Any} value
+     */
+    set(name, value) {
+        name = name.toLowerCase();
+        this[name] = value;
+    }
+
+    /**
+     * Get Array of heades value
+     * @returns {Array}
+     */
+    values() {
+        const keys = this.keys();
+        const values = [];
+        for (let i = 0; i < keys.length; i++) {
+            const name = keys[i];
+            values.push(this[name]);
+        }
+        return values;
+    }
+}
+
+// // Usage
+// var headers = new Headers()
+// console.log(headers)
+// var headers = new Headers({'Content-Type':'application/json'})
+// headers.set('connection','keep-alive')
+// headers.append('set-cookie','name1=value1')
+// headers.append('set-cookie','name2=value2')
+// headers.append('set-cookie','name3=value3')
+// headers.delete('set-cookie')
+// console.log(headers.keys())
+// console.log(headers.values())
+// console.log(headers.entries())
+// console.log(headers)
+
+/**
+ *
+ */
+class Request {
+    /**
+     * Wrap Request from stream
+     * @param {Any} input
+     * @param {Any} options
+     */
+    constructor(input = "", options = {}) {
+        /**
+         * @readonly
+         */
+        this.body = options.body || [];
+
+        /**
+         * @readonly
+         */
+        this.headers = new Headers(options.headers);
+
+        /**
+         * @readonly
+         */
+        this.method = options.method;
+
+        /**
+         * @readonly
+         */
+        this.url = url.parse(input);
+
+        /**
+         * @readonly
+         */
+        this.url.searchParams = new url.URLSearchParams(this.url.query);
+
+        /**
+         * @readonly
+         */
+        this.stream = options;
+
+        /**
+         * @readonly
+         */
+        this.params = {};
+
+        /**
+         * @readonly
+         */
+        this.query = {};
+        // parseQuery
+        for (const [name, value] of this.url.searchParams) {
+            if (this.query[name]) {
+                if (Array.isArray(this.query[name])) {
+                    this.query[name].push(value);
+                } else {
+                    this.query[name] = [this.query[name], value];
+                }
+            } else {
+                this.query[name] = value;
+            }
+        }
+
+        /**
+         * @readonly
+         */
+        this.cookies = {};
+        // parseCookies
+        if (this.headers.has("cookie")) {
+            for (const cookie of this.headers.get("cookie").split("; ")) {
+                const [name, value] = cookie.split("=");
+                this.cookies[name] = value;
+            }
+        }
+
+        this.request = {};
+    }
+}
+
+// // Usage
+// var request=new Request('/',{})
+// console.log(request)
+
+/**
+ *
+ */
+class Response {
+    /**
+     *
+     * @param {Any} body
+     * @param {Any} options
+     */
+    constructor(body = [], options = {}) {
+        this.body = body;
+
+        options.headers = {
+            "Access-Control-Allow-Origin": "*",
+            "Content-Security-Policy": "default-src 'self';base-uri 'self';block-all-mixed-content;font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests",
+            "Cross-Origin-Embedder-Policy": "require-corp",
+            "Cross-Origin-Opener-Policy": "same-origin",
+            "Cross-Origin-Resource-Policy": "same-origin",
+            "X-DNS-Prefetch-Control": "off",
+            "Expect-CT": "max-age=0",
+            "X-Frame-Options": "SAMEORIGIN",
+            "Strict-Transport-Security": "max-age=15552000; includeSubDomains",
+            "X-Download-Options": "noopen",
+            "X-Content-Type-Options": "nosniff",
+            "Origin-Agent-Cluster": "?1",
+            "X-Permitted-Cross-Domain-Policies": "none",
+            "Referrer-Policy": "no-referrer",
+            "X-XSS-Protection": "0",
+            Connection: "close",
+            "Content-Type": "text/html",
+            "X-Powered-By": "Ndiing",
+            ...options.headers,
+        };
+
+        /**
+         * @readonly
+         */
+        this.headers = new Headers(options.headers);
+
+        /**
+         * @readonly
+         */
+        this.status = options.status || 200;
+
+        this.stream = options;
+    }
+
+    /**
+     * Send string of response
+     * @param {Any} value
+     */
+    send(value = "") {
+        let stream = this.stream;
+
+        // set status
+        this.stream.statusCode = this.status;
+
+        // set compression
+        if (/\bdeflate\b/.test(this.request.headers.get("accept-encoding"))) {
+            this.headers.set("content-encoding", "deflate");
+            // stream = deflate
+            stream = zlib.createDeflate();
+        } else if (/\bgzip\b/.test(this.request.headers.get("accept-encoding"))) {
+            this.headers.set("content-encoding", "gzip");
+            // stream = gzip
+            stream = zlib.createGzip();
+        } else if (/\bbr\b/.test(this.request.headers.get("accept-encoding"))) {
+            this.headers.set("content-encoding", "br");
+            // stream = br
+            stream = zlib.createBrotliCompress();
+        }
+
+        // set connection = keep-alive
+        if (stream !== this.stream || this.request.headers.get("connection") == "keep-alive") {
+            this.headers.set("connection", "keep-alive");
+
+            if (stream !== this.stream) {
+                stream.pipe(this.stream);
+            }
+        }
+
+        // set headers
+        for (const [name, value] of this.headers.entries()) {
+            this.stream.setHeader(name, value);
+        }
+
+        // stringify object/array
+        if (/json/.test(this.headers.get("content-type")) && typeof value == "object") {
+            value = JSON.stringify(value);
+        }
+
+        // buffer
+        value = Buffer.from(value);
+
+        if (this.headers.get("connection") == "keep-alive") {
+            // keep-alive
+            stream.write(value);
+            stream.end();
+        } else {
+            // close
+            stream.end(value);
+        }
+    }
+
+    /**
+     * Send object/array as json response
+     * @param {Any} value
+     */
+    json(value = {}) {
+        this.headers.set("content-type", "application/json");
+        this.send(value);
+    }
+
+    /**
+     * Send `set-cookie`
+     * @param {Any} name 
+     * @param {Any} value 
+     */
+    cookie(name, value) {
+        let cookie = name;
+
+        if (typeof name == "string") {
+            cookie = { name, value };
+        }
+
+        cookie.value = cookie.value || "";
+        let cookieArray = [`${cookie.name}=${cookie.value}`];
+
+        if (!cookie.value) {
+            cookie.expires = new Date(0);
+            cookie.maxAge = 0; //0s
+        }
+
+        if (cookie.expires) cookieArray.push(`Expires=${cookie.expires.toUTCString()}`);
+        if (cookie.maxAge) cookieArray.push(`Max-Age=${cookie.maxAge}`);
+        if (cookie.domain) cookieArray.push(`Domain=${cookie.domain}`);
+        if (cookie.path) cookieArray.push(`Path=${cookie.path}`);
+        if (cookie.secure) cookieArray.push(`Secure`);
+        if (cookie.httpOnly) cookieArray.push(`HttpOnly`);
+        if (cookie.sameSite) cookieArray.push(`SameSite=${cookie.sameSite}`);
+
+        let cookieString = cookieArray.join("; ");
+
+        this.headers.append("set-cookie", cookieString);
+    }
+}
+
+// // Usage
+// var response = new Response([],{})
+// console.log(response)
+
+/**
+ *
+ */
+class Router {
+    /**
+     * @readonly
+     */
+    routes = [];
+
+    /**
+     * Create router
+     * @param {Any} init
+     */
+    constructor(init = []) {
+        // data binding
+        this.requestListener = this.requestListener.bind(this);
+
+        for (let i = 0; i < init.length; i++) {
+            this.add(init[i]);
+        }
+    }
+
+    /**
+     * Adding route
+     * @param {Any} route
+     * @private
+     */
+    add(route = {}) {
+        let { method = ".*", path = ".*", callback } = route;
+
+        if (!Array.isArray(callback)) {
+            callback = [callback];
+        }
+
+        let [{ routes }] = callback;
+
+        if (routes) {
+            callback = [];
+
+            for (let i = 0; i < routes.length; i++) {
+                const route = routes[i];
+                route.path = path + route.path;
+                this.add(route);
+            }
+        } else {
+            const route = { method, path, callback, routes };
+
+            // Create regexp
+            route.regexp = "^" + route.path.replace(/\:(\w+)/g, "(?<$1>[^/]+)").replace(/\/?$/, "") + "/?$";
+            route.regexp = new RegExp(route.regexp);
+
+            this.routes.push(route);
+        }
+    }
+
+    /**
+     * `http.requestListener`
+     * @param {Any} req
+     * @param {Any} res
+     */
+    async requestListener(req, res) {
         try {
-            req.Url = url.parse(req.url);
-            options.queryParser(req);
-            options.mimeTypeParser(req);
-            options.cookieParser(req);
-            await options.bodyParser(req);
-            options.cookieHandler(res);
-            options.jsonHandler(res);
+            req = new Request(req.url, req);
+            res = new Response([], res);
+            res.request = req;
 
-            for (let i = 0; i < app.routes.length; i++) {
-                const { method, regexp, fns } = app.routes[i];
-                const passed = (method == ".*" || method == req.method) && regexp.test(req.Url.pathname);
+            // parseBody
+            // beside head and get
+            if (!/(GET|HEAD)/.test(req.method)) {
+                for await (const chunk of req.stream) {
+                    req.body.push(chunk);
+                }
+                req.body = Buffer.concat(req.body);
+                if (/json/.test(req.headers.get("content-type"))) {
+                    req.body = JSON.parse(req.body);
+                } else {
+                    req.body = req.body.toString();
+                }
+            }
 
-                if (!passed) continue;
+            for (let i = 0; i < this.routes.length; i++) {
+                const route = this.routes[i];
+                const passed = (route.method == ".*" || route.method == req.method) && route.regexp.test(req.url.pathname);
 
-                options.paramsParser(req, regexp);
-                for (let j = 0; j < fns.length; j++) {
-                    const fn = fns[j];
+                if (!passed) {
+                    continue;
+                }
+
+                // parseParams
+                req.params = { ...req.url.pathname.match(route.regexp)?.groups };
+
+                // handleCallback
+                for (let j = 0; j < route.callback.length; j++) {
+                    const callback = route.callback[j];
+
                     try {
                         await new Promise((resolve, reject) => {
-                            fn(req, res, (next) => {
-                                if (next == undefined) resolve();
-                                else reject(next);
+                            callback(req, res, (next) => {
+                                if (next == undefined) {
+                                    resolve();
+                                } else {
+                                    reject(next);
+                                }
                             });
                         });
                     } catch (error) {
@@ -172,159 +480,90 @@ function Router(options = {}) {
                     }
                 }
             }
-            
-            options.missingHandler(res);
+
+            // Handle default route
+            res.status = 404;
+            throw { message: http.STATUS_CODES[res.status] };
         } catch (err) {
-            const { fns: [fnError] = [] } = app.routes[app.routes.length - 1];
-            
+            if (typeof err == "object") {
+                err = JSON.parse(JSON.stringify(err, Object.getOwnPropertyNames(err)));
+            }
+
             try {
-                fnError(err, req, res, (next) => {});
+                const [{ callback: [callback] = [] }] = this.routes.slice(-1);
+                callback(err, req, res, (next) => {});
             } catch (error) {
-                err = options.errorHandler(err, res);
+                // Handle default error
+                res.status = res.status == 200 ? 500 : res.status;
+                res.json(err);
             }
         }
     }
+}
 
-    app.routes = [];
+/**
+ *
+ */
+function Layer() {
+    const router = new Router();
+    const app = (req, res) => router.requestListener(req, res);
+    app.routes = router.routes;
 
-    app.add = function (method, path, ...fns) {
-        if (typeof method == "object") ({ method, path, fns } = method);
+    app.add = function (method, path, ...callback) {
         if (typeof path == "function") {
-            fns = [path, ...fns];
+            callback = [path, ...callback];
             path = ".*";
         }
-        let regexp = path;
-        const [{ routes }] = fns;
-        if (routes) {
-            for (let i = 0; i < routes.length; i++) {
-                const route = routes[i];
-                route.path = path + route.path;
-                app.add(route);
-            }
-        } else {
-            regexp = new RegExp("^" + regexp.replace(/\:(\w+)/g, "(?<$1>[^/]+)").replace(/\/?$/, "/?$"));
-            const route = { method, path, regexp, fns };
-            app.routes.push(route);
-        }
+        router.add({ method, path, callback });
     };
 
     /**
-     * Add middleware
-     * @param  {String} path - Optional
-     * @param  {Function} args - Set one or more handler
-     * @memberof module:Router
+     *
+     * @param  {String} path -
+     * @param  {Array/Function} callback -
+     * @method use
      */
     app.use = function (...args) {
         app.add(".*", ...args);
     };
 
     /**
-     * Add middleware
+     *
      * @param  {String} path -
-     * @param  {Function} args - Set one or more handler
-     * @method {post/get/patch/put/delete}
-     * @memberof module:Router
+     * @param  {Array/Function} callback -
+     * @method post/get/patch/put/delete
      */
     for (let i = 0; i < http.METHODS.length; i++) {
         const method = http.METHODS[i];
+
         app[method.toLowerCase()] = function (...args) {
             app.add(method, ...args);
         };
     }
 
     /**
-     * Create server
+     *
      * @param {Number} port -
-     * @param {String} hostname - Optional
+     * @param {String} hostname -
      * @param {Function} backlog -
      * @returns {Object}
+     * @method listen
      */
     app.listen = function (port, hostname, backlog) {
         if (typeof hostname == "function") {
             backlog = hostname;
             hostname = "0.0.0.0";
         }
+
         return http.createServer(app).listen(port, hostname, backlog);
     };
 
     return app;
-
-    function errorHandler(err, res) {
-        err = JSON.parse(JSON.stringify(err, Object.getOwnPropertyNames(err)));
-        if (res.statusCode == 200) res.statusCode = 500;
-        res.json(err);
-        return err;
-    }
-
-    function missingHandler(res) {
-        res.statusCode = 404;
-        throw new Error(http.STATUS_CODES[res.statusCode]);
-    }
-
-    function paramsParser(req, regexp) {
-        req.params = { ...req.Url.pathname.match(regexp)?.groups };
-    }
-
-    function jsonHandler(res) {
-        res.json = function (value) {
-            res.setHeader("Content-Type", "application/json");
-            res.end(JSON.stringify(value));
-        };
-    }
-
-    function cookieHandler(res) {
-        res.cookie = function (name, value, options = {}) {
-            const setCookie = res.getHeaders()["set-cookie"] || [];
-            let { expires, maxAge, domain, path, secure, httpOnly, sameSite } = options;
-            const cookie = [`${name}=${value ?? ""}`];
-            if (!value) {
-                expires = new Date(0);
-                maxAge = 0;
-            }
-            if (expires) cookie.push(`Expires=${expires.toUTCString()}`);
-            if (maxAge) cookie.push(`Max-Age=${maxAge}`);
-            if (domain) cookie.push(`Domain=${domain}`);
-            if (path) cookie.push(`Path=${path}`);
-            if (secure) cookie.push(`Secure`);
-            if (httpOnly) cookie.push(`HttpOnly`);
-            if (sameSite) cookie.push(`SameSite=${sameSite}`);
-            const cookieString = cookie.join("; ");
-            setCookie.push(cookieString);
-            res.setHeader("Set-Cookie", setCookie);
-        };
-    }
-
-    async function bodyParser(req) {
-        if (!/\b(GET|DELETE|HEAD)\b/.test(req.method)) {
-            const body = [];
-            for await (const chunk of req) body.push(chunk);
-            if (/json/.test(req.mimeType)) req.body = JSON.parse(body);
-            else req.body = Buffer.concat(body).toString();
-        }
-    }
-
-    function cookieParser(req) {
-        req.cookie = {};
-        const cookieString = req.headers["cookie"];
-        const cookie = {};
-        if (cookieString) for (const [, name, value] of cookieString.matchAll(/([\s\S]+?)\=([\s\S]+?)(; ?|$)/g)) cookie[name] = value;
-        req.cookie = cookie;
-    }
-
-    function mimeTypeParser(req) {
-        req.mimeType = req.headers["content-type"];
-    }
-
-    function queryParser(req) {
-        const query = {};
-        for (const [name, value] of new URLSearchParams(req.Url.query)) {
-            if (query[name]) {
-                if (Array.isArray(query[name])) query[name].push(value);
-                else query[name] = [query[name], value];
-            } else query[name] = value;
-        }
-        req.query = query;
-    }
 }
 
-module.exports = Router;
+Layer.Headers = Headers;
+Layer.Request = Request;
+Layer.Response = Response;
+Layer.Router = Router;
+
+module.exports = Layer;
