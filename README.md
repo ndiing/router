@@ -1,7 +1,7 @@
 <a name="module_router"></a>
 
 ## router
-Nodejs backend router### Install```npm install @ndiing/router```
+Nodejs router module### Install```npm install @ndiing/router```
 
 **See**
 
@@ -37,6 +37,7 @@ Nodejs backend router### Install```npm install @ndiing/router```
         * [.status](#module_router..Response+status)
         * [.send(value)](#module_router..Response+send)
         * [.json(value)](#module_router..Response+json)
+        * [.cookie(name, value)](#module_router..Response+cookie)
     * [~Router](#module_router..Router)
         * [new Router(init)](#new_module_router..Router_new)
         * [.routes](#module_router..Router+routes)
@@ -231,6 +232,7 @@ Wrap Request from stream
     * [.status](#module_router..Response+status)
     * [.send(value)](#module_router..Response+send)
     * [.json(value)](#module_router..Response+json)
+    * [.cookie(name, value)](#module_router..Response+cookie)
 
 <a name="new_module_router..Response_new"></a>
 
@@ -271,6 +273,18 @@ Send object/array as json response
 
 | Param | Type |
 | --- | --- |
+| value | <code>Any</code> | 
+
+<a name="module_router..Response+cookie"></a>
+
+#### response.cookie(name, value)
+Send `set-cookie`
+
+**Kind**: instance method of [<code>Response</code>](#module_router..Response)  
+
+| Param | Type |
+| --- | --- |
+| name | <code>Any</code> | 
 | value | <code>Any</code> | 
 
 <a name="module_router..Router"></a>

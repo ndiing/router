@@ -3,7 +3,7 @@ const url = require("url");
 const zlib = require("zlib");
 
 /**
- * Nodejs backend router
+ * Nodejs router module
  * ### Install
  * ```
  * npm install @ndiing/router
