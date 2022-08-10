@@ -160,13 +160,12 @@ class Response {
      * @param {Any} data
      */
     buffer(data = "") {
-        this._body.writeHead(this.status, this.headers.entries());
-
         if (/json/.test(this.headers.get("content-type"))) {
             data = JSON.stringify(data);
         }
         data = Buffer.from(data);
 
+        this._body.writeHead(this.status, this.headers.entries());
         this.body.write(data);
         this.body.end();
     }
