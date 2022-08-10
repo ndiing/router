@@ -405,6 +405,10 @@ function router() {
     return app;
 }
 
+router.URL2 = URL2
+router.Headers = Headers
+router.Request = Request
+router.Response = Response
 router.Router = Router;
 module.exports = router;
 
