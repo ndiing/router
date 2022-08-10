@@ -202,7 +202,7 @@ class Response {
      */
     redirect(url, status = 302) {
         this.status = status;
-        this.headers.set("Location", url);
+        this.headers.set("location", url);
         this.buffer();
     }
 }
