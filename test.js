@@ -22,8 +22,8 @@ var routerA = new Router([
         callback: async (req, res, next) => {
             console.log(req.url); // get url info
             console.log(req.url.searchParams); // get searchParams/query string as object
-            console.log(req.params);// get path params
-            console.log(req.cookies);// get cookies
+            console.log(req.params); // get path params
+            console.log(req.cookies); // get cookies
             console.log(await req.json()); // get body as json
             res.cookie("name1", "value1"); // set cookie
             res.cookie({ name: "name2", value: "value2" }); // set cookie with object
@@ -63,6 +63,23 @@ var app = new Router([
             res.json({ message: "from app" });
         },
     },
+    {
+        method: "GET",
+        path: "/error",
+        callback: (req, res, next) => {
+            throw new Error("test error message");
+        },
+    },
+    {
+        callback: (req, res, next) => {
+            next({ message: "page not found" });
+        },
+    },
+    {
+        callback: (err, req, res, next) => {
+            res.json({ err });
+        },
+    },
 ]);
 
 app.listen(6666);
@@ -81,8 +98,8 @@ routerA.get("/", (req, res, next) => {
 routerA.patch("/:id", async (req, res, next) => {
     console.log(req.url); // get url info
     console.log(req.url.searchParams); // get searchParams/query string as object
-    console.log(req.params);// get path params
-    console.log(req.cookies);// get cookies
+    console.log(req.params); // get path params
+    console.log(req.cookies); // get cookies
     console.log(await req.json()); // get body as json
     res.cookie("name1", "value1"); // set cookie
     res.cookie({ name: "name2", value: "value2" }); // set cookie with object
@@ -106,6 +123,15 @@ app.use((req, res, next) => {
 app.use("/router1", router1);
 app.get("/", (req, res, next) => {
     res.json({ message: "from app" });
+});
+app.get("/error", (req, res, next) => {
+    throw new Error("test error message");
+});
+app.use((req, res, next) => {
+    next({ message: "page not found" });
+});
+app.use((err, req, res, next) => {
+    res.json({ err });
 });
 
 app.listen(5555);

@@ -285,10 +285,17 @@ class Router {
                 err = JSON.parse(err);
             }
 
-            if (res.status == 200) {
-                res.status = 500;
+            try {
+                const { callback: [callback] = [] } = this.routes[this.routes.length - 1];
+                callback(err, req, res, (next) => {
+                    throw next;
+                });
+            } catch (error) {
+                if (res.status == 200) {
+                    res.status = 500;
+                }
+                res.json(err);
             }
-            res.json(err);
         }
     }
 

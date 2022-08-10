@@ -9,6 +9,12 @@ GET http://localhost:5555/
 GET http://localhost:5555/router1
 
 ###
+GET http://localhost:5555/undefined
+
+###
+GET http://localhost:5555/error
+
+###
 GET http://localhost:5555/router1/routerA
 
 ###
