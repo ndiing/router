@@ -1,10 +1,10 @@
 {
   "dependencies": {
-    "@ndiing/fetch": "^2.1.0"
+    "@ndiing/fetch": "^2.0.1"
   },
   "name": "@ndiing/router",
   "description": "<a name=\"module_router\"></a>",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "main": "index.js",
   "devDependencies": {},
   "scripts": {
