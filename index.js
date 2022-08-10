@@ -334,10 +334,7 @@ class Router {
             backlog = hostname;
             hostname = "0.0.0.0";
         }
-        const options = {
-            insecureHTTPParser: true,
-            keepAlive: true,
-        };
+        const options = {};
         const server = http.createServer(options).listen(port, hostname, backlog);
         server.on("request", this.requestListener);
         return server;
