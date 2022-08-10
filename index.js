@@ -87,7 +87,24 @@ class Response {
     constructor(body, options = {}) {
         this.body = body;
         this._body = body;
+
+        options.headers = {
+            "Access-Control-Allow-Origin": "*",
+            "X-XSS-Protection": "1; mode=block",
+            "Content-Security-Policy": "default-src 'self'",
+            "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+            "X-Frame-Options": "DENY",
+            "X-Content-Type-Options": "nosniff",
+            "X-Download-Options": "noopen",
+            "Referrer-Policy": "no-referrer",
+            "Cache-Control": "no-store",
+            "X-DNS-Prefetch-Control": "on",
+            "X-Powered-By": "Ndiing",
+            ...options.headers,
+        };
+
         this.headers = new Headers(options.headers);
+
         this.status = options.status || options.statusCode;
 
         // accept-encoding
@@ -147,7 +164,7 @@ class Response {
      *
      * @param {Any} data
      */
-    buffer(data) {
+    buffer(data = "") {
         this._body.writeHead(this.status, this.headers.entries());
 
         if (/json/.test(this.headers.get("content-type"))) {
@@ -173,7 +190,20 @@ class Response {
      * @param {String} value
      */
     text(value) {
+        // this.headers.set("content-type", "text/plain");
+        this.headers.set("content-type", "text/html");
         this.buffer(value);
+    }
+
+    /**
+     * 
+     * @param {String} url 
+     * @param {Number} status 
+     */
+    redirect(url, status = 302) {
+        this.status = status;
+        this.headers.set("Location", url);
+        this.buffer();
     }
 }
 

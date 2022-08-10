@@ -16,6 +16,7 @@
         * [.buffer(data)](#module_router..Response+buffer)
         * [.json(value)](#module_router..Response+json)
         * [.text(value)](#module_router..Response+text)
+        * [.redirect(url, status)](#module_router..Response+redirect)
     * [~Router](#module_router..Router)
         * [new Router(routes)](#new_module_router..Router_new)
         * [.add(method, path, ...callback)](#module_router..Router+add)
@@ -74,6 +75,7 @@
     * [.buffer(data)](#module_router..Response+buffer)
     * [.json(value)](#module_router..Response+json)
     * [.text(value)](#module_router..Response+text)
+    * [.redirect(url, status)](#module_router..Response+redirect)
 
 <a name="new_module_router..Response_new"></a>
 
@@ -122,6 +124,16 @@
 | Param | Type |
 | --- | --- |
 | value | <code>String</code> | 
+
+<a name="module_router..Response+redirect"></a>
+
+#### response.redirect(url, status)
+**Kind**: instance method of [<code>Response</code>](#module_router..Response)  
+
+| Param | Type | Default |
+| --- | --- | --- |
+| url | <code>String</code> |  | 
+| status | <code>Number</code> | <code>302</code> | 
 
 <a name="module_router..Router"></a>
 

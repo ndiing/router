@@ -13,7 +13,8 @@ var routerA = new Router([
         method: "GET",
         path: "/",
         callback: (req, res, next) => {
-            res.json({ message: "from routerA" });
+            res.redirect("http://127.0.0.1:3000/");
+            // res.json({ message: "from routerA" });
         },
     },
     {
@@ -82,7 +83,7 @@ var app = new Router([
     },
 ]);
 
-app.listen(6666);
+app.listen(5000);
 
 // or Intialize routes with express like style
 
@@ -134,6 +135,6 @@ app.use((err, req, res, next) => {
     res.json({ err });
 });
 
-app.listen(5555);
+app.listen(3000);
 
 // both technique are the same result
