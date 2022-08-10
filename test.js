@@ -138,3 +138,7 @@ app.use((err, req, res, next) => {
 app.listen(3000);
 
 // both technique are the same result
+
+// ab -k -c 350 -n 20000 http://127.0.0.1:3000/
+// ab -n 20000 -c 350 http://127.0.0.1:3000/
+

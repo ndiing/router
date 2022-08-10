@@ -121,11 +121,6 @@ class Response {
             this.body = zlib.createBrotliCompress();
         }
 
-        // keep-alive
-        if (this.headers.has("content-encoding") || /keep-alive/i.test(this.body.req.headers["connection"])) {
-            this.headers.set("connection", "keep-alive");
-        }
-
         if (this.body !== body) {
             this.body.pipe(body);
         }
@@ -190,7 +185,6 @@ class Response {
      * @param {String} value
      */
     text(value) {
-        // this.headers.set("content-type", "text/plain");
         this.headers.set("content-type", "text/html");
         this.buffer(value);
     }
@@ -345,7 +339,9 @@ class Router {
             insecureHTTPParser: true,
             keepAlive: true,
         };
-        return http.createServer(options, this.requestListener).listen(port, hostname, backlog);
+        const server = http.createServer(options).listen(port, hostname, backlog);
+        server.on("request", this.requestListener);
+        return server;
     }
 }
 
