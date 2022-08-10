@@ -1,0 +1,24 @@
+###
+GET http://localhost:5555?user=1&user=2&user=3&user=4&group=a
+Accept-Encoding: *
+
+###
+GET http://localhost:5555/
+
+###
+GET http://localhost:5555/router1
+
+###
+GET http://localhost:5555/router1/routerA
+
+###
+PATCH http://localhost:5555/router1/routerA/1?name=1&name=2&group=a
+Content-Type: application/json
+
+{"user":"name","pass":"word"}
+
+###
+POST http://localhost:5555?user=1&user=2&user=3&user=4&group=a
+Content-Type: application/json
+
+{"user":"name","pass":"word"}
