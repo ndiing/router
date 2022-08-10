@@ -4,6 +4,7 @@ Accept-Encoding: *
 
 ###
 GET http://127.0.0.1:5000/
+Connection: keep-alive
 
 ###
 GET http://127.0.0.1:5000/router1

@@ -196,9 +196,9 @@ class Response {
     }
 
     /**
-     * 
-     * @param {String} url 
-     * @param {Number} status 
+     *
+     * @param {String} url
+     * @param {Number} status
      */
     redirect(url, status = 302) {
         this.status = status;
@@ -341,7 +341,11 @@ class Router {
             backlog = hostname;
             hostname = "0.0.0.0";
         }
-        return http.createServer(this.requestListener).listen(port, hostname, backlog);
+        const options = {
+            insecureHTTPParser: true,
+            keepAlive: true,
+        };
+        return http.createServer(options, this.requestListener).listen(port, hostname, backlog);
     }
 }
 
