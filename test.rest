@@ -1,32 +1,13 @@
 ###
-GET http://127.0.0.1:5000?user=1&user=2&user=3&user=4&group=a
-Accept-Encoding: *
-Connection: keep-alive
-
+GET http://localhost:3000/
+Cookie: name1=value1; name2=value2; name3=value3
+Accept-Encoding: gzip, deflate, br
 ###
-GET http://127.0.0.1:3000/
-Connection: keep-alive
-
+GET http://localhost:3000/book
 ###
-GET http://127.0.0.1:5000/router1
-
+GET http://localhost:3000/router1/routerA
 ###
-GET http://127.0.0.1:5000/undefined
-
-###
-GET http://127.0.0.1:5000/error
-
-###
-GET http://127.0.0.1:5000/router1/routerA
-
-###
-PATCH http://127.0.0.1:5000/router1/routerA/1?name=1&name=2&group=a
-Content-Type: application/json
-
-{"user":"name","pass":"word"}
-
-###
-POST http://127.0.0.1:5000?user=1&user=2&user=3&user=4&group=a
+PATCH http://localhost:3000/router1/1?user=1&user=2&user=3&group=b
 Content-Type: application/json
 
 {"user":"name","pass":"word"}
