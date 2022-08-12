@@ -384,3 +384,5 @@ function Layer() {
 
 Layer.Router = Router;
 module.exports = Layer;
+
+// jsdoc2md router/index.js > router/README.md
