@@ -77,6 +77,7 @@
 | res.send | <code>function</code> | 
 | res.json | <code>function</code> | 
 | res.redirect | <code>function</code> | 
+| res.cookie | <code>function</code> | 
 
 <a name="module_router..Router+listen"></a>
 

@@ -1,4 +1,3 @@
-const { Console } = require("console");
 var { Router } = require("./index");
 
 // Initialize routes with class Router([/* routes */])
@@ -22,10 +21,10 @@ var routerA = new Router([
         path: "/:id",
         callback: async (req, res, next) => {
             console.log(req.url); // get url info
-            console.log(req.url.searchParams); // get searchParams/query string as object
+            console.log(req.query); // get searchParams/query string as object
             console.log(req.params); // get path params
             console.log(req.cookies); // get cookies
-            console.log(await req.json()); // get body as json
+            console.log(req.body); // get body as json
             res.cookie("name1", "value1"); // set cookie
             res.cookie({ name: "name2", value: "value2" }); // set cookie with object
             res.cookie("name1"); // remove previous cookie`
@@ -98,10 +97,10 @@ routerA.get("/", (req, res, next) => {
 });
 routerA.patch("/:id", async (req, res, next) => {
     console.log(req.url); // get url info
-    console.log(req.url.searchParams); // get searchParams/query string as object
+    console.log(req.query); // get searchParams/query string as object
     console.log(req.params); // get path params
     console.log(req.cookies); // get cookies
-    console.log(await req.json()); // get body as json
+    console.log(req.body); // get body as json
     res.cookie("name1", "value1"); // set cookie
     res.cookie({ name: "name2", value: "value2" }); // set cookie with object
     res.cookie("name1"); // remove previous cookie`
@@ -141,4 +140,3 @@ app.listen(3000);
 
 // ab -k -c 350 -n 20000 http://127.0.0.1:3000/
 // ab -n 20000 -c 350 http://127.0.0.1:3000/
-

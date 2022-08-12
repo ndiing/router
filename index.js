@@ -1,5 +1,6 @@
 const http = require("http");
 const zlib = require("zlib");
+const { Readable } = require("stream");
 const { URL2, Headers } = require("@ndiing/fetch");
 
 /**
@@ -170,11 +171,18 @@ class Router {
      * @property {Function} res.send
      * @property {Function} res.json
      * @property {Function} res.redirect
+     * @property {Function} res.cookie
      * @returns {Stream}
      */
     response(res) {
+        /**
+         *
+         */
         res.status = res.statusCode;
 
+        /**
+         *
+         */
         res.headers = new Headers({
             "Access-Control-Allow-Origin": "*",
             "X-XSS-Protection": "1; mode=block",
@@ -190,48 +198,94 @@ class Router {
             ...res.headers,
         });
 
+        /**
+         *
+         * @param {String} body
+         */
         res.send = (body = "") => {
-            let writableStream;
+            res.contentType = res.headers.get("content-type");
+            if (/json/.test(res.contentType)) {
+                body = JSON.stringify(body);
+            }
+
+            let readable = body;
             let acceptEncoding = res.req.headers.get("accept-encoding");
+            if (!(body instanceof Readable)) {
+                readable = new Readable();
+                readable.push(body);
+                readable.push(null);
+
+                body = readable;
+            }
+
             if (/\bgzip\b/.test(acceptEncoding)) {
                 res.headers.set("content-encoding", "gzip");
-                writableStream = zlib.createGzip();
+                readable = body.pipe(zlib.createGzip());
             } else if (/\bdeflate\b/.test(acceptEncoding)) {
                 res.headers.set("content-encoding", "deflate");
-                writableStream = zlib.createDeflate();
+                readable = body.pipe(zlib.createDeflate());
             } else if (/\bbr\b/.test(acceptEncoding)) {
                 res.headers.set("content-encoding", "br");
-                writableStream = zlib.createBrotliCompress();
+                readable = body.pipe(zlib.createBrotliCompress());
             }
 
-            if (writableStream) {
-                writableStream.pipe(res);
-            }
+            body = readable;
 
-            let stream = writableStream || res;
-            res.writeHead(res.status, res.headers);
-            if (body) {
-                res.contentType = res.headers.get("content-type");
-                if (/json/.test(res.contentType)) {
-                    body = JSON.stringify(body);
-                }
-
-                body = Buffer.from(body);
-                stream.write(body);
-            }
-
-            stream.end();
+            res.writeHead(res.status, res.headers.entries());
+            body.pipe(res);
         };
 
+        /**
+         *
+         * @param {Object} body
+         */
         res.json = (body) => {
             res.headers.set("content-type", "application/json");
             res.send(body);
         };
 
+        /**
+         *
+         * @param {String} url
+         * @param {Number} status
+         */
         res.redirect = (url, status = 302) => {
             res.status = status;
             res.headers.set("location", url);
             res.send();
+        };
+
+        /**
+         *
+         * @param {String/Object} name
+         * @param {String} value
+         * @param {Object} options
+         */
+        res.cookie = (name, value, options = {}) => {
+            let object = name;
+            if (typeof name == "string") {
+                object = {
+                    name,
+                    value,
+                    ...options,
+                };
+            }
+            object.value = object.value || "";
+
+            if (!object.value) {
+                object.expires = new Date(0);
+                object.maxAge = 0;
+            }
+
+            const array = [object.name + "=" + object.value];
+            if (object.expires !== undefined) array.push("Expires=" + object.expires.toUTCString());
+            if (object.maxAge !== undefined) array.push("Max-Age=" + object.maxAge);
+            if (object.domain !== undefined) array.push("Domain=" + object.domain);
+            if (object.path !== undefined) array.push("Path=" + object.path);
+            if (object.secure !== undefined) array.push("Secure");
+            if (object.httpOnly !== undefined) array.push("HttpOnly");
+            if (object.sameSite !== undefined) array.push("SameSite=" + object.sameSite);
+            res.headers.append("set-cookie", array.join("; "));
         };
 
         return res;
