@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "@ndiing/fetch": "^2.0.1"
+    "@ndiing/fetch": "^2.0.2"
   },
   "name": "@ndiing/router",
   "description": "<a name=\"module_router\"></a>",

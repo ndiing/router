@@ -15,41 +15,38 @@ const { URL2, Headers } = require("@ndiing/fetch");
  *
  */
 class Router {
-    routes = [];
-
-    constructor(routes = []) {
+    /**
+     *
+     */
+    constructor() {
         this.requestListener = this.requestListener.bind(this);
 
-        for (let i = 0; i < http.METHODS.length; i++) {
-            const method = http.METHODS[i];
+        // not all
+        // http.METHODS
+        const methods = ["POST", "GET", "PATCH", "PUT", "DELETE"];
 
+        for (let i = 0; i < methods.length; i++) {
+            const method = methods[i];
             this[method.toLowerCase()] = (...args) => {
                 this.add(method, ...args);
             };
         }
-
-        for (let j = 0; j < routes.length; j++) {
-            const { method = ".*", path = ".*", callback } = routes[j];
-            this.add({ method, path, callback });
-        }
     }
+
+    routes = [];
 
     add(method, path, ...callback) {
         if (typeof method == "object") {
             ({ method, path, callback } = method);
         }
-
         if (!Array.isArray(callback)) {
             callback = [callback];
         }
-
         if (typeof path == "function") {
             callback = [path, ...callback];
             path = ".*";
         }
-
-        let [{ routes }] = callback;
-
+        const [{ routes }] = callback;
         if (routes) {
             callback = [];
             for (let i = 0; i < routes.length; i++) {
@@ -58,105 +55,94 @@ class Router {
                 this.add(route);
             }
         } else {
-            let regexp = path;
-            regexp = "^" + regexp.replace(/\:(\w+)/g, "(?<$1>[^/]+)").replace(/\/?$/, "/?$");
-            regexp = new RegExp(regexp, "i");
+            let regexp = path.source || path;
+            regexp = regexp.replace(/\:(\w+)/g, "(?<$1>[^/]+)").replace(/\/?$/, "/?$");
+            regexp = new RegExp("^" + regexp);
             this.routes.push({ method, path, callback, regexp });
         }
     }
 
     /**
-     *
-     * @param  {String/Function} path
-     * @param  {Function} callback
+     * 
+     * @param {String/RegExp} path 
+     * @param {Function} callback 
      * @method post
      */
 
     /**
-     *
-     * @param  {String/Function} path
-     * @param  {Function} callback
+     * 
+     * @param {String/RegExp} path 
+     * @param {Function} callback 
      * @method get
      */
 
     /**
-     *
-     * @param  {String/Function} path
-     * @param  {Function} callback
+     * 
+     * @param {String/RegExp} path 
+     * @param {Function} callback 
      * @method patch
      */
 
     /**
-     *
-     * @param  {String/Function} path
-     * @param  {Function} callback
+     * 
+     * @param {String/RegExp} path 
+     * @param {Function} callback 
      * @method put
      */
 
     /**
-     *
-     * @param  {String/Function} path
-     * @param  {Function} callback
+     * 
+     * @param {String/RegExp} path 
+     * @param {Function} callback 
      * @method delete
      */
 
     /**
-     *
-     * @param  {String/Function} path
-     * @param  {Function} callback
+     * 
+     * @param {String/Function} path 
+     * @param {Function} callback 
      */
     use(...args) {
         this.add(".*", ...args);
     }
 
     /**
-     *
-     * @param {Stream} req
-     * @property {Object} req.url2
-     * @property {String} req.path
-     * @property {Object} req.params
-     * @property {Object} req.query
-     * @property {Object} req.headers
-     * @property {Object} req.cookies
-     * @property {String} req.contentType
-     * @property {Any} req.body
-     * @returns {Stream}
+     * 
+     * @param {Object/Stream} req 
+     * @param {Object} req.headers 
+     * @param {Object} req.path 
+     * @param {Object} req.query 
+     * @param {Object} req.params 
+     * @param {Object} req.cookies 
+     * @param {Any} req.body 
+     * @returns {Object/Stream}
      */
     async request(req) {
-        req.url2 = new URL2(req.url);
+        const url = new URL2(req.url);
 
-        req.path = req.url2.pathname;
-
-        req.params = {};
-
-        req.query = req.url2.searchParams;
         req.headers = new Headers(req.headers);
+        req.path = url.pathname;
+        req.query = url.searchParams;
+        // req.params = {};
 
         req.cookies = {};
-
-        // cookie
-        if (req.headers.has("cookie")) {
-            const cookies = req.headers.get("cookie").matchAll(/([^\=;]+?)\=([^\=;]+?)?(; |$)/g);
-            for (const [, name, value] of cookies) {
+        if (req.headers.has("Cookie")) {
+            for (const [, name, value] of req.headers.get("Cookie").matchAll(/([^\=;]+?)\=([^\=;]+?)?(; |$)/g)) {
                 req.cookies[name] = value;
             }
         }
 
-        // body
+        // req.body = {};
         if (!/(GET|HEAD|DELETE)/.test(req.method)) {
-            req.contentType = req.headers.get("content-type");
-
-            req.body = [];
-
+            const buffer = [];
             for await (const chunk of req) {
-                req.body.push(chunk);
+                buffer.push(chunk);
             }
+            req.body = Buffer.concat(buffer).toString();
 
-            req.body = Buffer.concat(req.body);
-            if (/json/.test(req.contentType)) {
+            const contentType = req.headers.get("Content-Type");
+            if (/json/.test(contentType)) {
                 req.body = JSON.parse(req.body);
-            } else if (/text/.test(req.contentType)) {
-                req.body = "" + req.body;
             }
         }
 
@@ -164,129 +150,87 @@ class Router {
     }
 
     /**
-     *
-     * @param {Stream} res
-     * @property {Number} res.status
-     * @property {Object} res.headers
-     * @property {Function} res.send
-     * @property {Function} res.json
-     * @property {Function} res.redirect
-     * @property {Function} res.cookie
-     * @returns {Stream}
+     * 
+     * @param {Object/Stream} req 
+     * @param {Object/Stream} res 
+     * @param {Number} res.status 
+     * @param {Object} res.headers 
+     * @param {Function} res.send 
+     * @param {Function} res.json 
+     * @param {Function} res.cookie 
+     * @param {Function} res.redirect 
+     * @returns {Object/Stream}
      */
-    response(res) {
-        /**
-         *
-         */
+    response(req, res) {
         res.status = res.statusCode;
 
-        /**
-         *
-         */
-        res.headers = new Headers({
-            "Access-Control-Allow-Origin": "*",
-            "X-XSS-Protection": "1; mode=block",
+        res.headers = {
             "Content-Security-Policy": "default-src 'self'",
-            "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
-            "X-Frame-Options": "DENY",
+            "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
             "X-Content-Type-Options": "nosniff",
-            "X-Download-Options": "noopen",
-            "Referrer-Policy": "no-referrer",
-            "Cache-Control": "no-store",
-            "X-DNS-Prefetch-Control": "on",
+            "X-Frame-Options": "DENY",
+            "X-XSS-Protection": "1; mode=block",
+            "Access-Control-Allow-Origin": "*",
+            "Content-Language": "en-US",
             "X-Powered-By": "Ndiing",
             ...res.headers,
-        });
+        };
 
-        /**
-         *
-         * @param {String} body
-         */
-        res.send = (body = "") => {
-            res.contentType = res.headers.get("content-type");
-            if (/json/.test(res.contentType)) {
-                body = JSON.stringify(body);
-            }
+        // ETag: "33a64df551425fcc55e4d42a148795d9f25f89d4"
 
-            let readable = body;
-            let acceptEncoding = res.req.headers.get("accept-encoding");
-            if (!(body instanceof Readable)) {
-                readable = new Readable();
-                readable.push(body);
-                readable.push(null);
+        res.headers = new Headers(res.headers);
 
-                body = readable;
-            }
+        res.send = (data = "") => {
+            let readable = new Readable();
+            readable.push(data);
+            readable.push(null);
 
+            let acceptEncoding = req.headers.get("Accept-Encoding");
             if (/\bgzip\b/.test(acceptEncoding)) {
-                res.headers.set("content-encoding", "gzip");
-                readable = body.pipe(zlib.createGzip());
+                res.headers.set("Content-Encoding", "gzip");
+                readable = readable.pipe(zlib.createGzip());
             } else if (/\bdeflate\b/.test(acceptEncoding)) {
-                res.headers.set("content-encoding", "deflate");
-                readable = body.pipe(zlib.createDeflate());
+                res.headers.set("Content-Encoding", "deflate");
+                readable = readable.pipe(zlib.createDeflate());
             } else if (/\bbr\b/.test(acceptEncoding)) {
-                res.headers.set("content-encoding", "br");
-                readable = body.pipe(zlib.createBrotliCompress());
+                res.headers.set("Content-Encoding", "br");
+                readable = readable.pipe(zlib.createBrotliCompress());
             }
-
-            body = readable;
 
             res.writeHead(res.status, res.headers.entries());
-            body.pipe(res);
+            readable.pipe(res);
         };
 
-        /**
-         *
-         * @param {Object} body
-         */
-        res.json = (body) => {
-            res.headers.set("content-type", "application/json");
-            res.send(body);
+        res.json = (data = {}) => {
+            res.headers.set("Content-Type", "application/json");
+            res.send(JSON.stringify(data));
         };
 
-        /**
-         *
-         * @param {String} url
-         * @param {Number} status
-         */
-        res.redirect = (url, status = 302) => {
-            res.status = status;
-            res.headers.set("location", url);
-            res.send();
-        };
-
-        /**
-         *
-         * @param {String/Object} name
-         * @param {String} value
-         * @param {Object} options
-         */
         res.cookie = (name, value, options = {}) => {
             let object = name;
             if (typeof name == "string") {
-                object = {
-                    name,
-                    value,
-                    ...options,
-                };
+                object = { name, value, ...options };
             }
             object.value = object.value || "";
+            let array = [object.name + "=" + object.value];
 
             if (!object.value) {
                 object.expires = new Date(0);
                 object.maxAge = 0;
             }
 
-            const array = [object.name + "=" + object.value];
-            if (object.expires !== undefined) array.push("Expires=" + object.expires.toUTCString());
-            if (object.maxAge !== undefined) array.push("Max-Age=" + object.maxAge);
-            if (object.domain !== undefined) array.push("Domain=" + object.domain);
-            if (object.path !== undefined) array.push("Path=" + object.path);
-            if (object.secure !== undefined) array.push("Secure");
-            if (object.httpOnly !== undefined) array.push("HttpOnly");
-            if (object.sameSite !== undefined) array.push("SameSite=" + object.sameSite);
-            res.headers.append("set-cookie", array.join("; "));
+            if (object.expires !== undefined) array.push(`Expires=${object.expires.toUTCString()}`);
+            if (object.maxAge !== undefined) array.push(`Max-Age=${object.maxAge}`);
+            if (object.domain !== undefined) array.push(`Domain=${object.domain}`);
+            if (object.path !== undefined) array.push(`Path=${object.path}`);
+            if (object.secure !== undefined) array.push(`Secure`);
+            if (object.httpOnly !== undefined) array.push(`HttpOnly`);
+            if (object.sameSite !== undefined) array.push(`SameSite=${object.sameSite}`);
+
+            res.headers.append("Set-Cookie", array.join("; "));
         };
+
+        // Location: <url>
 
         return res;
     }
@@ -294,95 +238,159 @@ class Router {
     async requestListener(req, res) {
         try {
             req = await this.request(req);
-            res = this.response(res);
+            res = this.response(req, res);
+            await this.forEachRoute(req, res);
 
-            for (let i = 0; i < this.routes.length; i++) {
-                const route = this.routes[i];
-                const passed = (route.method == ".*" || route.method == req.method) && route.regexp.test(req.path);
-
-                if (!passed) {
-                    continue;
-                }
-
-                req.params = { ...req.path.match(route.regexp)?.groups };
-
-                for (let j = 0; j < route.callback.length; j++) {
-                    const callback = route.callback[j];
-
-                    try {
-                        await new Promise((resolve, reject) => {
-                            callback(req, res, (next) => {
-                                if (next == undefined) {
-                                    resolve();
-                                } else {
-                                    reject(next);
-                                }
-                            });
-                        });
-                    } catch (error) {
-                        if (!(error instanceof TypeError)) {
-                            throw error;
-                        }
-                    }
-                }
-            }
-
-            res.status = 404;
-            throw { message: http.STATUS_CODES[res.status] };
+            this.handleDefault(res);
         } catch (err) {
             if (typeof err == "object") {
-                let replacer = Object.getOwnPropertyNames(err);
+                const replacer = Object.getOwnPropertyNames(err);
                 err = JSON.stringify(err, replacer);
                 err = JSON.parse(err);
             }
 
             try {
                 const { callback: [callback] = [] } = this.routes[this.routes.length - 1];
-                callback(err, req, res, (next) => {
-                    throw next;
+                callback(err, req, res, (err) => {
+                    throw err;
                 });
             } catch (error) {
-                if (res.status == 200) {
-                    res.status = 500;
-                }
-
-                res.json(err);
+                this.handleError(res, err);
             }
         }
     }
 
-    /**
-     *
-     * @param {Number} port
-     * @param {String/Function} hostname
-     * @param {Function} backlog
-     * @returns {Object}
-     */
-    listen(port, hostname, backlog) {
-        if (typeof hostname == "function") {
-            backlog = hostname;
-            hostname = "0.0.0.0";
+    handleError(res, err) {
+        if (res.status == 200) {
+            res.status = 500;
         }
 
-        return http.createServer(this.requestListener).listen(port, hostname, backlog);
+        res.json(err);
+    }
+
+    handleDefault(res) {
+        res.status = 404;
+        throw { message: http.STATUS_CODES[res.status] };
+    }
+
+    async forEachRoute(req, res) {
+        for (let i = 0; i < this.routes.length; i++) {
+            const route = this.routes[i];
+            const passed = (route.method == ".*" || route.method == req.method) && route.regexp.test(req.path);
+
+            if (!passed) {
+                continue;
+            }
+
+            // params
+            req.params = { ...req.path.match(route.regexp)?.groups };
+
+            await this.forEachCallback(route, req, res);
+        }
+    }
+
+    async forEachCallback(route, req, res) {
+        for (let j = 0; j < route.callback.length; j++) {
+            const callback = route.callback[j];
+
+            if (callback.length > 3) {
+                continue;
+            }
+            await this.handleCallback(callback, req, res);
+        }
+    }
+
+    async handleCallback(callback, req, res) {
+        return new Promise((resolve, reject) => {
+            callback(req, res, (err) => {
+                if (err !== undefined) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
+            });
+        });
+    }
+
+    /**
+     * 
+     * @param  {Number} port 
+     * @param  {String/Function} hostname
+     * @param  {Function} backlog 
+     * @returns {Server}
+     */
+    listen(...args) {
+        const server = http.createServer(this.requestListener).listen(...args);
+        return server;
     }
 }
 
-function Layer() {
-    const router = new Router();
-    const app = (req, res) => router.requestListener(req, res);
-    app.routes = router.routes;
-    const methods = ["add", "use", "listen"].concat(http.METHODS);
-    for (let i = 0; i < methods.length; i++) {
-        const method = methods[i];
-        app[method.toLowerCase()] = (...args) => {
-            router[method.toLowerCase()](...args);
-        };
-    }
-    return app;
-}
+module.exports = Router;
 
-Layer.Router = Router;
-module.exports = Layer;
+// // @test
+// const routerA = new Router();
+// routerA.use((req, res, next) => {
+//     next();
+// });
+// routerA.get("/", (req, res, next) => {
+//     res.json({ message: "routerA get" });
+// });
+// routerA.patch("/:id", (req, res, next) => {
+//     res.cookie("name", "value");
+//     res.cookie({
+//         name: "name",
+//         value: "value",
+//     });
+//     res.cookie("name");
+//     res.json({
+//         path: req.path,
+//         query: req.query,
+//         params: req.params,
+//         cookies: req.cookies,
+//         body: req.body,
+//         message: "routerA patch",
+//     });
+// });
 
-// jsdoc2md router/index.js > router/README.md
+// const router2 = new Router();
+// router2.use((req, res, next) => {
+//     next();
+// });
+// router2.use("/routerA", routerA);
+// router2.get("/", (req, res, next) => {
+//     res.json({ message: "router2 get" });
+// });
+
+// const router1 = new Router();
+// router1.use((req, res, next) => {
+//     next();
+// });
+// router1.get("/", (req, res, next) => {
+//     res.json({ message: "router1 get" });
+// });
+
+// const app = new Router();
+// app.use((req, res, next) => {
+//     next();
+// });
+// app.use("/router1", router1);
+// app.use("/router2", router2);
+// app.get("/", (req, res, next) => {
+//     res.json({ message: "app get" });
+// });
+// app.get("/error", (req, res, next) => {
+//     throw new Error("message");
+// });
+// app.use((req, res, next) => {
+//     next({ message: "custom not found" });
+// });
+// app.use((err, req, res, next) => {
+//     // custom error
+//     res.json({ err });
+// });
+
+// app.listen(3000);
+
+// // var req = { method: "GET", url: "/book" };
+// // var res = { json: console.log, end: console.log };
+// // app.requestListener(req, res);
