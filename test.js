@@ -1,142 +1,71 @@
-var { Router } = require("./index");
+const Router = require('./index')
 
-// Initialize routes with class Router([/* routes */])
-
-var routerA = new Router([
-    {
-        callback: (req, res, next) => {
-            next();
-        },
-    },
-    {
-        method: "GET",
-        path: "/",
-        callback: (req, res, next) => {
-            res.redirect("http://127.0.0.1:3000/");
-            // res.json({ message: "from routerA" });
-        },
-    },
-    {
-        method: "PATCH",
-        path: "/:id",
-        callback: async (req, res, next) => {
-            console.log(req.url); // get url info
-            console.log(req.query); // get searchParams/query string as object
-            console.log(req.params); // get path params
-            console.log(req.cookies); // get cookies
-            console.log(req.body); // get body as json
-            res.cookie("name1", "value1"); // set cookie
-            res.cookie({ name: "name2", value: "value2" }); // set cookie with object
-            res.cookie("name1"); // remove previous cookie`
-            res.json({ message: "from routerA" });
-        },
-    },
-]);
-
-var router1 = new Router([
-    {
-        callback: (req, res, next) => {
-            next();
-        },
-    },
-    { path: "/routerA", callback: routerA },
-    {
-        method: "GET",
-        path: "/",
-        callback: (req, res, next) => {
-            res.json({ message: "from router1" });
-        },
-    },
-]);
-
-var app = new Router([
-    {
-        callback: (req, res, next) => {
-            next();
-        },
-    },
-    { path: "/router1", callback: router1 },
-    {
-        method: "GET",
-        path: "/",
-        callback: (req, res, next) => {
-            res.json({ message: "from app" });
-        },
-    },
-    {
-        method: "GET",
-        path: "/error",
-        callback: (req, res, next) => {
-            throw new Error("test error message");
-        },
-    },
-    {
-        callback: (req, res, next) => {
-            next({ message: "page not found" });
-        },
-    },
-    {
-        callback: (err, req, res, next) => {
-            res.json({ err });
-        },
-    },
-]);
-
-app.listen(5000);
-
-// or Intialize routes with express like style
-
-var Router = require("./index");
-
-var routerA = Router();
+// @test
+const routerA = new Router();
 routerA.use((req, res, next) => {
     next();
 });
 routerA.get("/", (req, res, next) => {
-    res.json({ message: "from routerA" });
+    res.json({ message: "routerA get" });
 });
-routerA.patch("/:id", async (req, res, next) => {
-    console.log(req.url); // get url info
-    console.log(req.query); // get searchParams/query string as object
-    console.log(req.params); // get path params
-    console.log(req.cookies); // get cookies
-    console.log(req.body); // get body as json
-    res.cookie("name1", "value1"); // set cookie
-    res.cookie({ name: "name2", value: "value2" }); // set cookie with object
-    res.cookie("name1"); // remove previous cookie`
-    res.json({ message: "from routerA" });
+routerA.patch("/:id", (req, res, next) => {
+    res.cookie("name", "value");
+    res.cookie({
+        name: "name",
+        value: "value",
+    });
+    res.cookie("name");
+    res.json({
+        path: req.path,
+        query: req.query,
+        params: req.params,
+        cookies: req.cookies,
+        body: req.body,
+        message: "routerA patch",
+    });
 });
 
-var router1 = Router();
+const router2 = new Router();
+router2.use((req, res, next) => {
+    next();
+});
+router2.use("/routerA", routerA);
+router2.get("/", (req, res, next) => {
+    res.json({ message: "router2 get" });
+});
+
+const router1 = new Router();
 router1.use((req, res, next) => {
     next();
 });
-router1.use("/routerA", routerA);
 router1.get("/", (req, res, next) => {
-    res.json({ message: "from router1" });
+    res.json({ message: "router1 get" });
 });
 
-var app = Router();
+const app = new Router();
 app.use((req, res, next) => {
     next();
 });
 app.use("/router1", router1);
+app.use("/router2", router2);
 app.get("/", (req, res, next) => {
-    res.json({ message: "from app" });
+    res.json({ message: "app get" });
 });
 app.get("/error", (req, res, next) => {
-    throw new Error("test error message");
+    throw new Error("message");
 });
 app.use((req, res, next) => {
-    next({ message: "page not found" });
+    next({ message: "custom not found" });
 });
 app.use((err, req, res, next) => {
+    // custom error
     res.json({ err });
 });
 
-app.listen(3000);
+app.listen(3000, () => {
+    console.log('app listen on port 3000')
+});
 
-// both technique are the same result
-
-// ab -k -c 350 -n 20000 http://127.0.0.1:3000/
-// ab -n 20000 -c 350 http://127.0.0.1:3000/
+// var req = { method: "GET", url: "/book" };
+// var res = { json: console.log, end: console.log };
+// app.requestListener(req, res);
