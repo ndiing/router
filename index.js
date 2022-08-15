@@ -1,20 +1,18 @@
 const http = require("http");
 const zlib = require("zlib");
 const { Readable } = require("stream");
-const { URL2, Headers } = require("@ndiing/fetch");
+const { URL2, Headers } = require("@ndiinginc/fetch");
 
-/**
- *
- */
 class Router {
-    /**
-     *
-     */
-    constructor() {
-        this.requestListener = this.requestListener.bind(this);
+    routes = [];
 
-        // not all
-        // http.METHODS
+    constructor(routes = []) {
+        this.handleRequest = this.handleRequest.bind(this);
+        for (let i = 0; i < routes.length; i++) {
+            const { method = ".*", path = ".*", callback = [] } = routes[i];
+            this.add({ method, path, callback });
+        }
+
         const methods = ["POST", "GET", "PATCH", "PUT", "DELETE"];
 
         for (let i = 0; i < methods.length; i++) {
@@ -25,18 +23,6 @@ class Router {
         }
     }
 
-    /**
-     * @private
-     */
-    routes = [];
-
-    /**
-     *
-     * @param {*} method
-     * @param {*} path
-     * @param  {...any} callback
-     * @private
-     */
     add(method, path, ...callback) {
         if (typeof method == "object") {
             ({ method, path, callback } = method);
@@ -57,115 +43,51 @@ class Router {
                 this.add(route);
             }
         } else {
-            let regexp = path.source || path;
+            let regexp = path;
             regexp = regexp.replace(/\:(\w+)/g, "(?<$1>[^/]+)").replace(/\/?$/, "/?$");
-            regexp = new RegExp("^" + regexp);
+            regexp = new RegExp("^" + regexp, "i");
             this.routes.push({ method, path, callback, regexp });
         }
     }
 
-    /**
-     *
-     * @param {String/RegExp} path
-     * @param {Function} callback
-     * @method post
-     */
-
-    /**
-     *
-     * @param {String/RegExp} path
-     * @param {Function} callback
-     * @method get
-     */
-
-    /**
-     *
-     * @param {String/RegExp} path
-     * @param {Function} callback
-     * @method patch
-     */
-
-    /**
-     *
-     * @param {String/RegExp} path
-     * @param {Function} callback
-     * @method put
-     */
-
-    /**
-     *
-     * @param {String/RegExp} path
-     * @param {Function} callback
-     * @method delete
-     */
-
-    /**
-     *
-     * @param {String/Function} path
-     * @param {Function} callback
-     */
     use(...args) {
         this.add(".*", ...args);
     }
 
-    /**
-     *
-     * @param {Object/Stream} req
-     * @param {Object} req.headers
-     * @param {Object} req.path
-     * @param {Object} req.query
-     * @param {Object} req.params
-     * @param {Object} req.cookies
-     * @param {Any} req.body
-     * @returns {Object/Stream}
-     */
-    async request(req) {
-        const url = new URL2(req.url);
-
+    async beforeRequest(req, res) {
         req.headers = new Headers(req.headers);
-        req.path = url.pathname;
-        req.query = url.searchParams;
-        // req.params = {};
 
+        req.url2 = new URL2(req.url);
+
+        req.path = req.url2.pathname;
+        req.query = req.url2.searchParams;
+
+        req.params = {}; //
         req.cookies = {};
-        if (req.headers.has("Cookie")) {
-            for (const [, name, value] of req.headers.get("Cookie").matchAll(/([^\=;]+?)\=([^\=;]+?)?(; |$)/g)) {
+        if (req.headers.has("cookie")) {
+            for (const [, name, value] of req.headers.get("cookie").matchAll(/([^\=;]+)\=([^\=;]+)?(; |$)/g)) {
                 req.cookies[name] = value;
             }
         }
 
         // req.body = {};
         if (!/(GET|HEAD|DELETE)/.test(req.method)) {
-            const buffer = [];
+            let buffer = [];
             for await (const chunk of req) {
                 buffer.push(chunk);
             }
-            req.body = Buffer.concat(buffer).toString();
-
-            const contentType = req.headers.get("Content-Type");
-            if (/json/.test(contentType)) {
-                req.body = JSON.parse(req.body);
+            buffer = Buffer.concat(buffer);
+            const type = req.headers.get("content-type");
+            if (/json/.test(type)) {
+                req.body = JSON.parse(buffer);
+            } else {
+                req.body = "" + buffer;
             }
         }
-
-        return req;
     }
 
-    /**
-     *
-     * @param {Object/Stream} req
-     * @param {Object/Stream} res
-     * @param {Number} res.status
-     * @param {Object} res.headers
-     * @param {Function} res.send
-     * @param {Function} res.json
-     * @param {Function} res.cookie
-     * @param {Function} res.redirect
-     * @returns {Object/Stream}
-     */
-    response(req, res) {
-        res.status = res.statusCode;
-
+    beforeResponse(req, res) {
+        // default headers
         res.headers = {
             "Content-Security-Policy": "default-src 'self'",
             "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
@@ -178,49 +100,61 @@ class Router {
             ...res.headers,
         };
 
-        // ETag: "33a64df551425fcc55e4d42a148795d9f25f89d4"
-
         res.headers = new Headers(res.headers);
+        res.status = res.statusCode;
 
-        res.send = (data = "") => {
-            let readable = new Readable();
-            readable.push(data);
-            readable.push(null);
-
-            let acceptEncoding = req.headers.get("Accept-Encoding");
-            if (/\bgzip\b/.test(acceptEncoding)) {
-                res.headers.set("Content-Encoding", "gzip");
+        res.send = (value = "") => {
+            let readable = value;
+            if (!(value instanceof Readable)) {
+                readable = new Readable();
+                readable.push(value);
+                readable.push(null);
+            }
+            let encoding = req.headers.get("accept-encoding");
+            if (/\bgzip\b/.test(encoding)) {
+                res.headers.set("content-encoding", "gzip");
                 readable = readable.pipe(zlib.createGzip());
-            } else if (/\bdeflate\b/.test(acceptEncoding)) {
-                res.headers.set("Content-Encoding", "deflate");
+            } else if (/\bdeflate\b/.test(encoding)) {
+                res.headers.set("content-encoding", "deflate");
                 readable = readable.pipe(zlib.createDeflate());
-            } else if (/\bbr\b/.test(acceptEncoding)) {
-                res.headers.set("Content-Encoding", "br");
+            } else if (/\bbr\b/.test(encoding)) {
+                res.headers.set("content-encoding", "br");
                 readable = readable.pipe(zlib.createBrotliCompress());
             }
-
+            if (value && !res.headers.has("content-type")) {
+                res.headers.set("content-type", "text/html");
+            }
             res.writeHead(res.status, res.headers.entries());
             readable.pipe(res);
         };
 
-        res.json = (data = {}) => {
-            res.headers.set("Content-Type", "application/json");
-            res.send(JSON.stringify(data));
+        res.json = (value = {}) => {
+            res.headers.set("content-type", "application/json");
+            res.send(JSON.stringify(value));
+        };
+
+        res.redirect = (url, status = 302) => {
+            if (status) {
+                res.status = status;
+            }
+            res.headers.set("location", url);
+            res.send();
         };
 
         res.cookie = (name, value, options = {}) => {
-            let object = name;
+            let object;
             if (typeof name == "string") {
                 object = { name, value, ...options };
+            } else {
+                object = { ...name, ...options };
             }
+            // remove
             object.value = object.value || "";
-            let array = [object.name + "=" + object.value];
-
             if (!object.value) {
                 object.expires = new Date(0);
                 object.maxAge = 0;
             }
-
+            const array = [];
             if (object.expires !== undefined) array.push(`Expires=${object.expires.toUTCString()}`);
             if (object.maxAge !== undefined) array.push(`Max-Age=${object.maxAge}`);
             if (object.domain !== undefined) array.push(`Domain=${object.domain}`);
@@ -228,99 +162,61 @@ class Router {
             if (object.secure !== undefined) array.push(`Secure`);
             if (object.httpOnly !== undefined) array.push(`HttpOnly`);
             if (object.sameSite !== undefined) array.push(`SameSite=${object.sameSite}`);
-
-            res.headers.append("Set-Cookie", array.join("; "));
+            res.headers.set("set-cookie", array.join("; "));
         };
-
-        // Location: <url>
-
-        return res;
     }
 
-    /**
-     * 
-     * @param {*} req 
-     * @param {*} res 
-     * @private
-     */
-    async requestListener(req, res) {
+    defaultHandler(req, res) {
+        res.status = 404;
+        throw { message: http.STATUS_CODES[res.status] };
+    }
+
+    errorHandler(err, req, res) {
+        res.status = res.status == 200 ? 500 : res.status;
+        res.json(err);
+    }
+
+    async handleRequest(req, res) {
         try {
-            req = await this.request(req);
-            res = this.response(req, res);
+            await this.beforeRequest(req, res);
+            this.beforeResponse(req, res);
+
             await this.forEachRoute(req, res);
 
-            this.handleDefault(res);
+            this.defaultHandler(req, res);
         } catch (err) {
             if (typeof err == "object") {
                 const replacer = Object.getOwnPropertyNames(err);
                 err = JSON.stringify(err, replacer);
                 err = JSON.parse(err);
             }
-
             try {
                 const { callback: [callback] = [] } = this.routes[this.routes.length - 1];
-                callback(err, req, res, (err) => {
-                    throw err;
-                });
+                callback(err, req, res, (next) => {});
             } catch (error) {
-                this.handleError(res, err);
+                this.errorHandler(err, req, res);
             }
         }
     }
 
-    /**
-     * 
-     * @param {*} res 
-     * @param {*} err 
-     * @private
-     */
-    handleError(res, err) {
-        if (res.status == 200) {
-            res.status = 500;
-        }
-
-        res.json(err);
-    }
-
-    /**
-     * 
-     * @param {*} res 
-     * @private
-     */
-    handleDefault(res) {
-        res.status = 404;
-        throw { message: http.STATUS_CODES[res.status] };
-    }
-
-    /**
-     * 
-     * @param {*} req 
-     * @param {*} res 
-     * @private
-     */
     async forEachRoute(req, res) {
         for (let i = 0; i < this.routes.length; i++) {
             const route = this.routes[i];
+
             const passed = (route.method == ".*" || route.method == req.method) && route.regexp.test(req.path);
 
             if (!passed) {
                 continue;
             }
-
             // params
-            req.params = { ...req.path.match(route.regexp)?.groups };
+            req.params = {
+                ...req.path.match(route.regexp)?.groups,
+            };
 
             await this.forEachCallback(route, req, res);
         }
     }
 
-    /**
-     * 
-     * @param {*} route 
-     * @param {*} req 
-     * @param {*} res 
-     * @private
-     */
     async forEachCallback(route, req, res) {
         for (let j = 0; j < route.callback.length; j++) {
             const callback = route.callback[j];
@@ -332,16 +228,8 @@ class Router {
         }
     }
 
-    /**
-     * 
-     * @param {*} callback 
-     * @param {*} req 
-     * @param {*} res 
-     * @returns {Promise}
-     * @private
-     */
     async handleCallback(callback, req, res) {
-        return new Promise((resolve, reject) => {
+        await new Promise((resolve, reject) => {
             callback(req, res, (err) => {
                 if (err !== undefined) {
                     reject(err);
@@ -352,16 +240,13 @@ class Router {
         });
     }
 
-    /**
-     *
-     * @param  {Number} port
-     * @param  {String/Function} hostname
-     * @param  {Function} backlog
-     * @returns {Server}
-     */
-    listen(...args) {
-        const server = http.createServer(this.requestListener).listen(...args);
-        return server;
+    listen(port, hostname, backlog) {
+        if (typeof hostname == "function") {
+            backlog = hostname;
+            hostname = undefined;
+        }
+        hostname = hostname || "0.0.0.0";
+        return http.createServer(this.handleRequest).listen(port, hostname, backlog);
     }
 }
 

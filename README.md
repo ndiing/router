@@ -1,97 +1,121 @@
 # router
+router
 
-[Docs](https://ndiing.github.io/router/)
+### Install
+```
+npm install @ndiinginc/router
+```
 
-```
-npm install @ndiing/router
-```
 ### Usage
 
-
 ```js
-const Router = require("./index");
 
-// by default set
-// - url parser
-// - params parser
-// - query parser
-// - security headers & cors
-// - cookie parser
-// - body parser
-// - compression
+const Router = require('@ndiinginc/router')
 
-// ./api/book/index.js
-const book = new Router();
-book.get("/", (req, res, next) => {
-    res.json({ message: "this from api/book get" });
+// Create router
+const router = new Router();
+
+router.post("/", (req, res, next) => {
+    res.json({ message: "from router post" });
+});
+router.get("/", (req, res, next) => {
+    res.json({ message: "from router get" });
+});
+router.patch("/:id", (req, res, next) => {
+    // get url object
+    console.log(req.url2);
+    // get params
+    console.log(req.params);
+    // get query object
+    console.log(req.query);
+    // get cookies
+    console.log(req.cookies);
+    // get body
+    console.log(req.body);
+
+    // send cookie
+    res.cookie("name", "value");
+
+    // send cookie object
+    res.cookie({
+        name: "name1",
+        value: "value1",
+    });
+    // send more..
+    res.cookie({
+        name: "name1",
+        value: "value1",
+    });
+
+    // removing previouse cookie
+    res.cookie("name");
+
+    res.json({ message: "from router patch" });
+});
+router.put("/:id", (req, res, next) => {
+    res.json({ message: "from router put" });
+});
+router.delete("/:id", (req, res, next) => {
+    res.json({ message: "from router delete" });
 });
 
-// ./index.js
 // Create app
 const app = new Router();
 
 // Using middleware
-app.use((req,res,next) => {
-    // remove header name
-    // headers name are case insensitif
-    res.headers.delete('x-powered-by')
-    // res.headers.delete('X-Powered-By')
-    next()
-})
+app.use((req, res, next) => {
+    console.log("app middleware");
+    next();
+});
 
 // Register router
-app.use("/api/book", book);
+app.use("/router", router);
 
-// GET http://localhost:3000/
+// Redirect
+app.get("/redirect", (req, res, next) => {
+    res.redirect("/");
+});
+
+// Add Get route
 app.get("/", (req, res, next) => {
-    res.json({ message: "this message from app get" });
-});
-// PATCH http://localhost:3000/?name=a&name=b&name=c&group=band
-app.patch("/:id", (req, res, next) => {
-    // get request url
-    console.log(req.url2);
-    // get request path
-    console.log(req.path);
-    // get request params
-    console.log(req.params);
-    // get request query
-    console.log(req.query);
-    // get request cookie
-    console.log(req.cookies);
-    // get request headers
-    console.log(req.headers);
-    // get request data
-    console.log(req.body);
-
-    // set response status
-    // it will set something like
-    // HTTP/1.1 201 Created
-    res.status=201
-
-    // send cookie
-    res.cookie("name", "value");
-    
-    // send another cookies
-    res.cookie("name1", "value1");
-    res.cookie("name2", "value2");
-    res.cookie("name3", "value3");
-    res.cookie("andmore", "andmore");
-
-    // remove previous cookie, just remove value
-    // it will send
-    // Set-Cookie: name=value,name=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0
-    res.cookie("name");
-
-    // // send text/
-    // res.send('this message from app patch')
-
-    // send json
-    res.json({ message: "this message from app patch" });
+    res.json({ message: "from app get" });
 });
 
-// Start server
-const server = app.listen(3000, () => {
-    console.log(server.address());
+// Send error
+app.get("/catch-all", (req, res, next) => {
+    throw new Error("error message");
 });
+
+// custom page not found
+app.use((req, res, next) => {
+    next({ message: "page not found" });
+});
+
+// custom catch-all
+app.use((err, req, res, next) => {
+    res.json({ err });
+});
+
+app.listen(3000);
+
+// /test.rest
+// ###
+// GET http://localhost:3000
+// ###
+// GET http://localhost:3000/router
+// ###
+// POST http://localhost:3000/router
+// ###
+// PATCH http://localhost:3000/router/1?user=name&pass=word
+// Content-Type: application/json
+// Cookie: name=value; name1=value1; name3=value3
+
+// {"user":"name"}
+// ###
+// GET http://localhost:3000/redirect
+// ###
+// GET http://localhost:3000/not-found
+// ###
+// GET http://localhost:3000/catch-all
 
 ```
