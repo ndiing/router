@@ -24,7 +24,7 @@
 <label for="nav-trigger" class="overlay"></label>
 
 <nav>
-    <li class="nav-link nav-home-link"><a href="index.html">Home</a></li><li class="nav-heading">Classes</li><li class="nav-heading"><span class="nav-item-type type-class">C</span><span class="nav-item-name"><a href="module-router-Router.html">Router</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="module-router-Router.html#listen">listen</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="module-router-Router.html#request">request</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="module-router-Router.html#response">response</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="module-router-Router.html#use">use</a></span></li><li class="nav-heading">Modules</li><li class="nav-heading"><span class="nav-item-type type-module">M</span><span class="nav-item-name"><a href="module-router.html">router</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="module-router.html#~delete">delete</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="module-router.html#~get">get</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="module-router.html#~patch">patch</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="module-router.html#~post">post</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="module-router.html#~put">put</a></span></li>
+    <li class="nav-link nav-home-link"><a href="index.html">Home</a></li><li class="nav-heading">Classes</li><li class="nav-heading"><span class="nav-item-type type-class">C</span><span class="nav-item-name"><a href="Router.html">Router</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Router.html#listen">listen</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Router.html#request">request</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Router.html#response">response</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Router.html#use">use</a></span></li><li class="nav-heading"><a href="global.html">Globals</a></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#delete">delete</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#get">get</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#patch">patch</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#post">post</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#put">put</a></span></li>
 </nav>
 
 <div id="main">
@@ -51,6 +51,93 @@
         <article><h1>router</h1>
 <p><a href="https://ndiing.github.io/router/">Docs</a></p>
 <pre class="prettyprint source"><code>npm install @ndiing/router
+</code></pre>
+<h3>Usage</h3>
+<pre class="prettyprint source lang-js"><code>const Router = require(&quot;./index&quot;);
+
+// by default set
+// - url parser
+// - params parser
+// - query parser
+// - security headers & cors
+// - cookie parser
+// - body parser
+// - compression
+
+// ./api/book/index.js
+const book = new Router();
+book.get(&quot;/&quot;, (req, res, next) => {
+    res.json({ message: &quot;this from api/book get&quot; });
+});
+
+// ./index.js
+// Create app
+const app = new Router();
+
+// Using middleware
+app.use((req,res,next) => {
+    // remove header name
+    // headers name are case insensitif
+    res.headers.delete('x-powered-by')
+    // res.headers.delete('X-Powered-By')
+    next()
+})
+
+// Register router
+app.use(&quot;/api/book&quot;, book);
+
+// GET http://localhost:3000/
+app.get(&quot;/&quot;, (req, res, next) => {
+    res.json({ message: &quot;this message from app get&quot; });
+});
+// PATCH http://localhost:3000/?name=a&name=b&name=c&group=band
+app.patch(&quot;/:id&quot;, (req, res, next) => {
+    // get request url
+    console.log(req.url2);
+    // get request path
+    console.log(req.path);
+    // get request params
+    console.log(req.params);
+    // get request query
+    console.log(req.query);
+    // get request cookie
+    console.log(req.cookies);
+    // get request headers
+    console.log(req.headers);
+    // get request data
+    console.log(req.body);
+
+    // set response status
+    // it will set something like
+    // HTTP/1.1 201 Created
+    res.status=201
+
+    // send cookie
+    res.cookie(&quot;name&quot;, &quot;value&quot;);
+    
+    // send another cookies
+    res.cookie(&quot;name1&quot;, &quot;value1&quot;);
+    res.cookie(&quot;name2&quot;, &quot;value2&quot;);
+    res.cookie(&quot;name3&quot;, &quot;value3&quot;);
+    res.cookie(&quot;andmore&quot;, &quot;andmore&quot;);
+
+    // remove previous cookie, just remove value
+    // it will send
+    // Set-Cookie: name=value,name=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0
+    res.cookie(&quot;name&quot;);
+
+    // // send text/
+    // res.send('this message from app patch')
+
+    // send json
+    res.json({ message: &quot;this message from app patch&quot; });
+});
+
+// Start server
+const server = app.listen(3000, () => {
+    console.log(server.address());
+});
+
 </code></pre></article>
     </section>
 
@@ -64,7 +151,7 @@
 <br class="clear">
 
 <footer>
-    Generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.6.11</a> on Sun Aug 14 2022 21:47:41 GMT+0700 (Western Indonesia Time) using the Minami theme.
+    Generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.6.11</a> on Mon Aug 15 2022 08:20:33 GMT+0700 (Western Indonesia Time) using the Minami theme.
 </footer>
 
 <script>prettyPrint();</script>

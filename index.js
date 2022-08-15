@@ -4,81 +4,6 @@ const { Readable } = require("stream");
 const { URL2, Headers } = require("@ndiing/fetch");
 
 /**
- * ### Install
- * ```
- * npm install @ndiing/router
- * ```
- * ### Usage
- *
- * ```js
- * const routerA = new Router();
- * routerA.use((req, res, next) => {
- *     next();
- * });
- * routerA.get("/", (req, res, next) => {
- *     res.json({ message: "routerA get" });
- * });
- * routerA.patch("/:id", (req, res, next) => {
- *     res.cookie("name", "value");
- *     res.cookie({
- *         name: "name",
- *         value: "value",
- *     });
- *     res.cookie("name");
- *     res.json({
- *         path: req.path,
- *         query: req.query,
- *         params: req.params,
- *         cookies: req.cookies,
- *         body: req.body,
- *         message: "routerA patch",
- *     });
- * });
- *
- * const router2 = new Router();
- * router2.use((req, res, next) => {
- *     next();
- * });
- * router2.use("/routerA", routerA);
- * router2.get("/", (req, res, next) => {
- *     res.json({ message: "router2 get" });
- * });
- *
- * const router1 = new Router();
- * router1.use((req, res, next) => {
- *     next();
- * });
- * router1.get("/", (req, res, next) => {
- *     res.json({ message: "router1 get" });
- * });
- *
- * const app = new Router();
- * app.use((req, res, next) => {
- *     next();
- * });
- * app.use("/router1", router1);
- * app.use("/router2", router2);
- * app.get("/", (req, res, next) => {
- *     res.json({ message: "app get" });
- * });
- * app.get("/error", (req, res, next) => {
- *     throw new Error("message");
- * });
- * app.use((req, res, next) => {
- *     next({ message: "custom not found" });
- * });
- * app.use((err, req, res, next) => {
- *     // custom error
- *     res.json({ err });
- * });
- *
- * app.listen(3000);
- *
- * ```
- * @module router
- */
-
-/**
  *
  */
 class Router {
@@ -100,8 +25,18 @@ class Router {
         }
     }
 
+    /**
+     * @private
+     */
     routes = [];
 
+    /**
+     *
+     * @param {*} method
+     * @param {*} path
+     * @param  {...any} callback
+     * @private
+     */
     add(method, path, ...callback) {
         if (typeof method == "object") {
             ({ method, path, callback } = method);
@@ -302,6 +237,12 @@ class Router {
         return res;
     }
 
+    /**
+     * 
+     * @param {*} req 
+     * @param {*} res 
+     * @private
+     */
     async requestListener(req, res) {
         try {
             req = await this.request(req);
@@ -327,6 +268,12 @@ class Router {
         }
     }
 
+    /**
+     * 
+     * @param {*} res 
+     * @param {*} err 
+     * @private
+     */
     handleError(res, err) {
         if (res.status == 200) {
             res.status = 500;
@@ -335,11 +282,22 @@ class Router {
         res.json(err);
     }
 
+    /**
+     * 
+     * @param {*} res 
+     * @private
+     */
     handleDefault(res) {
         res.status = 404;
         throw { message: http.STATUS_CODES[res.status] };
     }
 
+    /**
+     * 
+     * @param {*} req 
+     * @param {*} res 
+     * @private
+     */
     async forEachRoute(req, res) {
         for (let i = 0; i < this.routes.length; i++) {
             const route = this.routes[i];
@@ -356,6 +314,13 @@ class Router {
         }
     }
 
+    /**
+     * 
+     * @param {*} route 
+     * @param {*} req 
+     * @param {*} res 
+     * @private
+     */
     async forEachCallback(route, req, res) {
         for (let j = 0; j < route.callback.length; j++) {
             const callback = route.callback[j];
@@ -367,6 +332,14 @@ class Router {
         }
     }
 
+    /**
+     * 
+     * @param {*} callback 
+     * @param {*} req 
+     * @param {*} res 
+     * @returns {Promise}
+     * @private
+     */
     async handleCallback(callback, req, res) {
         return new Promise((resolve, reject) => {
             callback(req, res, (err) => {
@@ -393,71 +366,3 @@ class Router {
 }
 
 module.exports = Router;
-
-// // @test
-// const routerA = new Router();
-// routerA.use((req, res, next) => {
-//     next();
-// });
-// routerA.get("/", (req, res, next) => {
-//     res.json({ message: "routerA get" });
-// });
-// routerA.patch("/:id", (req, res, next) => {
-//     res.cookie("name", "value");
-//     res.cookie({
-//         name: "name",
-//         value: "value",
-//     });
-//     res.cookie("name");
-//     res.json({
-//         path: req.path,
-//         query: req.query,
-//         params: req.params,
-//         cookies: req.cookies,
-//         body: req.body,
-//         message: "routerA patch",
-//     });
-// });
-
-// const router2 = new Router();
-// router2.use((req, res, next) => {
-//     next();
-// });
-// router2.use("/routerA", routerA);
-// router2.get("/", (req, res, next) => {
-//     res.json({ message: "router2 get" });
-// });
-
-// const router1 = new Router();
-// router1.use((req, res, next) => {
-//     next();
-// });
-// router1.get("/", (req, res, next) => {
-//     res.json({ message: "router1 get" });
-// });
-
-// const app = new Router();
-// app.use((req, res, next) => {
-//     next();
-// });
-// app.use("/router1", router1);
-// app.use("/router2", router2);
-// app.get("/", (req, res, next) => {
-//     res.json({ message: "app get" });
-// });
-// app.get("/error", (req, res, next) => {
-//     throw new Error("message");
-// });
-// app.use((req, res, next) => {
-//     next({ message: "custom not found" });
-// });
-// app.use((err, req, res, next) => {
-//     // custom error
-//     res.json({ err });
-// });
-
-// app.listen(3000);
-
-// // var req = { method: "GET", url: "/book" };
-// // var res = { json: console.log, end: console.log };
-// // app.requestListener(req, res);

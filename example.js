@@ -1,14 +1,3 @@
-# router
-
-[Docs](https://ndiing.github.io/router/)
-
-```
-npm install @ndiing/router
-```
-### Usage
-
-
-```js
 const Router = require("./index");
 
 // by default set
@@ -93,5 +82,3 @@ app.patch("/:id", (req, res, next) => {
 const server = app.listen(3000, () => {
     console.log(server.address());
 });
-
-```

@@ -1,0 +1,12 @@
+###
+GET http://localhost:3000/
+
+###
+GET http://localhost:3000/api/book
+
+###
+PATCH http://localhost:3000/1?name=a&name=b&name=c&group=band
+Content-Type: application/json
+Cookie: name=value
+
+{"user":"name","pass":"word"}
