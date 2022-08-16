@@ -60,7 +60,7 @@ class Router {
         req.url2 = new URL2(req.url);
         req.path = req.url2.pathname;
         req.query = req.url2.searchParams;
-        // req.params = {}; //
+        // req.params = {}; 
         req.cookies = {};
         if (req.headers.has("cookie")) {
             for (const [, name, value] of req.headers.get("cookie").matchAll(/([^\=;]+)\=([^\=;]+)?(; |$)/g)) {
@@ -140,7 +140,7 @@ class Router {
             res.send(JSON.stringify(value));
         };
 
-        res.redirect = (url, status = 302) => {
+        res.redirect = (url, status = 301) => {
             if (status) {
                 res.status = status;
             }
