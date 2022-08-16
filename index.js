@@ -103,7 +103,7 @@ class Router {
             const hash = Crypto.hash(value, { algorithm: "sha1" });
             const etag = `W/"${hash}"`;
             res.headers.set("etag", etag);
-            
+
             if (req.headers.get("if-none-match") == etag) {
                 res.status = 304;
                 value = "";
@@ -257,4 +257,16 @@ class Router {
     }
 }
 
-module.exports = Router;
+function App() {
+    const router = new Router();
+    const app = (...args) => router.handleRequest(...args);
+    app.routes = router.routes;
+    for (const name of ["post", "get", "patch", "put", "delete", "use", "listen"]) {
+        app[name] = (...args) => router[name](...args);
+    }
+    return app;
+}
+
+App.Router = Router;
+
+module.exports = App;
