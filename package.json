@@ -1,12 +1,12 @@
 {
   "dependencies": {
+    "@ndiinginc/crypto": "^1.0.0",
     "@ndiinginc/fetch": "^1.0.0"
   },
   "name": "@ndiinginc/router",
   "description": "nodejs router",
   "version": "1.0.0",
   "main": "index.js",
-  "devDependencies": {},
   "scripts": {
     "test": "exit 0"
   },

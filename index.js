@@ -2,6 +2,7 @@ const http = require("http");
 const zlib = require("zlib");
 const { Readable } = require("stream");
 const { URL2, Headers } = require("@ndiinginc/fetch");
+const Crypto = require("@ndiinginc/crypto");
 
 class Router {
     routes = [];
@@ -56,13 +57,10 @@ class Router {
 
     async beforeRequest(req, res) {
         req.headers = new Headers(req.headers);
-
         req.url2 = new URL2(req.url);
-
         req.path = req.url2.pathname;
         req.query = req.url2.searchParams;
-
-        req.params = {}; //
+        // req.params = {}; //
         req.cookies = {};
         if (req.headers.has("cookie")) {
             for (const [, name, value] of req.headers.get("cookie").matchAll(/([^\=;]+)\=([^\=;]+)?(; |$)/g)) {
@@ -87,7 +85,6 @@ class Router {
     }
 
     beforeResponse(req, res) {
-        // default headers
         res.headers = {
             "Content-Security-Policy": "default-src 'self'",
             "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
@@ -99,18 +96,27 @@ class Router {
             "X-Powered-By": "Ndiing",
             ...res.headers,
         };
-
         res.headers = new Headers(res.headers);
         res.status = res.statusCode;
 
         res.send = (value = "") => {
+            const hash = Crypto.hash(value, { algorithm: "sha1" });
+            const etag = `W/"${hash}"`;
+            res.headers.set("etag", etag);
+            
+            if (req.headers.get("if-none-match") == etag) {
+                res.status = 304;
+                value = "";
+            }
+
             let readable = value;
             if (!(value instanceof Readable)) {
                 readable = new Readable();
                 readable.push(value);
                 readable.push(null);
             }
-            let encoding = req.headers.get("accept-encoding");
+
+            const encoding = req.headers.get("accept-encoding");
             if (/\bgzip\b/.test(encoding)) {
                 res.headers.set("content-encoding", "gzip");
                 readable = readable.pipe(zlib.createGzip());
@@ -124,6 +130,7 @@ class Router {
             if (value && !res.headers.has("content-type")) {
                 res.headers.set("content-type", "text/html");
             }
+
             res.writeHead(res.status, res.headers.entries());
             readable.pipe(res);
         };
@@ -251,3 +258,111 @@ class Router {
 }
 
 module.exports = Router;
+
+// const Router = require('@ndiinginc/router')
+
+// Create router
+const router = new Router();
+
+router.post("/", (req, res, next) => {
+    res.json({ message: "from router post" });
+});
+router.get("/", (req, res, next) => {
+    res.json({ message: "from router get" });
+});
+router.patch("/:id", (req, res, next) => {
+    // get url object
+    console.log(req.url2);
+    // get params
+    console.log(req.params);
+    // get query object
+    console.log(req.query);
+    // get cookies
+    console.log(req.cookies);
+    // get body
+    console.log(req.body);
+
+    // send cookie
+    res.cookie("name", "value");
+
+    // send cookie object
+    res.cookie({
+        name: "name1",
+        value: "value1",
+    });
+    // send more..
+    res.cookie({
+        name: "name1",
+        value: "value1",
+    });
+
+    // removing previouse cookie
+    res.cookie("name");
+
+    res.json({ message: "from router patch" });
+});
+router.put("/:id", (req, res, next) => {
+    res.json({ message: "from router put" });
+});
+router.delete("/:id", (req, res, next) => {
+    res.json({ message: "from router delete" });
+});
+
+// Create app
+const app = new Router();
+
+// Using middleware
+app.use((req, res, next) => {
+    console.log("app middleware");
+    next();
+});
+
+// Register router
+app.use("/router", router);
+
+// Redirect
+app.get("/redirect", (req, res, next) => {
+    res.redirect("/");
+});
+
+// Add Get route
+app.get("/", (req, res, next) => {
+    res.json({ message: "from app get" });
+});
+
+// Send error
+app.get("/catch-all", (req, res, next) => {
+    throw new Error("error message");
+});
+
+// custom page not found
+app.use((req, res, next) => {
+    next({ message: "page not found" });
+});
+
+// custom catch-all
+app.use((err, req, res, next) => {
+    res.json({ err });
+});
+
+app.listen(3000);
+
+// /test.rest
+// ###
+// GET http://localhost:3000
+// ###
+// GET http://localhost:3000/router
+// ###
+// POST http://localhost:3000/router
+// ###
+// PATCH http://localhost:3000/router/1?user=name&pass=word
+// Content-Type: application/json
+// Cookie: name=value; name1=value1; name3=value3
+
+// {"user":"name"}
+// ###
+// GET http://localhost:3000/redirect
+// ###
+// GET http://localhost:3000/not-found
+// ###
+// GET http://localhost:3000/catch-all
