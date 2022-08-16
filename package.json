@@ -3,7 +3,7 @@
     "@ndiinginc/fetch": "^1.0.0"
   },
   "name": "@ndiinginc/router",
-  "description": "router",
+  "description": "nodejs router",
   "version": "1.0.0",
   "main": "index.js",
   "devDependencies": {},
