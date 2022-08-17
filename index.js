@@ -114,12 +114,15 @@ function limiter(options = {}) {
     return function (req, res, next) {
         const pool = Database.get(req.url2.origin);
         const key = "" + [req.ip, req.url2.href];
+
         let value = pool.sessionStorage.getItem(key) ?? { counter };
         if (Date.now() > value.time) {
             pool.sessionStorage.removeItem(key);
         }
+
         res.headers.set("x-ratelimit-limit", counter);
         res.headers.set("x-ratelimit-remaining", value.counter);
+
         if (value.counter > 0) {
             --value.counter;
             pool.sessionStorage.setItem(key, value);
@@ -130,10 +133,12 @@ function limiter(options = {}) {
                 value.date = date.toUTCString();
                 pool.sessionStorage.setItem(key, value);
             }
+
             res.status = 429;
             res.headers.set("retry-after", value.date);
             next({ message: http.STATUS_CODES[res.status] });
         }
+        
         next();
     };
 }
