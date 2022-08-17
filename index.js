@@ -131,8 +131,7 @@ function limiter(options = {}) {
                 pool.sessionStorage.setItem(key, value);
             }
             res.status = 429;
-            res.headers.set("Retry-After", value.date);
-            res.headers.set("x-ratelimit-reset", value.time);
+            res.headers.set("retry-after", value.date);
             next({ message: http.STATUS_CODES[res.status] });
         }
         next();
