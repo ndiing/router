@@ -197,16 +197,6 @@ class Router {
             const { method = ".*", path = ".*", callback = [] } = routes[i];
             this.add({ method, path, callback });
         }
-        const methods = ["POST", "GET", "PATCH", "PUT", "DELETE"];
-
-        for (let i = 0; i < methods.length; i++) {
-            const method = methods[i];
-
-            this[method.toLowerCase()] = (...args) => {
-                this.add(1, method, ...args);
-            };
-        }
-
         this.add(0, ".*", paramParser());
         this.add(0, ".*", cookieParser());
         this.add(0, ".*", bodyParser());
@@ -274,32 +264,42 @@ class Router {
      * 
      * @param  {String/Function} path 
      * @param  {Function} callback 
-     * @method post
      */
+    post(...args){
+        this.add(1,'POST',...args)
+    }
     /**
      * 
      * @param  {String/Function} path 
      * @param  {Function} callback 
-     * @method get
      */
+    get(...args){
+        this.add(1,'GET',...args)
+    }
     /**
      * 
      * @param  {String/Function} path 
      * @param  {Function} callback 
-     * @method patch
      */
+    patch(...args){
+        this.add(1,'PATCH',...args)
+    }
     /**
      * 
      * @param  {String/Function} path 
      * @param  {Function} callback 
-     * @method put
      */
+    put(...args){
+        this.add(1,'PUT',...args)
+    }
     /**
      * 
      * @param  {String/Function} path 
      * @param  {Function} callback 
-     * @method delete
      */
+    delete(...args){
+        this.add(1,'DELETE',...args)
+    }
 
     /**
      * @private
