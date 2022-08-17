@@ -24,7 +24,7 @@
 <label for="nav-trigger" class="overlay"></label>
 
 <nav>
-    <li class="nav-link nav-home-link"><a href="index.html">Home</a></li><li class="nav-heading">Classes</li><li class="nav-heading"><span class="nav-item-type type-class">C</span><span class="nav-item-name"><a href="Router.html">Router</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Router.html#handleRequest">handleRequest</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Router.html#listen">listen</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Router.html#use">use</a></span></li><li class="nav-heading"><a href="global.html">Globals</a></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#App">App</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#bodyParser">bodyParser</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#cacheHandler">cacheHandler</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#compressionHandler">compressionHandler</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#cookieParser">cookieParser</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#defaultHandler">defaultHandler</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#delete">delete</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#errorHandler">errorHandler</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#get">get</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#paramParser">paramParser</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#patch">patch</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#post">post</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#put">put</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#securityHandler">securityHandler</a></span></li>
+    <li class="nav-link nav-home-link"><a href="index.html">Home</a></li><li class="nav-heading">Classes</li><li class="nav-heading"><span class="nav-item-type type-class">C</span><span class="nav-item-name"><a href="Router.html">Router</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Router.html#delete">delete</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Router.html#get">get</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Router.html#handleRequest">handleRequest</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Router.html#listen">listen</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Router.html#patch">patch</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Router.html#post">post</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Router.html#put">put</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Router.html#use">use</a></span></li><li class="nav-heading"><a href="global.html">Globals</a></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#App">App</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#bodyParser">bodyParser</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#cacheHandler">cacheHandler</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#compressionHandler">compressionHandler</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#cookieParser">cookieParser</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#defaultHandler">defaultHandler</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#errorHandler">errorHandler</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#paramParser">paramParser</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#securityHandler">securityHandler</a></span></li>
 </nav>
 
 <div id="main">
@@ -238,16 +238,6 @@ class Router {
             const { method = ".*", path = ".*", callback = [] } = routes[i];
             this.add({ method, path, callback });
         }
-        const methods = ["POST", "GET", "PATCH", "PUT", "DELETE"];
-
-        for (let i = 0; i &lt; methods.length; i++) {
-            const method = methods[i];
-
-            this[method.toLowerCase()] = (...args) => {
-                this.add(1, method, ...args);
-            };
-        }
-
         this.add(0, ".*", paramParser());
         this.add(0, ".*", cookieParser());
         this.add(0, ".*", bodyParser());
@@ -315,32 +305,42 @@ class Router {
      * 
      * @param  {String/Function} path 
      * @param  {Function} callback 
-     * @method post
      */
+    post(...args){
+        this.add(1,'POST',...args)
+    }
     /**
      * 
      * @param  {String/Function} path 
      * @param  {Function} callback 
-     * @method get
      */
+    get(...args){
+        this.add(1,'GET',...args)
+    }
     /**
      * 
      * @param  {String/Function} path 
      * @param  {Function} callback 
-     * @method patch
      */
+    patch(...args){
+        this.add(1,'PATCH',...args)
+    }
     /**
      * 
      * @param  {String/Function} path 
      * @param  {Function} callback 
-     * @method put
      */
+    put(...args){
+        this.add(1,'PUT',...args)
+    }
     /**
      * 
      * @param  {String/Function} path 
      * @param  {Function} callback 
-     * @method delete
      */
+    delete(...args){
+        this.add(1,'DELETE',...args)
+    }
 
     /**
      * @private
@@ -523,7 +523,7 @@ module.exports = App;
 <br class="clear">
 
 <footer>
-    Generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.6.11</a> on Wed Aug 17 2022 21:48:43 GMT+0700 (Western Indonesia Time) using the Minami theme.
+    Generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.6.11</a> on Wed Aug 17 2022 21:52:14 GMT+0700 (Western Indonesia Time) using the Minami theme.
 </footer>
 
 <script>prettyPrint();</script>
