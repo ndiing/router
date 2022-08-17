@@ -92,13 +92,13 @@ function body() {
  */
 function security() {
     return function (req, res, next) {
-        req.headers.set("Content-Security-Policy", "default-src 'self'");
-        req.headers.set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
-        req.headers.set("X-Content-Type-Options", "nosniff");
-        req.headers.set("X-Frame-Options", "DENY");
-        req.headers.set("X-XSS-Protection", "1; mode=block");
-        req.headers.set("Access-Control-Allow-Origin", "*");
-        req.headers.set("Content-Language", "en-US");
+        res.headers.set("Content-Security-Policy", "default-src 'self'");
+        res.headers.set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
+        res.headers.set("X-Content-Type-Options", "nosniff");
+        res.headers.set("X-Frame-Options", "DENY");
+        res.headers.set("X-XSS-Protection", "1; mode=block");
+        res.headers.set("Access-Control-Allow-Origin", "*");
+        res.headers.set("Content-Language", "en-US");
         next();
     };
 }
