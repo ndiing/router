@@ -1,4 +1,45 @@
-const http = require("http");
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>index.js - Documentation</title>
+
+    <script src="scripts/prettify/prettify.js"></script>
+    <script src="scripts/prettify/lang-css.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css">
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+<body>
+
+<input type="checkbox" id="nav-trigger" class="nav-trigger" />
+<label for="nav-trigger" class="navicon-button x">
+  <div class="navicon"></div>
+</label>
+
+<label for="nav-trigger" class="overlay"></label>
+
+<nav>
+    <li class="nav-link nav-home-link"><a href="index.html">Home</a></li><li class="nav-heading">Classes</li><li class="nav-heading"><span class="nav-item-type type-class">C</span><span class="nav-item-name"><a href="Router.html">Router</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Router.html#handleRequest">handleRequest</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Router.html#listen">listen</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Router.html#use">use</a></span></li><li class="nav-heading"><a href="global.html">Globals</a></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#App">App</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#bodyParser">bodyParser</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#cacheHandler">cacheHandler</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#compressionHandler">compressionHandler</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#cookieParser">cookieParser</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#defaultHandler">defaultHandler</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#delete">delete</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#errorHandler">errorHandler</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#get">get</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#paramParser">paramParser</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#patch">patch</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#post">post</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#put">put</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#securityHandler">securityHandler</a></span></li>
+</nav>
+
+<div id="main">
+    
+    <h1 class="page-title">index.js</h1>
+    
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>const http = require("http");
 const zlib = require("zlib");
 const { Readable } = require("stream");
 const { URL2, Headers } = require("@ndiinginc/fetch");
@@ -193,13 +234,13 @@ class Router {
     constructor(routes = []) {
         this.handleRequest = this.handleRequest.bind(this);
 
-        for (let i = 0; i < routes.length; i++) {
+        for (let i = 0; i &lt; routes.length; i++) {
             const { method = ".*", path = ".*", callback = [] } = routes[i];
             this.add({ method, path, callback });
         }
         const methods = ["POST", "GET", "PATCH", "PUT", "DELETE"];
 
-        for (let i = 0; i < methods.length; i++) {
+        for (let i = 0; i &lt; methods.length; i++) {
             const method = methods[i];
 
             this[method.toLowerCase()] = (...args) => {
@@ -242,17 +283,17 @@ class Router {
         if (routes) {
             callback = [];
 
-            for (let i = 0; i < routes.length; i++) {
+            for (let i = 0; i &lt; routes.length; i++) {
                 const route = routes[i];
                 route.path = path + route.path;
                 this.add(route);
             }
         } else {
-            if ((index == 0 || index == 2) && path !== ".*") {
+            if ((index == 0 || index == 2) &amp;&amp; path !== ".*") {
                 return;
             }
             let regexp = path.source || path;
-            regexp = regexp.replace(/\:(\w+)/g, "(?<$1>[^/]+)").replace(/\/?$/, "/?$");
+            regexp = regexp.replace(/\:(\w+)/g, "(?&lt;$1>[^/]+)").replace(/\/?$/, "/?$");
             regexp = new RegExp("^" + regexp, "i");
             this.routes.push({ index, method, path, callback, regexp });
             this.routes.sort(function (a, b) {
@@ -388,10 +429,10 @@ class Router {
      * @param {Stream} res 
      */
     async forRoute(req, res) {
-        for (let i = 0; i < this.routes.length; i++) {
+        for (let i = 0; i &lt; this.routes.length; i++) {
             req.route = this.routes[i];
             const passed =
-                (req.route.method == ".*" || req.route.method == req.method) && //
+                (req.route.method == ".*" || req.route.method == req.method) &amp;&amp; //
                 req.route.regexp.test(req.path);
 
             if (!passed) {
@@ -407,7 +448,7 @@ class Router {
      * @param {Stream} res 
      */
     async forCallback(req, res) {
-        for (let j = 0; j < req.route.callback.length; j++) {
+        for (let j = 0; j &lt; req.route.callback.length; j++) {
             const callback = req.route.callback[j];
 
             if (callback.length > 3) {
@@ -470,3 +511,22 @@ function App() {
 App.Router = Router;
 
 module.exports = App;
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<br class="clear">
+
+<footer>
+    Generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.6.11</a> on Wed Aug 17 2022 21:48:43 GMT+0700 (Western Indonesia Time) using the Minami theme.
+</footer>
+
+<script>prettyPrint();</script>
+<script src="scripts/linenumber.js"></script>
+</body>
+</html>
