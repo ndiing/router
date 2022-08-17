@@ -23,15 +23,10 @@ router.get("/", (req, res, next) => {
 });
 router.patch("/:id", (req, res, next) => {
     // get url object
-    console.log(req.url2);
     // get params
-    console.log(req.params);
     // get query object
-    console.log(req.query);
     // get cookies
-    console.log(req.cookies);
     // get body
-    console.log(req.body);
 
     // send cookie
     res.cookie("name", "value");
@@ -50,7 +45,16 @@ router.patch("/:id", (req, res, next) => {
     // removing previouse cookie
     res.cookie("name");
 
-    res.json({ message: "from router patch" });
+    res.json({
+        origin: req.origin,
+        ip: req.ip,
+        url2: req.url2,
+        params: req.params,
+        query: req.query,
+        headers: req.headers,
+        cookies: req.cookies,
+        body: req.body,
+    });
 });
 router.put("/:id", (req, res, next) => {
     res.json({ message: "from router put" });
@@ -64,7 +68,6 @@ const app = new Router();
 
 // Using middleware
 app.use((req, res, next) => {
-    console.log("app middleware");
     next();
 });
 
@@ -97,25 +100,5 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(3000);
-
-// /test.rest
-// ###
-// GET http://localhost:3000
-// ###
-// GET http://localhost:3000/router
-// ###
-// POST http://localhost:3000/router
-// ###
-// PATCH http://localhost:3000/router/1?user=name&pass=word
-// Content-Type: application/json
-// Cookie: name=value; name1=value1; name3=value3
-
-// {"user":"name"}
-// ###
-// GET http://localhost:3000/redirect
-// ###
-// GET http://localhost:3000/not-found
-// ###
-// GET http://localhost:3000/catch-all
 
 ```
