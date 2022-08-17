@@ -3,12 +3,14 @@ const zlib = require("zlib");
 const { Readable } = require("stream");
 const { URL2, Headers } = require("@ndiinginc/fetch");
 const Crypto = require("@ndiinginc/crypto");
+const Database = require("@ndiinginc/database");
+const { Date2 } = require("@ndiinginc/util");
 
 /**
- * 
+ * param parser
  * @returns {Function}
  */
-function paramParser() {
+function param() {
     return async function (req, res, next) {
         req.params = {
             ...req.path.match(req.route.regexp)?.groups,
@@ -18,10 +20,10 @@ function paramParser() {
 }
 
 /**
- * 
+ * cookie parser
  * @returns {Function}
  */
-function cookieParser() {
+function cookie() {
     return function (req, res, next) {
         req.cookies = {};
 
@@ -60,10 +62,10 @@ function cookieParser() {
 }
 
 /**
- * 
+ * body parser
  * @returns {Function}
  */
-function bodyParser() {
+function body() {
     return async function (req, res, next) {
         if (!/(GET|HEAD|DELETE)/.test(req.method)) {
             let buffer = [];
@@ -85,10 +87,10 @@ function bodyParser() {
 }
 
 /**
- * 
+ * security headers
  * @returns {Function}
  */
-function securityHandler() {
+function security() {
     return function (req, res, next) {
         req.headers.set("Content-Security-Policy", "default-src 'self'");
         req.headers.set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
@@ -102,10 +104,47 @@ function securityHandler() {
 }
 
 /**
- * 
+ *
+ * @param {Object} options
+ * @param {Object} options.window=3600 - 3600s/1h
+ * @param {Object} options.counter=100 - 100x
+ */
+function limiter(options = {}) {
+    const { window = 3600, counter = 100 } = options;
+    return function (req, res, next) {
+        const pool = Database.get(req.url2.origin);
+        const key = "" + [req.ip, req.url2.href];
+        let value = pool.sessionStorage.getItem(key) ?? { counter };
+        if (Date.now() > value.time) {
+            pool.sessionStorage.removeItem(key);
+        }
+        if (value.counter > 0) {
+            --value.counter;
+            pool.sessionStorage.setItem(key, value);
+        } else {
+            if (!value.time) {
+                const date = new Date2().add(window, "s");
+                value.time = date.valueOf();
+                value.date = date.toUTCString();
+                pool.sessionStorage.setItem(key, value);
+            }
+            res.status = 429;
+            res.headers.set("Retry-After", value.date);
+            next({ message: http.STATUS_CODES[res.status] });
+        }
+        if (counter !== undefined) res.headers.set("x-ratelimit-limit", counter);
+        if (value.counter !== undefined) res.headers.set("x-ratelimit-remaining", value.counter);
+        if (value.time !== undefined) res.headers.set("x-ratelimit-reset", value.time);
+        console.log(value);
+        next();
+    };
+}
+
+/**
+ * compression response
  * @returns {Function}
  */
-function compressionHandler() {
+function compression() {
     return function (req, res, next) {
         const send = res.send;
         res.send = function (body) {
@@ -134,10 +173,10 @@ function compressionHandler() {
 }
 
 /**
- * 
+ * cache response
  * @returns {Function}
  */
-function cacheHandler() {
+function cache() {
     return function (req, res, next) {
         const send = res.send;
         res.send = function (body) {
@@ -156,10 +195,10 @@ function cacheHandler() {
 }
 
 /**
- * 
+ * default route
  * @returns {Function}
  */
-function defaultHandler() {
+function empty() {
     return function (req, res, next) {
         res.status = 404;
         next({ message: http.STATUS_CODES[res.status] });
@@ -167,10 +206,10 @@ function defaultHandler() {
 }
 
 /**
- * 
+ * catch-all
  * @returns {Function}
  */
-function errorHandler() {
+function error() {
     return function (err, req, res, next) {
         res.status = res.status == 200 ? 500 : res.status;
         res.json(err);
@@ -178,41 +217,56 @@ function errorHandler() {
 }
 
 /**
- * 
+ *
  */
 class Router {
     /**
-    * @private
-    */
+     * @private
+     */
     routes = [];
 
     /**
-     * 
-     * @param {Object} routes 
+     *
+     * @param {Object} routes
      */
-    constructor(routes = []) {
+    constructor(routes = [], options = {}) {
+        options = {
+            param,
+            cookie,
+            body,
+            security,
+            limiter,
+            compression,
+            cache,
+            empty,
+            error,
+            ...options,
+        };
         this.handleRequest = this.handleRequest.bind(this);
 
-        for (let i = 0; i < routes.length; i++) {
-            const { method = ".*", path = ".*", callback = [] } = routes[i];
-            this.add({ method, path, callback });
+        if (routes && routes.length) {
+            for (let i = 0; i < routes.length; i++) {
+                const { method = ".*", path = ".*", callback = [] } = routes[i];
+                this.add({ method, path, callback });
+            }
         }
-        this.add(0, ".*", paramParser());
-        this.add(0, ".*", cookieParser());
-        this.add(0, ".*", bodyParser());
-        this.add(0, ".*", securityHandler());
-        this.add(0, ".*", compressionHandler());
-        this.add(0, ".*", cacheHandler());
-        this.add(2, ".*", defaultHandler());
-        this.add(2, ".*", errorHandler());
+        if (options.param) this.add(0, ".*", param());
+        if (options.cookie) this.add(0, ".*", cookie());
+        if (options.body) this.add(0, ".*", body());
+        if (options.security) this.add(0, ".*", security());
+        if (options.limiter) this.add(0, ".*", limiter());
+        if (options.compression) this.add(0, ".*", compression());
+        if (options.cache) this.add(0, ".*", cache());
+        if (options.empty) this.add(2, ".*", empty());
+        if (options.error) this.add(2, ".*", error());
     }
 
     /**
      * @private
-     * @param {Number} index 
-     * @param {String} method 
-     * @param {String} path 
-     * @param  {Function} callback 
+     * @param {Number} index
+     * @param {String} method
+     * @param {String} path
+     * @param  {Function} callback
      */
     add(index, method, path, ...callback) {
         if (typeof index == "object") {
@@ -252,62 +306,64 @@ class Router {
     }
 
     /**
-     * 
-     * @param  {String/Function} path 
-     * @param  {Function} callback 
+     *
+     * @param  {String/Function} path
+     * @param  {Function} callback
      */
     use(...args) {
         this.add(1, ".*", ...args);
     }
 
     /**
-     * 
-     * @param  {String/Function} path 
-     * @param  {Function} callback 
+     *
+     * @param  {String/Function} path
+     * @param  {Function} callback
      */
-    post(...args){
-        this.add(1,'POST',...args)
+    post(...args) {
+        this.add(1, "POST", ...args);
     }
     /**
-     * 
-     * @param  {String/Function} path 
-     * @param  {Function} callback 
+     *
+     * @param  {String/Function} path
+     * @param  {Function} callback
      */
-    get(...args){
-        this.add(1,'GET',...args)
+    get(...args) {
+        this.add(1, "GET", ...args);
     }
     /**
-     * 
-     * @param  {String/Function} path 
-     * @param  {Function} callback 
+     *
+     * @param  {String/Function} path
+     * @param  {Function} callback
      */
-    patch(...args){
-        this.add(1,'PATCH',...args)
+    patch(...args) {
+        this.add(1, "PATCH", ...args);
     }
     /**
-     * 
-     * @param  {String/Function} path 
-     * @param  {Function} callback 
+     *
+     * @param  {String/Function} path
+     * @param  {Function} callback
      */
-    put(...args){
-        this.add(1,'PUT',...args)
+    put(...args) {
+        this.add(1, "PUT", ...args);
     }
     /**
-     * 
-     * @param  {String/Function} path 
-     * @param  {Function} callback 
+     *
+     * @param  {String/Function} path
+     * @param  {Function} callback
      */
-    delete(...args){
-        this.add(1,'DELETE',...args)
+    delete(...args) {
+        this.add(1, "DELETE", ...args);
     }
 
     /**
      * @private
-     * @param {Stream} req 
-     * @param {Stream} res 
+     * @param {Stream} req
+     * @param {Stream} res
      */
     async beforeRequest(req, res) {
-        req.url2 = new URL2(req.url);
+        req.origin = (req.socket.encrypted ? "https:" : "http:") + "//" + req.headers.host;
+        req.ip = req.socket.remoteAddress;
+        req.url2 = new URL2(req.url, req.origin);
         req.path = req.url2.pathname;
         req.query = req.url2.searchParams;
         req.headers = new Headers(req.headers);
@@ -315,8 +371,8 @@ class Router {
 
     /**
      * @private
-     * @param {Stream} req 
-     * @param {Stream} res 
+     * @param {Stream} req
+     * @param {Stream} res
      */
     beforeResponse(req, res) {
         res.status = res.statusCode;
@@ -348,9 +404,9 @@ class Router {
     }
 
     /**
-     * 
-     * @param {Stream} req 
-     * @param {Stream} res 
+     *
+     * @param {Stream} req
+     * @param {Stream} res
      */
     async handleRequest(req, res) {
         try {
@@ -359,18 +415,18 @@ class Router {
             await this.forRoute(req, res);
         } catch (err) {
             err = this.errorParser(err);
-            const [{ callback: [errorHandler] = [] } = {}, , { callback: [defaultErrorHandler] = [] } = {}] = this.routes.slice(-3);
+            const [{ callback: [error] = [] } = {}, , { callback: [defaulterror] = [] } = {}] = this.routes.slice(-3);
             try {
-                errorHandler(err, req, res, function (next) {});
+                error(err, req, res, function (next) {});
             } catch (error) {
-                defaultErrorHandler(err, req, res, function (next) {});
+                defaulterror(err, req, res, function (next) {});
             }
         }
     }
 
     /**
      * @private
-     * @param {Object/Error} err 
+     * @param {Object/Error} err
      * @returns {Object}
      */
     errorParser(err) {
@@ -384,8 +440,8 @@ class Router {
 
     /**
      * @private
-     * @param {Stream} req 
-     * @param {Stream} res 
+     * @param {Stream} req
+     * @param {Stream} res
      */
     async forRoute(req, res) {
         for (let i = 0; i < this.routes.length; i++) {
@@ -403,8 +459,8 @@ class Router {
 
     /**
      * @private
-     * @param {Stream} req 
-     * @param {Stream} res 
+     * @param {Stream} req
+     * @param {Stream} res
      */
     async forCallback(req, res) {
         for (let j = 0; j < req.route.callback.length; j++) {
@@ -419,9 +475,9 @@ class Router {
 
     /**
      * @private
-     * @param {Function} callback 
-     * @param {Stream} req 
-     * @param {Stream} res 
+     * @param {Function} callback
+     * @param {Stream} req
+     * @param {Stream} res
      */
     handleCallback(callback, req, res) {
         return new Promise(function (resolve, reject) {
@@ -436,10 +492,10 @@ class Router {
     }
 
     /**
-     * 
-     * @param {Number} port 
-     * @param {String/Function} hostname 
-     * @param {Function} backlog 
+     *
+     * @param {Number} port
+     * @param {String/Function} hostname
+     * @param {Function} backlog
      * @returns {Object}
      */
     listen(port, hostname, backlog) {
@@ -453,11 +509,11 @@ class Router {
 }
 
 /**
- * 
+ *
  * @returns {Object/Function}
  */
-function App() {
-    const router = new Router();
+function App(routes = [], options = {}) {
+    const router = new Router(routes, options);
     const app = (...args) => router.handleRequest(...args);
     app.routes = router.routes;
 
@@ -468,5 +524,103 @@ function App() {
 }
 
 App.Router = Router;
+App.param = param;
+App.cookie = cookie;
+App.body = body;
+App.security = security;
+App.limiter = limiter;
+App.compression = compression;
+App.cache = cache;
+App.empty = empty;
+App.error = error;
 
 module.exports = App;
+
+// Create router
+const router = new Router();
+
+router.post("/", (req, res, next) => {
+    res.json({ message: "from router post" });
+});
+router.get("/", (req, res, next) => {
+    res.json({ message: "from router get" });
+});
+router.patch("/:id", (req, res, next) => {
+    // get url object
+    // get params
+    // get query object
+    // get cookies
+    // get body
+
+    // send cookie
+    res.cookie("name", "value");
+
+    // send cookie object
+    res.cookie({
+        name: "name1",
+        value: "value1",
+    });
+    // send more..
+    res.cookie({
+        name: "name1",
+        value: "value1",
+    });
+
+    // removing previouse cookie
+    res.cookie("name");
+
+    res.json({
+        origin: req.origin,
+        ip: req.ip,
+        url2: req.url2,
+        params: req.params,
+        query: req.query,
+        headers: req.headers,
+        cookies: req.cookies,
+        body: req.body,
+    });
+});
+router.put("/:id", (req, res, next) => {
+    res.json({ message: "from router put" });
+});
+router.delete("/:id", (req, res, next) => {
+    res.json({ message: "from router delete" });
+});
+
+// Create app
+const app = new Router();
+
+// Using middleware
+app.use((req, res, next) => {
+    next();
+});
+
+// Register router
+app.use("/router", router);
+
+// Redirect
+app.get("/redirect", (req, res, next) => {
+    res.redirect("/");
+});
+
+// Add Get route
+app.get("/", (req, res, next) => {
+    res.json({ message: "from app get" });
+});
+
+// Send error
+app.get("/catch-all", (req, res, next) => {
+    throw new Error("error message");
+});
+
+// custom page not found
+app.use((req, res, next) => {
+    next({ message: "page not found" });
+});
+
+// custom catch-all
+app.use((err, req, res, next) => {
+    res.json({ err });
+});
+
+app.listen(3000);

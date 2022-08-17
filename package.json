@@ -1,7 +1,9 @@
 {
   "dependencies": {
     "@ndiinginc/crypto": "^1.0.0",
-    "@ndiinginc/fetch": "^1.0.0"
+    "@ndiinginc/database": "^1.0.2",
+    "@ndiinginc/fetch": "^1.0.0",
+    "@ndiinginc/util": "^1.0.0"
   },
   "name": "@ndiinginc/router",
   "description": "nodejs router",
