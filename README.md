@@ -55,14 +55,14 @@ router1.get("/", (req, res, next) => {
 
 // Create app
 const app = new Router({
-    // useDefaultBodyParser
-    // useDefaultSecurity
-    // useDefaultCompression
-    // useDefaultCaching
-    // useDefaultCookieParser
-    // useDefaultLimiter
-    // useDefaultRoute
-    // useDefaultErrorHandler
+    // body
+    // security
+    // compression
+    // cache
+    // cookie
+    // limiter
+    // defaultRoute
+    // defaultError
 });
 app.use((req, res, next) => {
     next();
