@@ -152,7 +152,7 @@ class Router {
         };
     }
     useDefaultErrorHandler() {
-        return (req, res) => {
+        return (err,req, res) => {
             res.status = res.status == 200 ? 500 : res.status;
             res.json(err);
         };
@@ -381,7 +381,7 @@ class Router {
             }
 
             if (this.config.useDefaultErrorHandler) {
-                this.config.useDefaultErrorHandler()(req, res);
+                this.config.useDefaultErrorHandler()(err,req, res);
             }
         }
     }
