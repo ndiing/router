@@ -7,287 +7,189 @@ const Database = require("@ndiinginc/database");
 const { Date2 } = require("@ndiinginc/util");
 
 /**
- * param parser
- * @returns {Function}
+ * 
  */
-function param() {
-    return async function (req, res, next) {
-        req.params = {
-            ...req.path.match(req.route.regexp)?.groups,
-        };
-        next();
-    };
-}
+class Router {
+    routes = [];
+    errors = [];
 
-/**
- * cookie parser
- * @returns {Function}
- */
-function cookie() {
-    return function (req, res, next) {
-        req.cookies = {};
-
-        if (req.headers.has("cookie")) {
-            for (const [, name, value] of req.headers.get("cookie").matchAll(/([^\=;]+)\=([^\=;]+)?(; |$)/g)) {
-                req.cookies[name] = value;
-            }
-        }
-
-        res.cookie = (name, value, options = {}) => {
-            let object;
-
-            if (typeof name == "string") {
-                object = { name, value, ...options };
-            } else {
-                object = { ...name, ...options };
-            }
-            object.value = object.value || "";
-
-            if (!object.value) {
-                object.expires = new Date(0);
-                object.maxAge = 0;
-            }
-            const array = [];
-            if (object.expires !== undefined) array.push(`Expires=${object.expires.toUTCString()}`);
-            if (object.maxAge !== undefined) array.push(`Max-Age=${object.maxAge}`);
-            if (object.domain !== undefined) array.push(`Domain=${object.domain}`);
-            if (object.path !== undefined) array.push(`Path=${object.path}`);
-            if (object.secure !== undefined) array.push(`Secure`);
-            if (object.httpOnly !== undefined) array.push(`HttpOnly`);
-            if (object.sameSite !== undefined) array.push(`SameSite=${object.sameSite}`);
-            res.headers.set("set-cookie", array.join("; "));
-        };
-        next();
-    };
-}
-
-/**
- * body parser
- * @returns {Function}
- */
-function body() {
-    return async function (req, res, next) {
-        if (!/(GET|HEAD|DELETE)/.test(req.method)) {
-            let buffer = [];
-
+    useDefaultBodyParser() {
+        return async (req, res) => {
+            const buffer = [];
             for await (const chunk of req) {
                 buffer.push(chunk);
             }
-            buffer = Buffer.concat(buffer);
-            const type = req.headers.get("content-type");
-
+            const type = req.headers.get("Content-Type");
             if (/json/.test(type)) {
-                req.body = JSON.parse(buffer);
+                req.body = JSON.parse(Buffer.concat(buffer));
             } else {
-                req.body = "" + buffer;
+                req.body = "" + Buffer.concat(buffer);
             }
-        }
-        next();
-    };
-}
+        };
+    }
+    useDefaultSecurity() {
+        return (req, res) => {
+            res.headers.set("Content-Security-Policy", "default-src 'self'");
+            res.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+            res.headers.set("X-Content-Type-Options", "nosniff");
+            res.headers.set("X-Frame-Options", "DENY");
+            res.headers.set("X-XSS-Protection", "1; mode=block");
+            res.headers.set("Access-Control-Allow-Origin", "*");
+        };
+    }
+    useDefaultCompression() {
+        return (req, res) => {
+            const send = res.send;
+            res.send = (body = "") => {
+                const encoding = req.headers.get("Accept-Encoding");
 
-/**
- * security headers
- * @returns {Function}
- */
-function security() {
-    return function (req, res, next) {
-        res.headers.set("Content-Security-Policy", "default-src 'self'");
-        res.headers.set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
-        res.headers.set("X-Content-Type-Options", "nosniff");
-        res.headers.set("X-Frame-Options", "DENY");
-        res.headers.set("X-XSS-Protection", "1; mode=block");
-        res.headers.set("Access-Control-Allow-Origin", "*");
-        res.headers.set("Content-Language", "en-US");
-        next();
-    };
-}
+                let readable = body;
+                if (!(body instanceof Readable)) {
+                    readable = new Readable();
+                    readable.push(body);
+                    readable.push(null);
+                }
+                if (/\bgzip\b/.test(encoding)) {
+                    res.headers.set("Content-Encoding", "gzip");
+                    readable = readable.pipe(zlib.createGzip());
+                } else if (/\bdeflate\b/.test(encoding)) {
+                    res.headers.set("Content-Encoding", "deflate");
+                    readable = readable.pipe(zlib.createDeflate());
+                } else if (/\bbr\b/.test(encoding)) {
+                    res.headers.set("Content-Encoding", "br");
+                    readable = readable.pipe(zlib.createBrotliCompress());
+                }
+                body = readable;
 
-/**
- *
- * @param {Object} options
- * @param {Object} options.window=3600 - 3600s/1h
- * @param {Object} options.counter=100 - 100x
- */
-function limiter(options = {}) {
-    const { window = 3600, counter = 100 } = options;
-    return function (req, res, next) {
-        const pool = Database.get(req.url2.origin);
-        const key = "" + [req.ip, req.url2.href];
+                send(body);
+            };
+        };
+    }
+    useDefaultCaching() {
+        return (req, res) => {
+            const send = res.send;
+            res.send = (body = "") => {
+                const hash = Crypto.hash(body, { algorithm: "sha1" });
+                const etag = `W/"${hash}"`;
+                res.headers.set("ETag", etag);
 
-        let value = pool.sessionStorage.getItem(key) ?? { counter };
-        if (Date.now() > value.time) {
-            pool.sessionStorage.removeItem(key);
-        }
+                if (req.headers.get("If-None-Match") == etag) {
+                    res.status = 304;
+                    body = "";
+                }
 
-        res.headers.set("x-ratelimit-limit", counter);
-        res.headers.set("x-ratelimit-remaining", value.counter);
+                send(body);
+            };
+        };
+    }
+    useDefaultCookieParser() {
+        return (req, res) => {
+            req.cookie = {};
+            if (req.headers.has("Cookie")) {
+                for (const [, name, value] of req.headers.get("Cookie").matchAll(/([^\=;]+?)\=([^\=;]+?)?(; |$)/g)) {
+                    req.cookie[name] = value;
+                }
+            }
 
-        if (value.counter > 0) {
-            --value.counter;
-            pool.sessionStorage.setItem(key, value);
-        } else {
-            if (!value.time) {
-                const date = new Date2().add(window, "s");
-                value.time = date.valueOf();
-                value.date = date.toUTCString();
+            res.cookie = (name, value, options = {}) => {
+                let object = name;
+
+                if (typeof name == "string") {
+                    object = { name, value, ...options };
+                }
+
+                object.value = object.value || "";
+
+                if (!object.value) {
+                    object.expires = new Date(0);
+                    object.maxAge = 0;
+                }
+
+                const array = [];
+
+                if (object.expires !== undefined) array.push(`Expires=${object.expires.toUTCString()}`);
+                if (object.maxAge !== undefined) array.push(`Max-Age=${object.maxAge}`);
+                if (object.domain !== undefined) array.push(`Domain=${object.domain}`);
+                if (object.path !== undefined) array.push(`Path=${object.path}`);
+                if (object.secure !== undefined) array.push(`Secure`);
+                if (object.httpOnly !== undefined) array.push(`HttpOnly`);
+                if (object.sameSite !== undefined) array.push(`SameSite=${object.sameSite}`);
+
+                res.headers.set("Set-Cookie", array.join("; "));
+            };
+        };
+    }
+    useDefaultLimiter(options = {}) {
+        const { window, counter } = options;
+        return (req, res) => {
+            const pool = Database.get(req.origin);
+            const key = "" + [req.ip, req.path];
+            let value = pool.sessionStorage.getItem(key) || { counter };
+            res.headers.set("X-RateLimit-Limit", counter);
+            res.headers.set("X-RateLimit-Remaining", value.counter);
+            if (Date.now() > value.time) {
+                pool.sessionStorage.removeItem(key);
+            }
+            if (value.counter > 0) {
+                --value.counter;
                 pool.sessionStorage.setItem(key, value);
+            } else {
+                if (!value.time) {
+                    const date = new Date2().add(window, "s");
+                    value.time = date.valueOf();
+                    value.date = date.toUTCString();
+                }
+                res.status = 429;
+                res.headers.set("Retry-After", value.date);
+                throw { message: http.STATUS_CODES[res.status] };
             }
-
-            res.status = 429;
-            res.headers.set("retry-after", value.date);
-            next({ message: http.STATUS_CODES[res.status] });
-        }
-        
-        next();
-    };
-}
-
-/**
- * compression response
- * @returns {Function}
- */
-function compression() {
-    return function (req, res, next) {
-        const send = res.send;
-        res.send = function (body) {
-            const encoding = req.headers.get("accept-encoding");
-            let readable = body;
-            if (!(body instanceof Readable)) {
-                readable = new Readable();
-                readable.push(body);
-                readable.push(null);
-            }
-            if (/\bgzip\b/.test(encoding)) {
-                res.headers.set("content-encoding", "gzip");
-                readable = readable.pipe(zlib.createGzip());
-            } else if (/\bdeflate\b/.test(encoding)) {
-                res.headers.set("content-encoding", "deflate");
-                readable = readable.pipe(zlib.createDeflate());
-            } else if (/\bbr\b/.test(encoding)) {
-                res.headers.set("content-encoding", "br");
-                readable = readable.pipe(zlib.createBrotliCompress());
-            }
-            body = readable;
-            send(body);
         };
-        next();
-    };
-}
-
-/**
- * cache response
- * @returns {Function}
- */
-function cache() {
-    return function (req, res, next) {
-        const send = res.send;
-        res.send = function (body) {
-            const hash = Crypto.hash(body, { algorithm: "sha1" });
-            const etag = `W/"${hash}"`;
-            res.headers.set("etag", etag);
-
-            if (req.headers.get("if-none-match") == etag) {
-                res.status = 304;
-                body = "";
-            }
-            send(body);
+    }
+    useDefaultRoute() {
+        return (req, res) => {
+            res.status = 404;
+            throw { message: http.STATUS_CODES[res.status] };
         };
-        next();
-    };
-}
-
-/**
- * default route
- * @returns {Function}
- */
-function empty() {
-    return function (req, res, next) {
-        res.status = 404;
-        next({ message: http.STATUS_CODES[res.status] });
-    };
-}
-
-/**
- * catch-all
- * @returns {Function}
- */
-function error() {
-    return function (err, req, res, next) {
-        res.status = res.status == 200 ? 500 : res.status;
-        res.json(err);
-    };
-}
-
-/**
- *
- */
-class Router {
-    /**
-     * @private
-     */
-    routes = [];
-
-    /**
-     *
-     * @param {Object} routes
-     */
-    constructor(routes = [], options = {}) {
-        options = {
-            param,
-            cookie,
-            body,
-            security,
-            limiter,
-            compression,
-            cache,
-            empty,
-            error,
-            ...options,
+    }
+    useDefaultErrorHandler() {
+        return (req, res) => {
+            res.status = res.status == 200 ? 500 : res.status;
+            res.json(err);
         };
-        this.handleRequest = this.handleRequest.bind(this);
-
-        if (routes && routes.length) {
-            for (let i = 0; i < routes.length; i++) {
-                const { method = ".*", path = ".*", callback = [] } = routes[i];
-                this.add({ method, path, callback });
-            }
-        }
-        if (options.param) this.add(0, ".*", param());
-        if (options.cookie) this.add(0, ".*", cookie());
-        if (options.body) this.add(0, ".*", body());
-        if (options.security) this.add(0, ".*", security());
-        if (options.limiter) this.add(0, ".*", limiter());
-        if (options.compression) this.add(0, ".*", compression());
-        if (options.cache) this.add(0, ".*", cache());
-        if (options.empty) this.add(2, ".*", empty());
-        if (options.error) this.add(2, ".*", error());
     }
 
-    /**
-     * @private
-     * @param {Number} index
-     * @param {String} method
-     * @param {String} path
-     * @param  {Function} callback
-     */
-    add(index, method, path, ...callback) {
-        if (typeof index == "object") {
-            ({ index, method, path, callback } = index);
+    constructor(config = {}) {
+        this.config = {
+            useDefaultBodyParser: this.useDefaultBodyParser,
+            useDefaultSecurity: this.useDefaultSecurity,
+            useDefaultCompression: this.useDefaultCompression,
+            useDefaultCaching: this.useDefaultCaching,
+            useDefaultCookieParser: this.useDefaultCookieParser,
+            useDefaultLimiter: this.useDefaultLimiter,
+            useDefaultRoute: this.useDefaultRoute,
+            useDefaultErrorHandler: this.useDefaultErrorHandler,
+            ...config,
+        };
+        this.handleRequest = this.handleRequest.bind(this);
+    }
+
+    add(method, path, ...listener) {
+        if (typeof method == "object") {
+            ({ method, path, listener } = method);
         }
 
-        if (!Array.isArray(callback)) {
-            callback = [callback];
+        if (!Array.isArray(listener)) {
+            listener = [listener];
         }
 
         if (typeof path == "function") {
-            callback = [path, ...callback];
+            listener = [path, ...listener];
             path = ".*";
         }
-        const [{ routes }] = callback;
+        const [{ routes }] = listener;
 
         if (routes) {
-            callback = [];
+            listener = [];
 
             for (let i = 0; i < routes.length; i++) {
                 const route = routes[i];
@@ -295,246 +197,207 @@ class Router {
                 this.add(route);
             }
         } else {
-            if ((index == 0 || index == 2) && path !== ".*") {
-                return;
-            }
-            let regexp = path.source || path;
-            regexp = regexp.replace(/\:(\w+)/g, "(?<$1>[^/]+)").replace(/\/?$/, "/?$");
-            regexp = new RegExp("^" + regexp, "i");
-            this.routes.push({ index, method, path, callback, regexp });
-            this.routes.sort(function (a, b) {
-                return a.index - b.index;
-            });
+            const regexp = new RegExp("^" + (path.source || path).replace(/\:(\w+)/g, "(?<$1>[^/]+)").replace(/\/?$/, "/?$"), "i");
+            const [callback] = listener;
+            const stacks = callback.length > 3 ? this.errors : this.routes;
+            stacks.push({ method, path, regexp, listener });
         }
+        return this;
     }
 
-    /**
-     *
-     * @param  {String/Function} path
-     * @param  {Function} callback
-     */
     use(...args) {
-        this.add(1, ".*", ...args);
+        this.add(".*", ...args);
+        return this;
     }
 
-    /**
-     *
-     * @param  {String/Function} path
-     * @param  {Function} callback
-     */
-    post(...args) {
-        this.add(1, "POST", ...args);
+    connect(...args) {
+        this.add("CONNECT", ...args);
+        return this;
     }
-    /**
-     *
-     * @param  {String/Function} path
-     * @param  {Function} callback
-     */
-    get(...args) {
-        this.add(1, "GET", ...args);
-    }
-    /**
-     *
-     * @param  {String/Function} path
-     * @param  {Function} callback
-     */
-    patch(...args) {
-        this.add(1, "PATCH", ...args);
-    }
-    /**
-     *
-     * @param  {String/Function} path
-     * @param  {Function} callback
-     */
-    put(...args) {
-        this.add(1, "PUT", ...args);
-    }
-    /**
-     *
-     * @param  {String/Function} path
-     * @param  {Function} callback
-     */
+
     delete(...args) {
-        this.add(1, "DELETE", ...args);
+        this.add("DELETE", ...args);
+        return this;
     }
 
-    /**
-     * @private
-     * @param {Stream} req
-     * @param {Stream} res
-     */
+    get(...args) {
+        this.add("GET", ...args);
+        return this;
+    }
+
+    head(...args) {
+        this.add("HEAD", ...args);
+        return this;
+    }
+
+    options(...args) {
+        this.add("OPTIONS", ...args);
+        return this;
+    }
+
+    patch(...args) {
+        this.add("PATCH", ...args);
+        return this;
+    }
+
+    post(...args) {
+        this.add("POST", ...args);
+        return this;
+    }
+
+    put(...args) {
+        this.add("PUT", ...args);
+        return this;
+    }
+
+    trace(...args) {
+        this.add("TRACE", ...args);
+        return this;
+    }
+
+    // headers
+    // origin
+    // ip
+    // url2
+    // path
+    // query
+    // params
+    // cookie
+    // body
     async beforeRequest(req, res) {
-        req.origin = (req.socket.encrypted ? "https:" : "http:") + "//" + req.headers.host;
+        req.headers = new Headers(req.headers);
+        req.origin = (req.socket.encrypted ? "https:" : "http:") + "//" + req.headers.get("host");
         req.ip = req.socket.remoteAddress;
         req.url2 = new URL2(req.url, req.origin);
         req.path = req.url2.pathname;
         req.query = req.url2.searchParams;
-        req.headers = new Headers(req.headers);
     }
 
-    /**
-     * @private
-     * @param {Stream} req
-     * @param {Stream} res
-     */
-    beforeResponse(req, res) {
+    // status
+    // headers
+    // send(body)
+    // json(body)
+    // redirect(url,status)
+    // cookie(name,value,options)
+    async beforeResponse(req, res) {
         res.status = res.statusCode;
         res.headers = new Headers(res.headers);
-        res.headers.set("content-type", "text/html");
 
-        res.send = function (body = "") {
-            let readable = body;
+        res.send = (body = "") => {
             if (!(body instanceof Readable)) {
-                readable = new Readable();
+                let readable = new Readable();
                 readable.push(body);
                 readable.push(null);
+                body = readable;
             }
-            body = readable;
             res.writeHead(res.status, res.headers.entries());
             body.pipe(res);
         };
 
-        res.json = function (value = {}) {
-            res.headers.set("content-type", "application/json");
-            res.send(JSON.stringify(value));
+        res.json = (body = {}) => {
+            res.headers.set("Content-Type", "application/json");
+            res.send(JSON.stringify(body));
         };
 
-        res.redirect = function (url, status = 301) {
+        res.redirect = (url = "", status = 302) => {
             res.status = status;
-            res.headers.set("location", url);
+            res.headers.set("Location", url);
             res.send();
         };
     }
 
-    /**
-     *
-     * @param {Stream} req
-     * @param {Stream} res
-     */
     async handleRequest(req, res) {
         try {
             await this.beforeRequest(req, res);
             await this.beforeResponse(req, res);
-            await this.forRoute(req, res);
-        } catch (err) {
-            err = this.errorParser(err);
-            const [{ callback: [error] = [] } = {}, , { callback: [defaulterror] = [] } = {}] = this.routes.slice(-3);
-            try {
-                error(err, req, res, function (next) {});
-            } catch (error) {
-                defaulterror(err, req, res, function (next) {});
+
+            if (this.config.useDefaultBodyParser) {
+                await this.config.useDefaultBodyParser()(req, res);
             }
-        }
-    }
 
-    /**
-     * @private
-     * @param {Object/Error} err
-     * @returns {Object}
-     */
-    errorParser(err) {
-        if (typeof err == "object") {
-            const replacer = Object.getOwnPropertyNames(err);
-            err = JSON.stringify(err, replacer);
-            err = JSON.parse(err);
-        }
-        return err;
-    }
-
-    /**
-     * @private
-     * @param {Stream} req
-     * @param {Stream} res
-     */
-    async forRoute(req, res) {
-        for (let i = 0; i < this.routes.length; i++) {
-            req.route = this.routes[i];
-            const passed =
-                (req.route.method == ".*" || req.route.method == req.method) && //
-                req.route.regexp.test(req.path);
-
-            if (!passed) {
-                continue;
+            if (this.config.useDefaultSecurity) {
+                this.config.useDefaultSecurity()(req, res);
             }
-            await this.forCallback(req, res);
-        }
-    }
 
-    /**
-     * @private
-     * @param {Stream} req
-     * @param {Stream} res
-     */
-    async forCallback(req, res) {
-        for (let j = 0; j < req.route.callback.length; j++) {
-            const callback = req.route.callback[j];
-
-            if (callback.length > 3) {
-                continue;
+            if (this.config.useDefaultCompression) {
+                this.config.useDefaultCompression()(req, res);
             }
-            await this.handleCallback(callback, req, res);
-        }
-    }
 
-    /**
-     * @private
-     * @param {Function} callback
-     * @param {Stream} req
-     * @param {Stream} res
-     */
-    handleCallback(callback, req, res) {
-        return new Promise(function (resolve, reject) {
-            callback(req, res, function (err) {
-                if (err !== undefined) {
-                    reject(err);
-                } else {
-                    resolve();
+            if (this.config.useDefaultCaching) {
+                this.config.useDefaultCaching()(req, res);
+            }
+
+            if (this.config.useDefaultCookieParser) {
+                this.config.useDefaultCookieParser()(req, res);
+            }
+
+            if (this.config.useDefaultLimiter) {
+                this.config.useDefaultLimiter({ window: 60 * 60, counter: 100 })(req, res);
+            }
+
+            for (let i = 0; i < this.routes.length; i++) {
+                req.route = this.routes[i];
+                const skip = !((req.route.method == req.method || req.route.method == ".*") && req.route.regexp.test(req.path));
+
+                if (skip) {
+                    continue;
                 }
-            });
-        });
+
+                req.params = { ...req.path.match(req.route.regexp)?.groups };
+
+                for (let j = 0; j < req.route.listener.length; j++) {
+                    const callback = req.route.listener[j];
+
+                    await new Promise((resolve, reject) => {
+                        callback(req, res, (err) => {
+                            if (err) {
+                                reject(err);
+                            } else {
+                                resolve();
+                            }
+                        });
+                    });
+                }
+            }
+
+            if (this.config.useDefaultRoute) {
+                this.config.useDefaultRoute()(req, res);
+            }
+        } catch (err) {
+            if (typeof err == "object") {
+                // Error parser
+                err = JSON.parse(JSON.stringify(err, Object.getOwnPropertyNames(err)));
+            }
+
+            // User defined error handler
+            for (let i = 0; i < this.errors.length; i++) {
+                const { listener: [callback] = [] } = this.errors[i];
+
+                await new Promise((resolve, reject) => {
+                    callback(err, req, res, () => {
+                        resolve();
+                    });
+                });
+            }
+
+            if (this.config.useDefaultErrorHandler) {
+                this.config.useDefaultErrorHandler()(req, res);
+            }
+        }
     }
 
-    /**
-     *
-     * @param {Number} port
-     * @param {String/Function} hostname
-     * @param {Function} backlog
-     * @returns {Object}
-     */
     listen(port, hostname, backlog) {
         if (typeof hostname == "function") {
             backlog = hostname;
-            hostname = undefined;
+            hostname = null;
         }
-        hostname = hostname || "0.0.0.0";
-        return http.createServer(this.handleRequest).listen(port, hostname, backlog);
+
+        hostname = hostname || "127.0.0.1";
+
+        const server = http.createServer().listen(port, hostname, backlog);
+        server.on("request", this.handleRequest);
+        return server;
     }
 }
 
-/**
- *
- * @returns {Object/Function}
- */
-function App(routes = [], options = {}) {
-    const router = new Router(routes, options);
-    const app = (...args) => router.handleRequest(...args);
-    app.routes = router.routes;
-
-    for (const name of ["post", "get", "patch", "put", "delete", "use", "listen"]) {
-        app[name] = (...args) => router[name](...args);
-    }
-    return app;
-}
-
-App.Router = Router;
-App.param = param;
-App.cookie = cookie;
-App.body = body;
-App.security = security;
-App.limiter = limiter;
-App.compression = compression;
-App.cache = cache;
-App.empty = empty;
-App.error = error;
-
-module.exports = App;
+module.exports = Router;
