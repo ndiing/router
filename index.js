@@ -13,7 +13,7 @@ class Router {
     routes = [];
     errors = [];
 
-    useDefaultBodyParser() {
+    static body() {
         return async (req, res) => {
             const buffer = [];
             for await (const chunk of req) {
@@ -27,7 +27,8 @@ class Router {
             }
         };
     }
-    useDefaultSecurity() {
+    
+    static security() {
         return (req, res) => {
             res.headers.set("Content-Security-Policy", "default-src 'self'");
             res.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
@@ -37,7 +38,8 @@ class Router {
             res.headers.set("Access-Control-Allow-Origin", "*");
         };
     }
-    useDefaultCompression() {
+    
+    static compression() {
         return (req, res) => {
             const send = res.send;
             res.send = (body = "") => {
@@ -65,7 +67,8 @@ class Router {
             };
         };
     }
-    useDefaultCaching() {
+    
+    static cache() {
         return (req, res) => {
             const send = res.send;
             res.send = (body = "") => {
@@ -82,7 +85,8 @@ class Router {
             };
         };
     }
-    useDefaultCookieParser() {
+    
+    static cookie() {
         return (req, res) => {
             req.cookie = {};
             if (req.headers.has("Cookie")) {
@@ -119,7 +123,8 @@ class Router {
             };
         };
     }
-    useDefaultLimiter(options = {}) {
+    
+    static limiter(options = {}) {
         const { window, counter } = options;
         return (req, res) => {
             const pool = Database.get(req.origin);
@@ -145,13 +150,15 @@ class Router {
             }
         };
     }
-    useDefaultRoute() {
+    
+    static defaultRoute() {
         return (req, res) => {
             res.status = 404;
             throw { message: http.STATUS_CODES[res.status] };
         };
     }
-    useDefaultErrorHandler() {
+    
+    static defaultError() {
         return (err,req, res) => {
             res.status = res.status == 200 ? 500 : res.status;
             res.json(err);
@@ -160,14 +167,14 @@ class Router {
 
     constructor(config = {}) {
         this.config = {
-            useDefaultBodyParser: this.useDefaultBodyParser,
-            useDefaultSecurity: this.useDefaultSecurity,
-            useDefaultCompression: this.useDefaultCompression,
-            useDefaultCaching: this.useDefaultCaching,
-            useDefaultCookieParser: this.useDefaultCookieParser,
-            useDefaultLimiter: this.useDefaultLimiter,
-            useDefaultRoute: this.useDefaultRoute,
-            useDefaultErrorHandler: this.useDefaultErrorHandler,
+            body: Router.body,
+            security: Router.security,
+            compression: Router.compression,
+            cache: Router.cache,
+            cookie: Router.cookie,
+            limiter: Router.limiter,
+            defaultRoute: Router.defaultRoute,
+            defaultError: Router.defaultError,
             ...config,
         };
         this.handleRequest = this.handleRequest.bind(this);
@@ -311,28 +318,28 @@ class Router {
             await this.beforeRequest(req, res);
             await this.beforeResponse(req, res);
 
-            if (this.config.useDefaultBodyParser) {
-                await this.config.useDefaultBodyParser()(req, res);
+            if (this.config.body) {
+                await this.config.body()(req, res);
             }
 
-            if (this.config.useDefaultSecurity) {
-                this.config.useDefaultSecurity()(req, res);
+            if (this.config.security) {
+                this.config.security()(req, res);
             }
 
-            if (this.config.useDefaultCompression) {
-                this.config.useDefaultCompression()(req, res);
+            if (this.config.compression) {
+                this.config.compression()(req, res);
             }
 
-            if (this.config.useDefaultCaching) {
-                this.config.useDefaultCaching()(req, res);
+            if (this.config.cache) {
+                this.config.cache()(req, res);
             }
 
-            if (this.config.useDefaultCookieParser) {
-                this.config.useDefaultCookieParser()(req, res);
+            if (this.config.cookie) {
+                this.config.cookie()(req, res);
             }
 
-            if (this.config.useDefaultLimiter) {
-                this.config.useDefaultLimiter({ window: 60 * 60, counter: 100 })(req, res);
+            if (this.config.limiter) {
+                this.config.limiter({ window: 60 * 60, counter: 100 })(req, res);
             }
 
             for (let i = 0; i < this.routes.length; i++) {
@@ -360,8 +367,8 @@ class Router {
                 }
             }
 
-            if (this.config.useDefaultRoute) {
-                this.config.useDefaultRoute()(req, res);
+            if (this.config.defaultRoute) {
+                this.config.defaultRoute()(req, res);
             }
         } catch (err) {
             if (typeof err == "object") {
@@ -380,8 +387,8 @@ class Router {
                 });
             }
 
-            if (this.config.useDefaultErrorHandler) {
-                this.config.useDefaultErrorHandler()(err,req, res);
+            if (this.config.defaultError) {
+                this.config.defaultError()(err,req, res);
             }
         }
     }
@@ -401,3 +408,90 @@ class Router {
 }
 
 module.exports = Router;
+
+// Create routerA
+const routerA = new Router();
+
+// Using chain method
+routerA
+    .use((req, res, next) => {
+        next();
+    })
+    .get("/", (req, res, next) => {
+        res.json({ message: "routerA get" });
+    })
+    .post("/", (req, res, next) => {
+        res.json({ message: "routerA post" });
+    })
+    .patch("/:id", (req, res, next) => {
+        res.json({
+            origin: req.origin,
+            ip: req.ip,
+            url2: req.url2,
+            path: req.path,
+            query: req.query,
+            params: req.params,
+            cookie: req.cookie,
+            body: req.body,
+            status: res.status,
+        });
+    })
+    .delete("/:id", (req, res, next) => {
+        res.json({ message: "routerA delete" });
+    });
+
+// Create router1
+const router1 = new Router();
+router1.use((req, res, next) => {
+    next();
+});
+
+// Register routerA to router1
+router1.use("/routerA", routerA);
+router1.get("/", (req, res, next) => {
+    res.json({ message: "router1 get" });
+});
+
+// Create app
+const app = new Router({
+    // body
+    // security
+    // compression
+    // cache
+    // cookie
+    // limiter
+    // defaultRoute
+    // defaultError
+});
+app.use((req, res, next) => {
+    next();
+});
+
+// Register router1 to app
+app.use("/router1", router1);
+app.get("/", (req, res, next) => {
+    res.json({ message: "app get" });
+});
+
+// Test error
+app.get("/internal-server-error", (req, res, next) => {
+    throw new Error("internal-server-error");
+});
+
+// Custom default route
+app.use((req, res, next) => {
+    res.status = 404;
+    next({ message: "page not found" });
+});
+
+// Custom error handler
+app.use((err, req, res, next) => {
+    if (err && typeof err == "object") {
+        err = JSON.parse(JSON.stringify(err, Object.getOwnPropertyNames(err)));
+    }
+    res.status = res.status == 200 ? 500 : res.status;
+    res.json({ err });
+});
+
+// Start server
+app.listen(3000);
