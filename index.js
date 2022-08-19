@@ -339,7 +339,7 @@ class Router {
             }
 
             if (this.config.limiter) {
-                this.config.limiter({ window: 60 * 60, counter: 100 })(req, res);
+                this.config.limiter({ window: 60, counter: 10000 })(req, res);
             }
 
             for (let i = 0; i < this.routes.length; i++) {
