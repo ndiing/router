@@ -1,100 +1,43 @@
-# [router](https://ndiing.github.io/router/)
-router
+# Router
 
-### Install
-```
-npm install @ndiinginc/router
-```
+## [Methods]()
 
-### Usage
+[`Router.body()`]()
 
-```js
+[`Router.security()`]()
 
-// Create routerA
-const routerA = new Router();
+[`Router.compression()`]()
 
-// Using chain method
-routerA
-    .use((req, res, next) => {
-        next();
-    })
-    .get("/", (req, res, next) => {
-        res.json({ message: "routerA get" });
-    })
-    .post("/", (req, res, next) => {
-        res.json({ message: "routerA post" });
-    })
-    .patch("/:id", (req, res, next) => {
-        res.json({
-            origin: req.origin,
-            ip: req.ip,
-            url2: req.url2,
-            path: req.path,
-            query: req.query,
-            params: req.params,
-            cookie: req.cookie,
-            body: req.body,
-            status: res.status,
-        });
-    })
-    .delete("/:id", (req, res, next) => {
-        res.json({ message: "routerA delete" });
-    });
+[`Router.cache()`]()
 
-// Create router1
-const router1 = new Router();
-router1.use((req, res, next) => {
-    next();
-});
+[`Router.cookie()`]()
 
-// Register routerA to router1
-router1.use("/routerA", routerA);
-router1.get("/", (req, res, next) => {
-    res.json({ message: "router1 get" });
-});
+[`Router.limiter()`]()
 
-// Create app
-const app = new Router({
-    // body
-    // security
-    // compression
-    // cache
-    // cookie
-    // limiter
-    // defaultRoute
-    // defaultError
-});
-app.use((req, res, next) => {
-    next();
-});
+[`Router.use()`]()
 
-// Register router1 to app
-app.use("/router1", router1);
-app.get("/", (req, res, next) => {
-    res.json({ message: "app get" });
-});
+[`Router.connect()`]()
 
-// Test error
-app.get("/internal-server-error", (req, res, next) => {
-    throw new Error("internal-server-error");
-});
+[`Router.delete()`]()
 
-// Custom default route
-app.use((req, res, next) => {
-    res.status = 404;
-    next({ message: "page not found" });
-});
+[`Router.get()`]()
 
-// Custom error handler
-app.use((err, req, res, next) => {
-    if (err && typeof err == "object") {
-        err = JSON.parse(JSON.stringify(err, Object.getOwnPropertyNames(err)));
-    }
-    res.status = res.status == 200 ? 500 : res.status;
-    res.json({ err });
-});
+[`Router.head()`]()
 
-// Start server
-app.listen(3000);
+[`Router.options()`]()
 
-```
+[`Router.patch()`]()
+
+[`Router.post()`]()
+
+[`Router.put()`]()
+
+[`Router.trace()`]()
+
+[`Router.listen()`]()
+
+# Global
+
+## [See also]()
+
+-   See also
