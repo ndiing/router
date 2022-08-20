@@ -13,6 +13,9 @@ class Router {
     routes = [];
     errors = [];
 
+    /**
+     * Middleware body
+     */
     static body() {
         return async (req, res) => {
             const buffer = [];
@@ -28,6 +31,9 @@ class Router {
         };
     }
     
+    /**
+     * Middleware security
+     */
     static security() {
         return (req, res) => {
             res.headers.set("Content-Security-Policy", "default-src 'self'");
@@ -39,6 +45,9 @@ class Router {
         };
     }
     
+    /**
+     * Middleware compression
+     */
     static compression() {
         return (req, res) => {
             const send = res.send;
@@ -68,6 +77,9 @@ class Router {
         };
     }
     
+    /**
+     * Middleware cache
+     */
     static cache() {
         return (req, res) => {
             const send = res.send;
@@ -86,6 +98,9 @@ class Router {
         };
     }
     
+    /**
+     * Middleware cookie
+     */
     static cookie() {
         return (req, res) => {
             req.cookie = {};
@@ -124,6 +139,9 @@ class Router {
         };
     }
     
+    /**
+     * Middleware limiter
+     */
     static limiter(options = {}) {
         const { window, counter } = options;
         return (req, res) => {
@@ -212,51 +230,81 @@ class Router {
         return this;
     }
 
+    /**
+     * 
+     */
     use(...args) {
         this.add(".*", ...args);
         return this;
     }
 
+    /**
+     * 
+     */
     connect(...args) {
         this.add("CONNECT", ...args);
         return this;
     }
 
+    /**
+     * 
+     */
     delete(...args) {
         this.add("DELETE", ...args);
         return this;
     }
 
+    /**
+     * 
+     */
     get(...args) {
         this.add("GET", ...args);
         return this;
     }
 
+    /**
+     * 
+     */
     head(...args) {
         this.add("HEAD", ...args);
         return this;
     }
 
+    /**
+     * 
+     */
     options(...args) {
         this.add("OPTIONS", ...args);
         return this;
     }
 
+    /**
+     * 
+     */
     patch(...args) {
         this.add("PATCH", ...args);
         return this;
     }
 
+    /**
+     * 
+     */
     post(...args) {
         this.add("POST", ...args);
         return this;
     }
 
+    /**
+     * 
+     */
     put(...args) {
         this.add("PUT", ...args);
         return this;
     }
 
+    /**
+     * 
+     */
     trace(...args) {
         this.add("TRACE", ...args);
         return this;
@@ -393,6 +441,13 @@ class Router {
         }
     }
 
+    /**
+     * 
+     * @param {*} port 
+     * @param {*} hostname 
+     * @param {*} backlog 
+     * @returns {Any}
+     */
     listen(port, hostname, backlog) {
         if (typeof hostname == "function") {
             backlog = hostname;

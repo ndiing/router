@@ -24,7 +24,7 @@
 <label for="nav-trigger" class="overlay"></label>
 
 <nav>
-    <li class="nav-link nav-home-link"><a href="index.html">Home</a></li><li class="nav-heading">Classes</li><li class="nav-heading"><span class="nav-item-type type-class">C</span><span class="nav-item-name"><a href="Router.html">Router</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Router.html#delete">delete</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Router.html#get">get</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Router.html#handleRequest">handleRequest</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Router.html#listen">listen</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Router.html#patch">patch</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Router.html#post">post</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Router.html#put">put</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Router.html#use">use</a></span></li><li class="nav-heading"><a href="global.html">Globals</a></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#App">App</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#bodyParser">bodyParser</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#cacheHandler">cacheHandler</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#compressionHandler">compressionHandler</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#cookieParser">cookieParser</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#defaultHandler">defaultHandler</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#errorHandler">errorHandler</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#paramParser">paramParser</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#securityHandler">securityHandler</a></span></li>
+    <li class="nav-link nav-home-link"><a href="index.html">Home</a></li><li class="nav-heading">Classes</li><li class="nav-heading"><span class="nav-item-type type-class">C</span><span class="nav-item-name"><a href="Router.html">Router</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Router.html#.body">body</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Router.html#.cache">cache</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Router.html#.compression">compression</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Router.html#.cookie">cookie</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Router.html#.limiter">limiter</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Router.html#.security">security</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Router.html#connect">connect</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Router.html#delete">delete</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Router.html#get">get</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Router.html#head">head</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Router.html#listen">listen</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Router.html#options">options</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Router.html#patch">patch</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Router.html#post">post</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Router.html#put">put</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Router.html#trace">trace</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Router.html#use">use</a></span></li>
 </nav>
 
 <div id="main">
@@ -55,113 +55,92 @@
 </code></pre>
 <h3>Usage</h3>
 <pre class="prettyprint source lang-js"><code>
-const Router = require('@ndiinginc/router')
+// Create routerA
+const routerA = new Router();
 
-// Create router
-const router = new Router();
-
-router.post(&quot;/&quot;, (req, res, next) => {
-    res.json({ message: &quot;from router post&quot; });
-});
-router.get(&quot;/&quot;, (req, res, next) => {
-    res.json({ message: &quot;from router get&quot; });
-});
-router.patch(&quot;/:id&quot;, (req, res, next) => {
-    // get url object
-    console.log(req.url2);
-    // get params
-    console.log(req.params);
-    // get query object
-    console.log(req.query);
-    // get cookies
-    console.log(req.cookies);
-    // get body
-    console.log(req.body);
-
-    // send cookie
-    res.cookie(&quot;name&quot;, &quot;value&quot;);
-
-    // send cookie object
-    res.cookie({
-        name: &quot;name1&quot;,
-        value: &quot;value1&quot;,
-    });
-    // send more..
-    res.cookie({
-        name: &quot;name1&quot;,
-        value: &quot;value1&quot;,
+// Using chain method
+routerA
+    .use((req, res, next) => {
+        next();
+    })
+    .get(&quot;/&quot;, (req, res, next) => {
+        res.json({ message: &quot;routerA get&quot; });
+    })
+    .post(&quot;/&quot;, (req, res, next) => {
+        res.json({ message: &quot;routerA post&quot; });
+    })
+    .patch(&quot;/:id&quot;, (req, res, next) => {
+        res.json({
+            origin: req.origin,
+            ip: req.ip,
+            url2: req.url2,
+            path: req.path,
+            query: req.query,
+            params: req.params,
+            cookie: req.cookie,
+            body: req.body,
+            status: res.status,
+        });
+    })
+    .delete(&quot;/:id&quot;, (req, res, next) => {
+        res.json({ message: &quot;routerA delete&quot; });
     });
 
-    // removing previouse cookie
-    res.cookie(&quot;name&quot;);
-
-    res.json({ message: &quot;from router patch&quot; });
-});
-router.put(&quot;/:id&quot;, (req, res, next) => {
-    res.json({ message: &quot;from router put&quot; });
-});
-router.delete(&quot;/:id&quot;, (req, res, next) => {
-    res.json({ message: &quot;from router delete&quot; });
-});
-
-// Create app
-const app = new Router();
-
-// Using middleware
-app.use((req, res, next) => {
-    console.log(&quot;app middleware&quot;);
+// Create router1
+const router1 = new Router();
+router1.use((req, res, next) => {
     next();
 });
 
-// Register router
-app.use(&quot;/router&quot;, router);
-
-// Redirect
-app.get(&quot;/redirect&quot;, (req, res, next) => {
-    res.redirect(&quot;/&quot;);
+// Register routerA to router1
+router1.use(&quot;/routerA&quot;, routerA);
+router1.get(&quot;/&quot;, (req, res, next) => {
+    res.json({ message: &quot;router1 get&quot; });
 });
 
-// Add Get route
-app.get(&quot;/&quot;, (req, res, next) => {
-    res.json({ message: &quot;from app get&quot; });
+// Create app
+const app = new Router({
+    // body
+    // security
+    // compression
+    // cache
+    // cookie
+    // limiter
+    // defaultRoute
+    // defaultError
 });
-
-// Send error
-app.get(&quot;/catch-all&quot;, (req, res, next) => {
-    throw new Error(&quot;error message&quot;);
-});
-
-// custom page not found
 app.use((req, res, next) => {
+    next();
+});
+
+// Register router1 to app
+app.use(&quot;/router1&quot;, router1);
+app.get(&quot;/&quot;, (req, res, next) => {
+    res.json({ message: &quot;app get&quot; });
+});
+
+// Test error
+app.get(&quot;/internal-server-error&quot;, (req, res, next) => {
+    throw new Error(&quot;internal-server-error&quot;);
+});
+
+// Custom default route
+app.use((req, res, next) => {
+    res.status = 404;
     next({ message: &quot;page not found&quot; });
 });
 
-// custom catch-all
+// Custom error handler
 app.use((err, req, res, next) => {
+    if (err && typeof err == &quot;object&quot;) {
+        err = JSON.parse(JSON.stringify(err, Object.getOwnPropertyNames(err)));
+    }
+    res.status = res.status == 200 ? 500 : res.status;
     res.json({ err });
 });
 
+// Start server
 app.listen(3000);
-
-// /test.rest
-// ###
-// GET http://localhost:3000
-// ###
-// GET http://localhost:3000/router
-// ###
-// POST http://localhost:3000/router
-// ###
-// PATCH http://localhost:3000/router/1?user=name&pass=word
-// Content-Type: application/json
-// Cookie: name=value; name1=value1; name3=value3
-
-// {&quot;user&quot;:&quot;name&quot;}
-// ###
-// GET http://localhost:3000/redirect
-// ###
-// GET http://localhost:3000/not-found
-// ###
-// GET http://localhost:3000/catch-all
 
 </code></pre></article>
     </section>
@@ -176,7 +155,7 @@ app.listen(3000);
 <br class="clear">
 
 <footer>
-    Generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.6.11</a> on Wed Aug 17 2022 21:52:14 GMT+0700 (Western Indonesia Time) using the Minami theme.
+    Generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.6.11</a> on Sat Aug 20 2022 17:08:17 GMT+0700 (Western Indonesia Time) using the Minami theme.
 </footer>
 
 <script>prettyPrint();</script>
