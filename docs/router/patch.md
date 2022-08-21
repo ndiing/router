@@ -14,7 +14,6 @@ patch(args);
 ### Parameters
 
 - `args`
-
 <!-- parameters -->
 
 <!-- return -->

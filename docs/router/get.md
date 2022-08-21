@@ -14,7 +14,6 @@ get(args);
 ### Parameters
 
 - `args`
-
 <!-- parameters -->
 
 <!-- return -->

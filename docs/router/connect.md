@@ -14,7 +14,6 @@ connect(args);
 ### Parameters
 
 - `args`
-
 <!-- parameters -->
 
 <!-- return -->

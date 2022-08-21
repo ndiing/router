@@ -14,7 +14,6 @@ put(args);
 ### Parameters
 
 - `args`
-
 <!-- parameters -->
 
 <!-- return -->

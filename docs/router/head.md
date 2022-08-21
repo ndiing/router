@@ -14,7 +14,6 @@ head(args);
 ### Parameters
 
 - `args`
-
 <!-- parameters -->
 
 <!-- return -->

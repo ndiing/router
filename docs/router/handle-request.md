@@ -14,9 +14,7 @@ handleRequest(req,res);
 ### Parameters
 
 - `req`
-
 - `res`
-
 <!-- parameters -->
 
 <!-- return -->

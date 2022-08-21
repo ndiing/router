@@ -14,7 +14,6 @@ trace(args);
 ### Parameters
 
 - `args`
-
 <!-- parameters -->
 
 <!-- return -->

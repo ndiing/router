@@ -14,7 +14,6 @@ delete(args);
 ### Parameters
 
 - `args`
-
 <!-- parameters -->
 
 <!-- return -->

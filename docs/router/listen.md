@@ -14,11 +14,8 @@ listen(port,hostname,backlog);
 ### Parameters
 
 - `port`
-
 - `hostname`
-
 - `backlog`
-
 <!-- parameters -->
 
 <!-- return -->

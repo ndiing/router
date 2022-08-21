@@ -14,7 +14,6 @@ post(args);
 ### Parameters
 
 - `args`
-
 <!-- parameters -->
 
 <!-- return -->

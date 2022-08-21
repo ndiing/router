@@ -14,7 +14,6 @@ use(args);
 ### Parameters
 
 - `args`
-
 <!-- parameters -->
 
 <!-- return -->
