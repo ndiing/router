@@ -1,54 +1,64 @@
 # Router
 
+<!-- Description -->
+
+
+
+
 ## [Methods]()
 
-[`Router.use()`]()
+<!-- _Description_ -->
 
-[`Router.connect()`]()
+[`use()`]()
 
-[`Router.delete()`]()
+<!-- Description -->
+[`connect()`]()
 
-[`Router.get()`]()
+<!-- Description -->
+[`delete()`]()
 
-[`Router.head()`]()
+<!-- Description -->
+[`get()`]()
 
-[`Router.options()`]()
+<!-- Description -->
+[`head()`]()
 
-[`Router.patch()`]()
+<!-- Description -->
+[`options()`]()
 
-[`Router.post()`]()
+<!-- Description -->
+[`patch()`]()
 
-[`Router.put()`]()
+<!-- Description -->
+[`post()`]()
 
-[`Router.trace()`]()
+<!-- Description -->
+[`put()`]()
 
-[`Router.listen()`]()
+<!-- Description -->
+[`trace()`]()
 
-## [Static methods]()
+<!-- Description -->
+[`listen()`]()
 
-[`Router.body()`]()
+<!-- Description -->
 
-Middleware body
 
-[`Router.security()`]()
 
-Middleware security
 
-[`Router.compression()`]()
-
-Middleware compression
-
-[`Router.cache()`]()
-
-Middleware cache
-
-[`Router.cookie()`]()
-
-Middleware cookie
-
-[`Router.limiter()`]()
-
-Middleware limiter
+<!-- ## [Events]() -->
+<!--  -->
+<!-- Description -->
+<!--  -->
+<!-- [`eventName`]() event -->
+<!--  -->
+<!-- Description -->
+<!--  -->
+<!-- ## [Example]() -->
+<!--  -->
+<!-- ### [Title]() -->
+<!--  -->
+<!-- Description -->
 
 ## [See also]()
 
