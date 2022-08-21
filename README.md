@@ -1,173 +1,58 @@
 
-# body
-
-Middleware body
-
-
-
-# security
-
-Middleware security
-
-
-
-# compression
-
-Middleware compression
-
-
-
-# cache
-
-Middleware cache
-
-
-
-# cookie
-
-Middleware cookie
-
-
-
-# limiter
-
-Middleware limiter
-
-
-
 # Router
 
 
+<!-- examples -->
+<!-- examples -->
 
+<!-- properties -->
+<!-- properties -->
 
+<!-- staticproperties -->
+<!-- staticproperties -->
 
-## [Methods]()
+<!-- methods -->
+## Methods
 
-<!-- _Methods._ -->
 
+[`Router#use(args)`](./docs/router/use.md)
 
-## Router#use()
 
+[`Router#connect(args)`](./docs/router/connect.md)
 
 
-### [Syntax]()
+[`Router#delete(args)`](./docs/router/delete.md)
 
-    use(args)
 
+[`Router#get(args)`](./docs/router/get.md)
 
 
-## Router#connect()
+[`Router#head(args)`](./docs/router/head.md)
 
 
+[`Router#options(args)`](./docs/router/options.md)
 
-### [Syntax]()
 
-    connect(args)
+[`Router#patch(args)`](./docs/router/patch.md)
 
 
+[`Router#post(args)`](./docs/router/post.md)
 
-## Router#delete()
 
+[`Router#put(args)`](./docs/router/put.md)
 
 
-### [Syntax]()
+[`Router#trace(args)`](./docs/router/trace.md)
 
-    delete(args)
 
+[`Router#handleRequest(req,res)`](./docs/router/handle-request.md)
 
 
-## Router#get()
+[`Router#listen(port,hostname,backlog)`](./docs/router/listen.md)
 
 
+<!-- methods -->
 
-### [Syntax]()
-
-    get(args)
-
-
-
-## Router#head()
-
-
-
-### [Syntax]()
-
-    head(args)
-
-
-
-## Router#options()
-
-
-
-### [Syntax]()
-
-    options(args)
-
-
-
-## Router#patch()
-
-
-
-### [Syntax]()
-
-    patch(args)
-
-
-
-## Router#post()
-
-
-
-### [Syntax]()
-
-    post(args)
-
-
-
-## Router#put()
-
-
-
-### [Syntax]()
-
-    put(args)
-
-
-
-## Router#trace()
-
-
-
-### [Syntax]()
-
-    trace(args)
-
-
-
-## Router#listen()
-
-
-
-### [Syntax]()
-
-    listen(port,hostname,backlog)
-
-#### [Parameters]()
-
-name|type|defaultvalue
----|---|---
-port|`*`|
-hostname|`*`|
-backlog|`*`|
-
-#### [Return value]()
-
-`Any`
-
-# 
-
-
-
+<!-- staticmethods -->
+<!-- staticmethods -->
 

@@ -6,10 +6,15 @@ const Crypto = require("@ndiinginc/crypto");
 const Database = require("@ndiinginc/database");
 const { Date2 } = require("@ndiinginc/util");
 
+/**
+ *
+ */
 class Router {
     routes = [];
     errors = [];
-
+    /**
+     *
+     */
     static body() {
         return async (req, res) => {
             const buffer = [];
@@ -25,6 +30,9 @@ class Router {
         };
     }
 
+    /**
+     *
+     */
     static security() {
         return (req, res) => {
             res.headers.set("Content-Security-Policy", "default-src 'self'");
@@ -36,6 +44,9 @@ class Router {
         };
     }
 
+    /**
+     *
+     */
     static compression() {
         return (req, res) => {
             const send = res.send;
@@ -65,6 +76,9 @@ class Router {
         };
     }
 
+    /**
+     *
+     */
     static cache() {
         return (req, res) => {
             const send = res.send;
@@ -83,6 +97,9 @@ class Router {
         };
     }
 
+    /**
+     *
+     */
     static cookie() {
         return (req, res) => {
             req.cookie = {};
@@ -121,6 +138,9 @@ class Router {
         };
     }
 
+    /**
+     *
+     */
     static limiter(options = {}) {
         const { window, counter } = options;
         return (req, res) => {
@@ -148,6 +168,9 @@ class Router {
         };
     }
 
+    /**
+     *
+     */
     static defaultRoute() {
         return (req, res) => {
             res.status = 404;
@@ -155,6 +178,9 @@ class Router {
         };
     }
 
+    /**
+     *
+     */
     static defaultError() {
         return (err, req, res) => {
             res.status = res.status == 200 ? 500 : res.status;
@@ -162,6 +188,9 @@ class Router {
         };
     }
 
+    /**
+     *
+     */
     constructor(config = {}) {
         this.config = {
             body: Router.body,
@@ -209,51 +238,81 @@ class Router {
         return this;
     }
 
+    /**
+     *
+     */
     use(...args) {
         this.add(".*", ...args);
         return this;
     }
 
+    /**
+     *
+     */
     connect(...args) {
         this.add("CONNECT", ...args);
         return this;
     }
 
+    /**
+     *
+     */
     delete(...args) {
         this.add("DELETE", ...args);
         return this;
     }
 
+    /**
+     *
+     */
     get(...args) {
         this.add("GET", ...args);
         return this;
     }
 
+    /**
+     *
+     */
     head(...args) {
         this.add("HEAD", ...args);
         return this;
     }
 
+    /**
+     *
+     */
     options(...args) {
         this.add("OPTIONS", ...args);
         return this;
     }
 
+    /**
+     *
+     */
     patch(...args) {
         this.add("PATCH", ...args);
         return this;
     }
 
+    /**
+     *
+     */
     post(...args) {
         this.add("POST", ...args);
         return this;
     }
 
+    /**
+     *
+     */
     put(...args) {
         this.add("PUT", ...args);
         return this;
     }
 
+    /**
+     *
+     */
     trace(...args) {
         this.add("TRACE", ...args);
         return this;
@@ -295,6 +354,9 @@ class Router {
         };
     }
 
+    /**
+     *
+     */
     async handleRequest(req, res) {
         try {
             await this.beforeRequest(req, res);
@@ -375,6 +437,9 @@ class Router {
         }
     }
 
+    /**
+     *
+     */
     listen(port, hostname, backlog) {
         if (typeof hostname == "function") {
             backlog = hostname;
