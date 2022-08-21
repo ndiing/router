@@ -11,6 +11,10 @@ use(args);
 ```
 
 <!-- parameters -->
+### Parameters
+
+- `args`
+
 <!-- parameters -->
 
 <!-- return -->

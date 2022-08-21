@@ -11,6 +11,10 @@ delete(args);
 ```
 
 <!-- parameters -->
+### Parameters
+
+- `args`
+
 <!-- parameters -->
 
 <!-- return -->

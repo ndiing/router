@@ -11,6 +11,12 @@ handleRequest(req,res);
 ```
 
 <!-- parameters -->
+### Parameters
+
+- `req`
+
+- `res`
+
 <!-- parameters -->
 
 <!-- return -->

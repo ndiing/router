@@ -11,6 +11,10 @@ patch(args);
 ```
 
 <!-- parameters -->
+### Parameters
+
+- `args`
+
 <!-- parameters -->
 
 <!-- return -->
