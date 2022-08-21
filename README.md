@@ -1,67 +1,113 @@
-# Router
+<a name="Router"></a>
 
-Description
+## Router
+**Kind**: global class  
 
+* [Router](#Router)
+    * _instance_
+        * [.use()](#Router+use)
+        * [.connect()](#Router+connect)
+        * [.delete()](#Router+delete)
+        * [.get()](#Router+get)
+        * [.head()](#Router+head)
+        * [.options()](#Router+options)
+        * [.patch()](#Router+patch)
+        * [.post()](#Router+post)
+        * [.put()](#Router+put)
+        * [.trace()](#Router+trace)
+        * [.listen(port, hostname, backlog)](#Router+listen) ⇒ <code>Any</code>
+    * _static_
+        * [.body()](#Router.body)
+        * [.security()](#Router.security)
+        * [.compression()](#Router.compression)
+        * [.cache()](#Router.cache)
+        * [.cookie()](#Router.cookie)
+        * [.limiter()](#Router.limiter)
 
+<a name="Router+use"></a>
 
+### router.use()
+**Kind**: instance method of [<code>Router</code>](#Router)  
+<a name="Router+connect"></a>
 
-## [Methods]()
+### router.connect()
+**Kind**: instance method of [<code>Router</code>](#Router)  
+<a name="Router+delete"></a>
 
-_Description_
+### router.delete()
+**Kind**: instance method of [<code>Router</code>](#Router)  
+<a name="Router+get"></a>
 
-[`use()`](./docs/use.md)
+### router.get()
+**Kind**: instance method of [<code>Router</code>](#Router)  
+<a name="Router+head"></a>
 
+### router.head()
+**Kind**: instance method of [<code>Router</code>](#Router)  
+<a name="Router+options"></a>
 
-[`connect()`](./docs/connect.md)
+### router.options()
+**Kind**: instance method of [<code>Router</code>](#Router)  
+<a name="Router+patch"></a>
 
+### router.patch()
+**Kind**: instance method of [<code>Router</code>](#Router)  
+<a name="Router+post"></a>
 
-[`delete()`](./docs/delete.md)
+### router.post()
+**Kind**: instance method of [<code>Router</code>](#Router)  
+<a name="Router+put"></a>
 
+### router.put()
+**Kind**: instance method of [<code>Router</code>](#Router)  
+<a name="Router+trace"></a>
 
-[`get()`](./docs/get.md)
+### router.trace()
+**Kind**: instance method of [<code>Router</code>](#Router)  
+<a name="Router+listen"></a>
 
+### router.listen(port, hostname, backlog) ⇒ <code>Any</code>
+**Kind**: instance method of [<code>Router</code>](#Router)  
 
-[`head()`](./docs/head.md)
+| Param | Type |
+| --- | --- |
+| port | <code>\*</code> | 
+| hostname | <code>\*</code> | 
+| backlog | <code>\*</code> | 
 
+<a name="Router.body"></a>
 
-[`options()`](./docs/options.md)
+### Router.body()
+Middleware body
 
+**Kind**: static method of [<code>Router</code>](#Router)  
+<a name="Router.security"></a>
 
-[`patch()`](./docs/patch.md)
+### Router.security()
+Middleware security
 
+**Kind**: static method of [<code>Router</code>](#Router)  
+<a name="Router.compression"></a>
 
-[`post()`](./docs/post.md)
+### Router.compression()
+Middleware compression
 
+**Kind**: static method of [<code>Router</code>](#Router)  
+<a name="Router.cache"></a>
 
-[`put()`](./docs/put.md)
+### Router.cache()
+Middleware cache
 
+**Kind**: static method of [<code>Router</code>](#Router)  
+<a name="Router.cookie"></a>
 
-[`trace()`](./docs/trace.md)
+### Router.cookie()
+Middleware cookie
 
+**Kind**: static method of [<code>Router</code>](#Router)  
+<a name="Router.limiter"></a>
 
-[`listen()`](./docs/listen.md)
+### Router.limiter()
+Middleware limiter
 
-
-
-
-
-
-<!-- ## [Events]() -->
-<!--  -->
-<!-- Description -->
-<!--  -->
-<!-- [`eventName`]() event -->
-<!--  -->
-<!-- Description -->
-<!--  -->
-
-<!-- ## [Example]() -->
-<!--  -->
-<!-- ### [Title]() -->
-<!--  -->
-<!-- Description -->
-
-
-## [See also]()
-
--   [`link`]()
+**Kind**: static method of [<code>Router</code>](#Router)  
