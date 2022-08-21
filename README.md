@@ -1,7 +1,5 @@
 # Router
 
-## [Properties]()
-
 ## [Methods]()
 
 [`Router.use()`]()
