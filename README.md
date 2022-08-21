@@ -54,12 +54,6 @@ Middleware limiter
 
     use(args)
 
-#### [Parameters]()
-
-name|type|defaultvalue
----|---|---
-
-#### [Return value]()
 
 
 ## Router#connect()
@@ -70,12 +64,6 @@ name|type|defaultvalue
 
     connect(args)
 
-#### [Parameters]()
-
-name|type|defaultvalue
----|---|---
-
-#### [Return value]()
 
 
 ## Router#delete()
@@ -86,12 +74,6 @@ name|type|defaultvalue
 
     delete(args)
 
-#### [Parameters]()
-
-name|type|defaultvalue
----|---|---
-
-#### [Return value]()
 
 
 ## Router#get()
@@ -102,12 +84,6 @@ name|type|defaultvalue
 
     get(args)
 
-#### [Parameters]()
-
-name|type|defaultvalue
----|---|---
-
-#### [Return value]()
 
 
 ## Router#head()
@@ -118,12 +94,6 @@ name|type|defaultvalue
 
     head(args)
 
-#### [Parameters]()
-
-name|type|defaultvalue
----|---|---
-
-#### [Return value]()
 
 
 ## Router#options()
@@ -134,12 +104,6 @@ name|type|defaultvalue
 
     options(args)
 
-#### [Parameters]()
-
-name|type|defaultvalue
----|---|---
-
-#### [Return value]()
 
 
 ## Router#patch()
@@ -150,12 +114,6 @@ name|type|defaultvalue
 
     patch(args)
 
-#### [Parameters]()
-
-name|type|defaultvalue
----|---|---
-
-#### [Return value]()
 
 
 ## Router#post()
@@ -166,12 +124,6 @@ name|type|defaultvalue
 
     post(args)
 
-#### [Parameters]()
-
-name|type|defaultvalue
----|---|---
-
-#### [Return value]()
 
 
 ## Router#put()
@@ -182,12 +134,6 @@ name|type|defaultvalue
 
     put(args)
 
-#### [Parameters]()
-
-name|type|defaultvalue
----|---|---
-
-#### [Return value]()
 
 
 ## Router#trace()
@@ -198,12 +144,6 @@ name|type|defaultvalue
 
     trace(args)
 
-#### [Parameters]()
-
-name|type|defaultvalue
----|---|---
-
-#### [Return value]()
 
 
 ## Router#listen()
