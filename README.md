@@ -46,175 +46,175 @@ Middleware limiter
 <!-- _Methods._ -->
 
 
-### Router#use()
+## Router#use()
 
 
 
-#### [Syntax]()
+### [Syntax]()
 
     use(args)
 
-##### [Parameters]()
+#### [Parameters]()
 
 name|type|defaultvalue
 ---|---|---
 
-##### [Return value]()
+#### [Return value]()
 
 
-### Router#connect()
+## Router#connect()
 
 
 
-#### [Syntax]()
+### [Syntax]()
 
     connect(args)
 
-##### [Parameters]()
+#### [Parameters]()
 
 name|type|defaultvalue
 ---|---|---
 
-##### [Return value]()
+#### [Return value]()
 
 
-### Router#delete()
+## Router#delete()
 
 
 
-#### [Syntax]()
+### [Syntax]()
 
     delete(args)
 
-##### [Parameters]()
+#### [Parameters]()
 
 name|type|defaultvalue
 ---|---|---
 
-##### [Return value]()
+#### [Return value]()
 
 
-### Router#get()
+## Router#get()
 
 
 
-#### [Syntax]()
+### [Syntax]()
 
     get(args)
 
-##### [Parameters]()
+#### [Parameters]()
 
 name|type|defaultvalue
 ---|---|---
 
-##### [Return value]()
+#### [Return value]()
 
 
-### Router#head()
+## Router#head()
 
 
 
-#### [Syntax]()
+### [Syntax]()
 
     head(args)
 
-##### [Parameters]()
+#### [Parameters]()
 
 name|type|defaultvalue
 ---|---|---
 
-##### [Return value]()
+#### [Return value]()
 
 
-### Router#options()
+## Router#options()
 
 
 
-#### [Syntax]()
+### [Syntax]()
 
     options(args)
 
-##### [Parameters]()
+#### [Parameters]()
 
 name|type|defaultvalue
 ---|---|---
 
-##### [Return value]()
+#### [Return value]()
 
 
-### Router#patch()
+## Router#patch()
 
 
 
-#### [Syntax]()
+### [Syntax]()
 
     patch(args)
 
-##### [Parameters]()
+#### [Parameters]()
 
 name|type|defaultvalue
 ---|---|---
 
-##### [Return value]()
+#### [Return value]()
 
 
-### Router#post()
+## Router#post()
 
 
 
-#### [Syntax]()
+### [Syntax]()
 
     post(args)
 
-##### [Parameters]()
+#### [Parameters]()
 
 name|type|defaultvalue
 ---|---|---
 
-##### [Return value]()
+#### [Return value]()
 
 
-### Router#put()
+## Router#put()
 
 
 
-#### [Syntax]()
+### [Syntax]()
 
     put(args)
 
-##### [Parameters]()
+#### [Parameters]()
 
 name|type|defaultvalue
 ---|---|---
 
-##### [Return value]()
+#### [Return value]()
 
 
-### Router#trace()
+## Router#trace()
 
 
 
-#### [Syntax]()
+### [Syntax]()
 
     trace(args)
 
-##### [Parameters]()
+#### [Parameters]()
 
 name|type|defaultvalue
 ---|---|---
 
-##### [Return value]()
+#### [Return value]()
 
 
-### Router#listen()
+## Router#listen()
 
 
 
-#### [Syntax]()
+### [Syntax]()
 
     listen(port,hostname,backlog)
 
-##### [Parameters]()
+#### [Parameters]()
 
 name|type|defaultvalue
 ---|---|---
@@ -222,7 +222,7 @@ port|`*`|
 hostname|`*`|
 backlog|`*`|
 
-##### [Return value]()
+#### [Return value]()
 
 `Any`
 
