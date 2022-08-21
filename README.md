@@ -1,113 +1,233 @@
-<a name="Router"></a>
 
-## Router
-**Kind**: global class  
+# body
 
-* [Router](#Router)
-    * _instance_
-        * [.use()](#Router+use)
-        * [.connect()](#Router+connect)
-        * [.delete()](#Router+delete)
-        * [.get()](#Router+get)
-        * [.head()](#Router+head)
-        * [.options()](#Router+options)
-        * [.patch()](#Router+patch)
-        * [.post()](#Router+post)
-        * [.put()](#Router+put)
-        * [.trace()](#Router+trace)
-        * [.listen(port, hostname, backlog)](#Router+listen) ⇒ <code>Any</code>
-    * _static_
-        * [.body()](#Router.body)
-        * [.security()](#Router.security)
-        * [.compression()](#Router.compression)
-        * [.cache()](#Router.cache)
-        * [.cookie()](#Router.cookie)
-        * [.limiter()](#Router.limiter)
-
-<a name="Router+use"></a>
-
-### router.use()
-**Kind**: instance method of [<code>Router</code>](#Router)  
-<a name="Router+connect"></a>
-
-### router.connect()
-**Kind**: instance method of [<code>Router</code>](#Router)  
-<a name="Router+delete"></a>
-
-### router.delete()
-**Kind**: instance method of [<code>Router</code>](#Router)  
-<a name="Router+get"></a>
-
-### router.get()
-**Kind**: instance method of [<code>Router</code>](#Router)  
-<a name="Router+head"></a>
-
-### router.head()
-**Kind**: instance method of [<code>Router</code>](#Router)  
-<a name="Router+options"></a>
-
-### router.options()
-**Kind**: instance method of [<code>Router</code>](#Router)  
-<a name="Router+patch"></a>
-
-### router.patch()
-**Kind**: instance method of [<code>Router</code>](#Router)  
-<a name="Router+post"></a>
-
-### router.post()
-**Kind**: instance method of [<code>Router</code>](#Router)  
-<a name="Router+put"></a>
-
-### router.put()
-**Kind**: instance method of [<code>Router</code>](#Router)  
-<a name="Router+trace"></a>
-
-### router.trace()
-**Kind**: instance method of [<code>Router</code>](#Router)  
-<a name="Router+listen"></a>
-
-### router.listen(port, hostname, backlog) ⇒ <code>Any</code>
-**Kind**: instance method of [<code>Router</code>](#Router)  
-
-| Param | Type |
-| --- | --- |
-| port | <code>\*</code> | 
-| hostname | <code>\*</code> | 
-| backlog | <code>\*</code> | 
-
-<a name="Router.body"></a>
-
-### Router.body()
 Middleware body
 
-**Kind**: static method of [<code>Router</code>](#Router)  
-<a name="Router.security"></a>
 
-### Router.security()
+
+# security
+
 Middleware security
 
-**Kind**: static method of [<code>Router</code>](#Router)  
-<a name="Router.compression"></a>
 
-### Router.compression()
+
+# compression
+
 Middleware compression
 
-**Kind**: static method of [<code>Router</code>](#Router)  
-<a name="Router.cache"></a>
 
-### Router.cache()
+
+# cache
+
 Middleware cache
 
-**Kind**: static method of [<code>Router</code>](#Router)  
-<a name="Router.cookie"></a>
 
-### Router.cookie()
+
+# cookie
+
 Middleware cookie
 
-**Kind**: static method of [<code>Router</code>](#Router)  
-<a name="Router.limiter"></a>
 
-### Router.limiter()
+
+# limiter
+
 Middleware limiter
 
-**Kind**: static method of [<code>Router</code>](#Router)  
+
+
+# Router
+
+
+
+
+
+## [Methods]()
+
+<!-- _Methods._ -->
+
+
+### Router#use()
+
+
+
+#### [Syntax]()
+
+    use(args)
+
+##### [Parameters]()
+
+name|type|defaultvalue
+---|---|---
+
+##### [Return value]()
+
+
+### Router#connect()
+
+
+
+#### [Syntax]()
+
+    connect(args)
+
+##### [Parameters]()
+
+name|type|defaultvalue
+---|---|---
+
+##### [Return value]()
+
+
+### Router#delete()
+
+
+
+#### [Syntax]()
+
+    delete(args)
+
+##### [Parameters]()
+
+name|type|defaultvalue
+---|---|---
+
+##### [Return value]()
+
+
+### Router#get()
+
+
+
+#### [Syntax]()
+
+    get(args)
+
+##### [Parameters]()
+
+name|type|defaultvalue
+---|---|---
+
+##### [Return value]()
+
+
+### Router#head()
+
+
+
+#### [Syntax]()
+
+    head(args)
+
+##### [Parameters]()
+
+name|type|defaultvalue
+---|---|---
+
+##### [Return value]()
+
+
+### Router#options()
+
+
+
+#### [Syntax]()
+
+    options(args)
+
+##### [Parameters]()
+
+name|type|defaultvalue
+---|---|---
+
+##### [Return value]()
+
+
+### Router#patch()
+
+
+
+#### [Syntax]()
+
+    patch(args)
+
+##### [Parameters]()
+
+name|type|defaultvalue
+---|---|---
+
+##### [Return value]()
+
+
+### Router#post()
+
+
+
+#### [Syntax]()
+
+    post(args)
+
+##### [Parameters]()
+
+name|type|defaultvalue
+---|---|---
+
+##### [Return value]()
+
+
+### Router#put()
+
+
+
+#### [Syntax]()
+
+    put(args)
+
+##### [Parameters]()
+
+name|type|defaultvalue
+---|---|---
+
+##### [Return value]()
+
+
+### Router#trace()
+
+
+
+#### [Syntax]()
+
+    trace(args)
+
+##### [Parameters]()
+
+name|type|defaultvalue
+---|---|---
+
+##### [Return value]()
+
+
+### Router#listen()
+
+
+
+#### [Syntax]()
+
+    listen(port,hostname,backlog)
+
+##### [Parameters]()
+
+name|type|defaultvalue
+---|---|---
+port|`*`|
+hostname|`*`|
+backlog|`*`|
+
+##### [Return value]()
+
+`Any`
+
+# 
+
+
+
+
