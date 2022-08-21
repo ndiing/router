@@ -1,18 +1,18 @@
 # Router
 
+## [Properties]()
+
+[`Router.routes`]()
+
+[`Router.errors`]()
+
+[`Router.config`]()
+
+[`Router.handleRequest`]()
+
 ## [Methods]()
 
-[`Router.body()`]()
-
-[`Router.security()`]()
-
-[`Router.compression()`]()
-
-[`Router.cache()`]()
-
-[`Router.cookie()`]()
-
-[`Router.limiter()`]()
+[`Router.add()`]()
 
 [`Router.use()`]()
 
@@ -34,10 +34,44 @@
 
 [`Router.trace()`]()
 
+[`Router.beforeRequest()`]()
+
+[`Router.beforeResponse()`]()
+
+[`Router.handleRequest()`]()
+
 [`Router.listen()`]()
 
-# Global
+## [Static methods]()
+
+[`Router.body()`]()
+
+Middleware body
+
+[`Router.security()`]()
+
+Middleware security
+
+[`Router.compression()`]()
+
+Middleware compression
+
+[`Router.cache()`]()
+
+Middleware cache
+
+[`Router.cookie()`]()
+
+Middleware cookie
+
+[`Router.limiter()`]()
+
+Middleware limiter
+
+[`Router.defaultRoute()`]()
+
+[`Router.defaultError()`]()
 
 ## [See also]()
 
--   See also
+-   [`link`]()
