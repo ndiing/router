@@ -1,47 +1,47 @@
 # Router
 
-<!-- Description -->
+Description
 
 
 
 
 ## [Methods]()
 
-<!-- _Description_ -->
+_Description_
 
-[`use()`]()
+[`use()`](./docs/use.md)
 
-<!-- Description -->
-[`connect()`]()
 
-<!-- Description -->
-[`delete()`]()
+[`connect()`](./docs/connect.md)
 
-<!-- Description -->
-[`get()`]()
 
-<!-- Description -->
-[`head()`]()
+[`delete()`](./docs/delete.md)
 
-<!-- Description -->
-[`options()`]()
 
-<!-- Description -->
-[`patch()`]()
+[`get()`](./docs/get.md)
 
-<!-- Description -->
-[`post()`]()
 
-<!-- Description -->
-[`put()`]()
+[`head()`](./docs/head.md)
 
-<!-- Description -->
-[`trace()`]()
 
-<!-- Description -->
-[`listen()`]()
+[`options()`](./docs/options.md)
 
-<!-- Description -->
+
+[`patch()`](./docs/patch.md)
+
+
+[`post()`](./docs/post.md)
+
+
+[`put()`](./docs/put.md)
+
+
+[`trace()`](./docs/trace.md)
+
+
+[`listen()`](./docs/listen.md)
+
+
 
 
 
@@ -54,11 +54,13 @@
 <!--  -->
 <!-- Description -->
 <!--  -->
+
 <!-- ## [Example]() -->
 <!--  -->
 <!-- ### [Title]() -->
 <!--  -->
 <!-- Description -->
+
 
 ## [See also]()
 
