@@ -6,16 +6,10 @@ const Crypto = require("@ndiinginc/crypto");
 const Database = require("@ndiinginc/database");
 const { Date2 } = require("@ndiinginc/util");
 
-/**
- * 
- */
 class Router {
     routes = [];
     errors = [];
 
-    /**
-     * Middleware body
-     */
     static body() {
         return async (req, res) => {
             const buffer = [];
@@ -30,10 +24,7 @@ class Router {
             }
         };
     }
-    
-    /**
-     * Middleware security
-     */
+
     static security() {
         return (req, res) => {
             res.headers.set("Content-Security-Policy", "default-src 'self'");
@@ -44,10 +35,7 @@ class Router {
             res.headers.set("Access-Control-Allow-Origin", "*");
         };
     }
-    
-    /**
-     * Middleware compression
-     */
+
     static compression() {
         return (req, res) => {
             const send = res.send;
@@ -76,10 +64,7 @@ class Router {
             };
         };
     }
-    
-    /**
-     * Middleware cache
-     */
+
     static cache() {
         return (req, res) => {
             const send = res.send;
@@ -97,10 +82,7 @@ class Router {
             };
         };
     }
-    
-    /**
-     * Middleware cookie
-     */
+
     static cookie() {
         return (req, res) => {
             req.cookie = {};
@@ -138,10 +120,7 @@ class Router {
             };
         };
     }
-    
-    /**
-     * Middleware limiter
-     */
+
     static limiter(options = {}) {
         const { window, counter } = options;
         return (req, res) => {
@@ -168,16 +147,16 @@ class Router {
             }
         };
     }
-    
+
     static defaultRoute() {
         return (req, res) => {
             res.status = 404;
             throw { message: http.STATUS_CODES[res.status] };
         };
     }
-    
+
     static defaultError() {
-        return (err,req, res) => {
+        return (err, req, res) => {
             res.status = res.status == 200 ? 500 : res.status;
             res.json(err);
         };
@@ -230,95 +209,56 @@ class Router {
         return this;
     }
 
-    /**
-     * 
-     */
     use(...args) {
         this.add(".*", ...args);
         return this;
     }
 
-    /**
-     * 
-     */
     connect(...args) {
         this.add("CONNECT", ...args);
         return this;
     }
 
-    /**
-     * 
-     */
     delete(...args) {
         this.add("DELETE", ...args);
         return this;
     }
 
-    /**
-     * 
-     */
     get(...args) {
         this.add("GET", ...args);
         return this;
     }
 
-    /**
-     * 
-     */
     head(...args) {
         this.add("HEAD", ...args);
         return this;
     }
 
-    /**
-     * 
-     */
     options(...args) {
         this.add("OPTIONS", ...args);
         return this;
     }
 
-    /**
-     * 
-     */
     patch(...args) {
         this.add("PATCH", ...args);
         return this;
     }
 
-    /**
-     * 
-     */
     post(...args) {
         this.add("POST", ...args);
         return this;
     }
 
-    /**
-     * 
-     */
     put(...args) {
         this.add("PUT", ...args);
         return this;
     }
 
-    /**
-     * 
-     */
     trace(...args) {
         this.add("TRACE", ...args);
         return this;
     }
 
-    // headers
-    // origin
-    // ip
-    // url2
-    // path
-    // query
-    // params
-    // cookie
-    // body
     async beforeRequest(req, res) {
         req.headers = new Headers(req.headers);
         req.origin = (req.socket.encrypted ? "https:" : "http:") + "//" + req.headers.get("host");
@@ -328,12 +268,6 @@ class Router {
         req.query = req.url2.searchParams;
     }
 
-    // status
-    // headers
-    // send(body)
-    // json(body)
-    // redirect(url,status)
-    // cookie(name,value,options)
     async beforeResponse(req, res) {
         res.status = res.statusCode;
         res.headers = new Headers(res.headers);
@@ -436,18 +370,11 @@ class Router {
             }
 
             if (this.config.defaultError) {
-                this.config.defaultError()(err,req, res);
+                this.config.defaultError()(err, req, res);
             }
         }
     }
 
-    /**
-     * 
-     * @param {*} port 
-     * @param {*} hostname 
-     * @param {*} backlog 
-     * @returns {Any}
-     */
     listen(port, hostname, backlog) {
         if (typeof hostname == "function") {
             backlog = hostname;
