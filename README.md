@@ -2,17 +2,7 @@
 
 ## [Properties]()
 
-[`Router.routes`]()
-
-[`Router.errors`]()
-
-[`Router.config`]()
-
-[`Router.handleRequest`]()
-
 ## [Methods]()
-
-[`Router.add()`]()
 
 [`Router.use()`]()
 
@@ -33,12 +23,6 @@
 [`Router.put()`]()
 
 [`Router.trace()`]()
-
-[`Router.beforeRequest()`]()
-
-[`Router.beforeResponse()`]()
-
-[`Router.handleRequest()`]()
 
 [`Router.listen()`]()
 
@@ -67,10 +51,6 @@ Middleware cookie
 [`Router.limiter()`]()
 
 Middleware limiter
-
-[`Router.defaultRoute()`]()
-
-[`Router.defaultError()`]()
 
 ## [See also]()
 
