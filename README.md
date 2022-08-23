@@ -1,9 +1,18 @@
+# Install
 
-# Router
+```
+npm install @ndiinginc/router
+```
 
+## Router
 
-<!-- examples -->
-<!-- examples -->
+<!-- constructor -->
+### Constructor
+<dl>
+    <dt><code><a href="./docs//router.md">Router()</a></code></dt>
+    <dd></dd>
+</dl>
+<!-- constructor -->
 
 <!-- properties -->
 <!-- properties -->
@@ -12,59 +21,37 @@
 <!-- staticproperties -->
 
 <!-- methods -->
-## Methods
-
-
-[`Router#use(args)`](./docs/router/use.md)
-
-
-
-[`Router#connect(args)`](./docs/router/connect.md)
-
-
-
-[`Router#delete(args)`](./docs/router/delete.md)
-
-
-
-[`Router#get(args)`](./docs/router/get.md)
-
-
-
-[`Router#head(args)`](./docs/router/head.md)
-
-
-
-[`Router#options(args)`](./docs/router/options.md)
-
-
-
-[`Router#patch(args)`](./docs/router/patch.md)
-
-
-
-[`Router#post(args)`](./docs/router/post.md)
-
-
-
-[`Router#put(args)`](./docs/router/put.md)
-
-
-
-[`Router#trace(args)`](./docs/router/trace.md)
-
-
-
-[`Router#handleRequest(req,res)`](./docs/router/handle-request.md)
-
-
-
-[`Router#listen(port,hostname,backlog)`](./docs/router/listen.md)
-
-
-
+### Methods
+<dl>
+    <dt><code><a href="./docs/router/use.md">Router#use()</a></code></dt>
+    <dd></dd>
+    <dt><code><a href="./docs/router/connect.md">Router#connect()</a></code></dt>
+    <dd></dd>
+    <dt><code><a href="./docs/router/delete.md">Router#delete()</a></code></dt>
+    <dd></dd>
+    <dt><code><a href="./docs/router/get.md">Router#get()</a></code></dt>
+    <dd></dd>
+    <dt><code><a href="./docs/router/head.md">Router#head()</a></code></dt>
+    <dd></dd>
+    <dt><code><a href="./docs/router/options.md">Router#options()</a></code></dt>
+    <dd></dd>
+    <dt><code><a href="./docs/router/patch.md">Router#patch()</a></code></dt>
+    <dd></dd>
+    <dt><code><a href="./docs/router/post.md">Router#post()</a></code></dt>
+    <dd></dd>
+    <dt><code><a href="./docs/router/put.md">Router#put()</a></code></dt>
+    <dd></dd>
+    <dt><code><a href="./docs/router/trace.md">Router#trace()</a></code></dt>
+    <dd></dd>
+    <dt><code><a href="./docs/router/handle-request.md">Router#handleRequest()</a></code></dt>
+    <dd></dd>
+    <dt><code><a href="./docs/router/listen.md">Router#listen()</a></code></dt>
+    <dd></dd>
+</dl>
 <!-- methods -->
 
 <!-- staticmethods -->
 <!-- staticmethods -->
 
+<!-- examples -->
+<!-- examples -->

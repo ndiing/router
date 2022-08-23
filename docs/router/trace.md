@@ -1,20 +1,20 @@
-# Router#trace()
+## Router#trace()
 
-
-<!-- examples -->
-<!-- examples -->
-
-## Syntax
-
-```js
-trace(args);
+### Syntax
+```
+trace(args)
 ```
 
-<!-- parameters -->
 ### Parameters
+<dl>
+    <dt><code>args</code></dt>
+</dl>
 
-- `args`
-<!-- parameters -->
+### Return value
 
-<!-- return -->
-<!-- return -->
+<dl>
+    <dt>None <code>undefined</code></dt>
+</dl>
+
+
+

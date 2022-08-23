@@ -1,20 +1,20 @@
-# Router#head()
+## Router#head()
 
-
-<!-- examples -->
-<!-- examples -->
-
-## Syntax
-
-```js
-head(args);
+### Syntax
+```
+head(args)
 ```
 
-<!-- parameters -->
 ### Parameters
+<dl>
+    <dt><code>args</code></dt>
+</dl>
 
-- `args`
-<!-- parameters -->
+### Return value
 
-<!-- return -->
-<!-- return -->
+<dl>
+    <dt>None <code>undefined</code></dt>
+</dl>
+
+
+

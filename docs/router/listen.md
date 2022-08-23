@@ -1,22 +1,22 @@
-# Router#listen()
+## Router#listen()
 
-
-<!-- examples -->
-<!-- examples -->
-
-## Syntax
-
-```js
-listen(port,hostname,backlog);
+### Syntax
+```
+listen(port,hostname,backlog)
 ```
 
-<!-- parameters -->
 ### Parameters
+<dl>
+    <dt><code>port</code></dt>
+    <dt><code>hostname</code></dt>
+    <dt><code>backlog</code></dt>
+</dl>
 
-- `port`
-- `hostname`
-- `backlog`
-<!-- parameters -->
+### Return value
 
-<!-- return -->
-<!-- return -->
+<dl>
+    <dt>None <code>undefined</code></dt>
+</dl>
+
+
+

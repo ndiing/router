@@ -1,20 +1,20 @@
-# Router#put()
+## Router#put()
 
-
-<!-- examples -->
-<!-- examples -->
-
-## Syntax
-
-```js
-put(args);
+### Syntax
+```
+put(args)
 ```
 
-<!-- parameters -->
 ### Parameters
+<dl>
+    <dt><code>args</code></dt>
+</dl>
 
-- `args`
-<!-- parameters -->
+### Return value
 
-<!-- return -->
-<!-- return -->
+<dl>
+    <dt>None <code>undefined</code></dt>
+</dl>
+
+
+

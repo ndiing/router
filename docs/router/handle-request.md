@@ -1,21 +1,21 @@
-# Router#handleRequest()
+## Router#handleRequest()
 
-
-<!-- examples -->
-<!-- examples -->
-
-## Syntax
-
-```js
-handleRequest(req,res);
+### Syntax
+```
+handleRequest(req,res)
 ```
 
-<!-- parameters -->
 ### Parameters
+<dl>
+    <dt><code>req</code></dt>
+    <dt><code>res</code></dt>
+</dl>
 
-- `req`
-- `res`
-<!-- parameters -->
+### Return value
 
-<!-- return -->
-<!-- return -->
+<dl>
+    <dt>None <code>undefined</code></dt>
+</dl>
+
+
+

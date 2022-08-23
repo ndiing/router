@@ -1,20 +1,20 @@
-# Router#get()
+## Router#get()
 
-
-<!-- examples -->
-<!-- examples -->
-
-## Syntax
-
-```js
-get(args);
+### Syntax
+```
+get(args)
 ```
 
-<!-- parameters -->
 ### Parameters
+<dl>
+    <dt><code>args</code></dt>
+</dl>
 
-- `args`
-<!-- parameters -->
+### Return value
 
-<!-- return -->
-<!-- return -->
+<dl>
+    <dt>None <code>undefined</code></dt>
+</dl>
+
+
+

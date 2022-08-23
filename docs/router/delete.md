@@ -1,20 +1,20 @@
-# Router#delete()
+## Router#delete()
 
-
-<!-- examples -->
-<!-- examples -->
-
-## Syntax
-
-```js
-delete(args);
+### Syntax
+```
+delete(args)
 ```
 
-<!-- parameters -->
 ### Parameters
+<dl>
+    <dt><code>args</code></dt>
+</dl>
 
-- `args`
-<!-- parameters -->
+### Return value
 
-<!-- return -->
-<!-- return -->
+<dl>
+    <dt>None <code>undefined</code></dt>
+</dl>
+
+
+

@@ -1,13 +1,13 @@
-## Router#connect()
+## Router()
 
 ### Syntax
 ```
-connect(args)
+Router(config)
 ```
 
 ### Parameters
 <dl>
-    <dt><code>args</code></dt>
+    <dt><code>config</code></dt>
 </dl>
 
 ### Return value
