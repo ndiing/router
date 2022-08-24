@@ -511,7 +511,7 @@ class Router {
             hostname = null;
         }
 
-        hostname = hostname || "127.0.0.1";
+        hostname = hostname || "0.0.0.0";
 
         const server = http.createServer().listen(port, hostname, backlog);
         server.on("request", this.handleRequest);
