@@ -3,6 +3,7 @@
     "@ndiinginc/crypto": "^1.0.3",
     "@ndiinginc/database": "^1.0.7",
     "@ndiinginc/fetch": "^1.0.12",
+    "@ndiinginc/url": "^1.0.0",
     "@ndiinginc/util": "^1.0.7"
   },
   "name": "@ndiinginc/router",

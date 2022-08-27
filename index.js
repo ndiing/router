@@ -1,7 +1,8 @@
 const http = require("http");
 const zlib = require("zlib");
 const { Readable } = require("stream");
-const { URL2, Headers } = require("@ndiinginc/fetch");
+const { Headers } = require("@ndiinginc/fetch");
+const URL2 = require("@ndiinginc/url");
 const Crypto = require("@ndiinginc/crypto");
 const Database = require("@ndiinginc/database");
 const { Date2 } = require("@ndiinginc/util");
