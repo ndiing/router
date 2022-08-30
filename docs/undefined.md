@@ -1,0 +1,10 @@
+# package:undefined
+
+
+## Syntax
+```js
+()
+```
+
+
+
