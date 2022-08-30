@@ -7,18 +7,6 @@ npm install @ndiinginc/router
 ```
 
 ### Index
-- Global
-
-    <!-- properties -->
-    <!-- properties -->
-    <!-- staticproperties -->
-    <!-- staticproperties -->
-    <!-- methods -->
-    <!-- methods -->
-    <!-- staticmethods -->
-    <!-- staticmethods -->
-    <!-- events -->
-    <!-- events -->
 - Router
 
     <!-- properties -->
@@ -44,33 +32,6 @@ npm install @ndiinginc/router
     <!-- staticmethods -->
     <!-- events -->
     <!-- events -->
-
-# Global
-<!--  -->
-
-
-<!-- examples -->
-<!-- examples -->
-
-
-<!-- constructor -->
-### Constructor
-
-<div><a href="./docs/.md" name=""><code>()</code></a></div>
-
-
-<!-- constructor -->
-
-<!-- properties -->
-<!-- properties -->
-<!-- staticproperties -->
-<!-- staticproperties -->
-<!-- methods -->
-<!-- methods -->
-<!-- staticmethods -->
-<!-- staticmethods -->
-<!-- events -->
-<!-- events -->
 
 # Router
 <!--  -->
