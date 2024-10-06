@@ -1,4 +1,4 @@
-const Router = require('../index.js')
+const Router = require('./index.js')
 
 const app = new Router()
 

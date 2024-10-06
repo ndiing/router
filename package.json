@@ -1,12 +1,16 @@
 {
   "name": "@ndiinginc/router",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": ["routing", "http", "web"],
+  "author": "Ridho Prasetya",
   "license": "ISC",
-  "description": "Kelas untuk menangani routing dalam aplikasi HTTP"
+  "description": "Kelas untuk menangani routing dalam aplikasi HTTP",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ndiing/router.git"
+  }
 }
