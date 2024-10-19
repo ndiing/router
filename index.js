@@ -239,56 +239,6 @@ function messages() {
     };
 }
 
-/**
- * Middleware untuk mengatur autentikasi berdasarkan izin yang diberikan.
- * Memeriksa token Bearer di header Authorization.
- *
- * @memberof module:middleware
- * @param {Array<Object>} permissions - Daftar izin yang memperbolehkan akses berdasarkan path, metode, dan alamat IP.
- * @returns {Function} Middleware Express untuk menangani autentikasi.
- */
-function auth(permissions) {
-    permissions = permissions || [];
-
-    function getPermission(pathname, remoteAddress, method) {
-        return permissions.find((permission) => {
-            return new RegExp(permission.path).test(pathname) && new RegExp(permission.matcher).test(remoteAddress) && permission[method];
-        });
-    }
-
-    function decode(token, secret) {}
-
-    return (req, res, next) => {
-        try {
-            let permission = getPermission(req._parsedUrl.pathname, req.socket.remoteAddress, req.method);
-            if (permission) {
-                return next();
-            }
-
-            const [, token] = (req.headers["authorization"] ?? "").split(" ");
-            if (!token) {
-                res.statusCode = 401;
-                return res.json({ message: http.STATUS_CODES[res.statusCode] });
-            }
-
-            const payload = decode(token, "your-256-bit-secret");
-            if (!payload) {
-                res.statusCode = 400;
-                return res.json({ message: http.STATUS_CODES[res.statusCode] });
-            }
-
-            permission = getPermission(req._parsedUrl.pathname, payload.role, req.method);
-            if (permission) {
-                return next();
-            }
-
-            res.statusCode = 403;
-            return res.json({ message: http.STATUS_CODES[res.statusCode] });
-        } catch (error) {
-            next(error);
-        }
-    };
-}
 
 /**
  * Middleware untuk menangani rute yang tidak ditemukan (404).
@@ -327,7 +277,6 @@ module.exports = {
     cookies,
     compression,
     messages,
-    auth,
     missing,
     catchAll,
 };
