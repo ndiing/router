@@ -1,0 +1,6 @@
+dev/
+scripts/
+tests/
+jest.config.js
+nodemon.json
+.prettierrc
