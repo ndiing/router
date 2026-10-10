@@ -1,26 +1,26 @@
 {
-    "name": "@ndiinginc/router",
-    "version": "1.0.1",
-    "description": "",
-    "main": "./src/router.js",
-    "scripts": {
-        "test": "nodemon --exec \"node -e \\\"require('@ndiinginc/test')(require('path').resolve('tests'),{verbose:true})\\\"\"",
-        "dev": "nodemon src/router.js",
-        "prettier": "npx prettier . --write",
-        "commit": "node -e \"require('@ndiinginc/commit')()\"",
-        "npm:dry-run": "npm publish --dry-run",
-        "npm:login": "npm login",
-        "npm:publish": "npm publish --access public",
-        "tsc": "npx tsc"
-    },
-    "keywords": [],
-    "author": "",
-    "license": "ISC",
-    "type": "commonjs",
-    "devDependencies": {
-        "@ndiinginc/commit": "^1.0.1",
-        "@ndiinginc/test": "^1.5.1",
-        "@types/jest": "^30.0.0",
-        "@types/node": "^26.6.4"
-    }
+  "name": "@ndiinginc/router",
+  "version": "3.0.0",
+  "description": "",
+  "main": "./src/router.js",
+  "scripts": {
+    "test": "nodemon --exec \"node -e \\\"require('@ndiinginc/test')(require('path').resolve('tests'),{verbose:true})\\\"\"",
+    "dev": "nodemon src/router.js",
+    "prettier": "npx prettier . --write",
+    "commit": "node -e \"require('@ndiinginc/commit')()\"",
+    "npm:dry-run": "npm publish --dry-run",
+    "npm:login": "npm login",
+    "npm:publish": "npm publish --access public",
+    "tsc": "npx tsc"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@ndiinginc/commit": "^1.0.1",
+    "@ndiinginc/test": "^1.5.1",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^26.6.4"
+  }
 }
