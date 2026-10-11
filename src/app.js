@@ -49,7 +49,7 @@ class App extends Router {
      * @param {import('net').ListenOptions} options
      * @returns {import('http').Server}
      */
-    listen(options = {}, callback) {
+    listen(...args) {
         const serverOptions = {
             IncomingMessage: Request,
             ServerResponse: Response,
@@ -58,7 +58,7 @@ class App extends Router {
 
         const server = http.createServer(serverOptions, requestListener);
 
-        server.listen(options, callback);
+        server.listen(...args);
 
         return server;
     }
