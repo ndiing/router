@@ -1,24 +1,34 @@
+/**
+ * @typedef {Object} PatternExec
+ * @property {number} index - The zero-based index of the match in the input string.
+ * @property {string} input - The original input string.
+ * @property {Object.<string, string>} [groups] - Named capture groups, or undefined.
+ */
 class Pattern {
-    static baseURL = "http://localhost";
-
     constructor(input) {
-        const regexStr = input
+        const pattern = input
             .replace(/[.+*?^${}()|[\]\\]/g, "\\$&")
             .replace(/:(\w+)/g, "(?<$1>[^/]+)")
             .replace(/\\\*/g, ".*");
-        this.regex = new RegExp(`^${regexStr}$`);
-    }
 
-    exec(input) {
-        const match = this.regex.exec(input);
-        if (!match) return null;
-        return {
-            pathname: { groups: match.groups || {} },
-        };
+        Object.defineProperty(this, "re", {
+            value: new RegExp(`^${pattern}$`),
+            writable: true,
+            enumerable: false,
+            configurable: true,
+        });
     }
 
     test(input) {
-        return this.regex.test(input);
+        return this.re.test(input);
+    }
+
+    /**
+     * @param {String} input
+     * @returns {PatternExec | null}
+     */
+    exec(input) {
+        return this.re.exec(input);
     }
 }
 exports.Pattern = Pattern;

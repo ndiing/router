@@ -24,14 +24,15 @@ function json({ limit = 100 * 1024 } = {}) {
             throw new Error(http.STATUS_CODES[res.statusCode]);
         }
 
-        let bodySize = 0;
+        let chunkLength = 0;
         const chunks = [];
         for await (const chunk of req) {
-            bodySize += chunk.length;
-            if (bodySize > limit) {
+            chunkLength += chunk.length;
+            if (chunkLength > limit) {
                 res.statusCode = 413;
                 throw new Error(http.STATUS_CODES[res.statusCode]);
             }
+
             chunks.push(chunk);
         }
 
@@ -40,9 +41,8 @@ function json({ limit = 100 * 1024 } = {}) {
             return;
         }
 
-        const rawBody = Buffer.concat(chunks).toString("utf8");
         try {
-            req.body = JSON.parse(rawBody, reviver);
+            req.body = JSON.parse(Buffer.concat(chunks), reviver);
         } catch (error) {
             res.statusCode = 400;
             throw new Error("Invalid JSON body");

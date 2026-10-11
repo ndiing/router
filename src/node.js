@@ -6,14 +6,27 @@ class Node {
         this.pattern = new Pattern(segment);
         /**@type {Map<string, Node>}*/
         this.children = new Map();
-        /**@type {Map<string, Function[]>}*/
-        this.handlers = new Map();
+        /**@type {Map<string, FunctionHandler[]>}*/
+        this.handlers = new Map([
+            ["ALL", []],
+            ["GET", []],
+            ["QUERY", []],
+            ["HEAD", []],
+            ["OPTIONS", []],
+            ["TRACE", []],
+            ["PUT", []],
+            ["DELETE", []],
+            ["POST", []],
+            ["PATCH", []],
+            ["CONNECT", []],
+        ]);
     }
 
     add(segment) {
         if (!this.children.has(segment)) {
             this.children.set(segment, new Node(segment));
         }
+
         return this.children.get(segment);
     }
 
@@ -25,7 +38,7 @@ class Node {
         for (const [method, handlers] of node.handlers) {
             for (const handler of handlers) {
                 handler.seq += offset;
-                this.handlers.getOrInsert(method, []).push(handler);
+                this.handlers.get(method).push(handler);
             }
         }
 
@@ -39,6 +52,9 @@ class Node {
         }
     }
 
+    /**
+     * @param {Number} offset
+     */
     setSeqOffset(offset) {
         for (const [, handlers] of this.handlers) {
             for (const handler of handlers) {

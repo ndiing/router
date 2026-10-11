@@ -1,9 +1,9 @@
-const { ServerResponse } = require("node:http");
+const http = require("node:http");
 
-class Response extends ServerResponse {
+class Response extends http.ServerResponse {
     send(string) {
-        this.done = true;
         this.end(string);
+        this.done = true;
     }
 
     json(object) {

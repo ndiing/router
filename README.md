@@ -46,11 +46,7 @@ app.listen(3000);
 Semua method mengembalikan `this`, jadi bisa di-chain.
 
 ```js
-app.get("/users", handler)
-   .post("/users", handler)
-   .put("/users/:id", handler)
-   .patch("/users/:id", handler)
-   .delete("/users/:id", handler);
+app.get("/users", handler).post("/users", handler).put("/users/:id", handler).patch("/users/:id", handler).delete("/users/:id", handler);
 ```
 
 Method yang tersedia: `get`, `post`, `put`, `patch`, `delete`, `head`, `options`, `trace`, `connect`, `query`, dan `use` (semua method).
@@ -149,12 +145,12 @@ Jika tidak ada handler yang mengirim response, router mengirim JSON otomatis:
 
 ## Request
 
-| Properti | Keterangan |
-| --- | --- |
-| `req.path` | Pathname tanpa query string |
-| `req.query` | Object query string. Key yang berulang menjadi array |
-| `req.params` | Parameter dari route dinamis |
-| `req.body` | Hasil parse body (butuh middleware `json()`) |
+| Properti     | Keterangan                                           |
+| ------------ | ---------------------------------------------------- |
+| `req.path`   | Pathname tanpa query string                          |
+| `req.query`  | Object query string. Key yang berulang menjadi array |
+| `req.params` | Parameter dari route dinamis                         |
+| `req.body`   | Hasil parse body (butuh middleware `json()`)         |
 
 ```js
 // GET /search?tag=a&tag=b&page=2
@@ -165,9 +161,9 @@ app.get("/search", (req, res) => {
 
 ## Response
 
-| Method | Keterangan |
-| --- | --- |
-| `res.send(string)` | Kirim response dan akhiri chain |
+| Method             | Keterangan                                                  |
+| ------------------ | ----------------------------------------------------------- |
+| `res.send(string)` | Kirim response dan akhiri chain                             |
 | `res.json(object)` | Set `content-type: application/json`, serialize, lalu kirim |
 
 Keduanya juga turunan dari `http.ServerResponse`, jadi `res.statusCode`, `res.setHeader()`, dan lainnya tetap tersedia.

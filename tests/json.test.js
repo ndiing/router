@@ -1,12 +1,13 @@
 const http = require("node:http");
-const Router = require("../src/router");
+const App = require("../src/app");
+const Router = App;
 const { json } = require("../src/middleware"); // sesuaikan path
 
 // ============================================================
 // SETUP: Router + body parser
 // ============================================================
 
-const app = new Router();
+const app = new App();
 
 app.use(json({ limit: 100 * 1024 })); // 100KB
 

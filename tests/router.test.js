@@ -1,4 +1,5 @@
-const Router = require("../src/router");
+const App = require("../src/app");
+const Router = App;
 
 // ============================================================
 // SETUP
@@ -27,7 +28,7 @@ beforeAll(() => {
     admin.get("/:id", (req, res) => res.json({ path: req.path, params: req.params }));
     admin.get("/", (req, res) => res.json({ path: req.path }));
 
-    const app = new Router();
+    const app = new App();
     app.use((req, res) => {}); // global middleware
     app.use("/blogs", blogs);
     app.use("/admin", admin);
@@ -198,7 +199,7 @@ describe("fetch() — integration", () => {
 
     test("GET /error — error handler dipanggil", async () => {
         // Tambahin route yang throw
-        const testApp = new Router();
+        const testApp = new App();
         testApp.get("/error", () => {
             throw new Error("Test error");
         });
@@ -224,7 +225,7 @@ describe("fetch() — integration", () => {
 
     test("Middleware dijalankan sebelum handler", async () => {
         const order = [];
-        const testApp = new Router();
+        const testApp = new App();
 
         testApp.use((req, res) => {
             order.push("middleware-1");
@@ -249,7 +250,7 @@ describe("fetch() — integration", () => {
     });
 
     test("Middleware bisa stop chain dengan res.done", async () => {
-        const testApp = new Router();
+        const testApp = new App();
 
         testApp.use((req, res) => {
             res.statusCode = 401;

@@ -1,17 +1,30 @@
-const { IncomingMessage } = require("node:http");
+const http = require("node:http");
 
-class Request extends IncomingMessage {
+class Request extends http.IncomingMessage {
+    static base = "http://127.0.0";
+
     get path() {
-        if (this.url.indexOf("?") !== -1) {
-            this.parsed = URL.parse(this.url, "http://localhost");
-            return this.parsed.pathname;
+        if (this._path) return this._path;
+
+        if (this.url === "/") {
+            this._path = this.url;
+            return this._path;
         }
-        return this.url;
+
+        this.parsed = URL.parse(this.url, Request.base);
+        this._path = this.parsed.pathname;
+        return this._path;
     }
 
     get query() {
+        if (this._query) return this._query;
+
+        if (!this.parsed) {
+            this._query = {};
+            return this._query;
+        }
+
         const query = {};
-        if (!this.parsed) return query;
         for (const [name, value] of this.parsed.searchParams) {
             if (query[name]) {
                 if (Array.isArray(query[name])) {
@@ -23,7 +36,8 @@ class Request extends IncomingMessage {
                 query[name] = value;
             }
         }
-        return query;
+        this._query = query;
+        return this._query;
     }
 }
 exports.Request = Request;
