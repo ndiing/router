@@ -6,7 +6,7 @@ class Request extends http.IncomingMessage {
     get path() {
         if (this._path) return this._path;
 
-        if (this.url === "/") {
+        if (this.url.indexOf('?')===-1) {
             this._path = this.url;
             return this._path;
         }
