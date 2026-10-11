@@ -1,11 +1,11 @@
 {
   "name": "@ndiinginc/router",
-  "version": "4.1.1",
+  "version": "4.1.2",
   "description": "",
-  "main": "./src/router.js",
+  "main": "./src/app.js",
   "scripts": {
     "test": "nodemon --exec \"node -e \\\"require('@ndiinginc/test')(require('path').resolve('tests'),{verbose:true})\\\"\"",
-    "dev": "nodemon src/router.js",
+    "dev": "nodemon src/app.js",
     "prettier": "npx prettier . --write",
     "commit": "node -e \"require('@ndiinginc/commit')()\"",
     "npm:dry-run": "npm publish --dry-run",
