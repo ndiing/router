@@ -1,43 +1,37 @@
 const http = require("node:http");
+const { parseUrl, parseQueryString } = require("./util.js");
 
 class Request extends http.IncomingMessage {
-    static base = "http://127.0.0";
+    _path;
+    _parsed;
+    _query;
+    params={};
+    timeout=0;
 
     get path() {
         if (this._path) return this._path;
 
-        if (this.url.indexOf('?')===-1) {
+        if (this.url.indexOf("?") === -1) {
             this._path = this.url;
             return this._path;
         }
 
-        this.parsed = URL.parse(this.url, Request.base);
-        this._path = this.parsed.pathname;
+        this._parsed = parseUrl(this.url)
+        this._path = this._parsed.path;
         return this._path;
     }
-
+    
     get query() {
         if (this._query) return this._query;
 
-        if (!this.parsed) {
+        if (!this._parsed) {
             this._query = {};
             return this._query;
         }
-
-        const query = {};
-        for (const [name, value] of this.parsed.searchParams) {
-            if (query[name]) {
-                if (Array.isArray(query[name])) {
-                    query[name].push(value);
-                } else {
-                    query[name] = [query[name], value];
-                }
-            } else {
-                query[name] = value;
-            }
-        }
-        this._query = query;
+        
+        this._query = parseQueryString(this._parsed.queryString);
         return this._query;
     }
 }
+
 exports.Request = Request;

@@ -1,5 +1,6 @@
 const http = require("node:http");
 
+// middleware
 function json({ limit = 100 * 1024 } = {}) {
     const reviver = (key, value) => {
         if (key === "__proto__" || key === "constructor" || key === "prototype") {
@@ -7,7 +8,7 @@ function json({ limit = 100 * 1024 } = {}) {
         }
         return value;
     };
-
+    
     return async (req, res) => {
         if (!["POST", "PUT", "PATCH", "QUERY"].includes(req.method)) {
             return;
@@ -25,14 +26,15 @@ function json({ limit = 100 * 1024 } = {}) {
         }
 
         let chunkLength = 0;
+
         const chunks = [];
+
         for await (const chunk of req) {
             chunkLength += chunk.length;
             if (chunkLength > limit) {
                 res.statusCode = 413;
                 throw new Error(http.STATUS_CODES[res.statusCode]);
             }
-
             chunks.push(chunk);
         }
 
@@ -49,4 +51,5 @@ function json({ limit = 100 * 1024 } = {}) {
         }
     };
 }
-module.exports.json = json;
+
+exports.json = json;

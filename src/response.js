@@ -1,14 +1,13 @@
 const http = require("node:http");
 
 class Response extends http.ServerResponse {
-    send(string) {
-        this.end(string);
-        this.done = true;
+    send(chunk) {
+        this.end(chunk);
     }
-
-    json(object) {
-        this.setHeader("content-type", "application/json");
-        this.send(JSON.stringify(object));
+    
+    json(value) {
+        this.setHeader("Content-Type","application/json")
+        this.end(JSON.stringify(value));
     }
 }
 exports.Response = Response;

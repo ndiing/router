@@ -1,45 +1,19 @@
-const { Node } = require("./node");
-const { Cache } = require("./cache");
-
-/**
- * @callback Handler
- * @param {*} req
- * @param {*} res
- */
-/**
- * @callback Middleware
- * @param {*} req
- */
-/**
- * @callback ErrorHandler
- * @param {*} err
- * @param {*} req
- * @param {*} res
- */
-/**
- * @typedef {Handler|Middleware|ErrorHandler} FunctionHandler
- */
+const { Node } = require("./node.js");
+const { Cache } = require("./cache.js");
 
 class Router {
     constructor(options = {}) {
-        this.cacheSize = options.cacheSize ?? 30_000;
+        this.cacheSize = options.size ?? 1000;
 
-        this.root = new Node("/");
+        this.root = new Node();
         this.seq = 0;
         this.cache = new Cache(this.cacheSize);
     }
 
     split(path) {
-        if (path === "/") return [];
-
         return path.split("/").filter(Boolean);
     }
 
-    /**
-     * @param {*} method
-     * @param {*} path
-     * @param {FunctionHandler[]} handler
-     */
     add(method, path, ...handlers) {
         if (typeof path === "function") {
             handlers = [path, ...handlers];
@@ -120,6 +94,11 @@ class Router {
         return this;
     }
 
+    /**
+     * @param {'GET'|'QUERY'|'HEAD'|'OPTIONS'|'TRACE'|'PUT'|'DELETE'|'POST'|'PATCH'|'CONNECT'} method
+     * @param {String} path
+     * @returns {{params: {};handlers: any[];errorHandlers: any[];}}
+     */
     find(method, path) {
         const key = `${method} ${path}`;
 
@@ -167,13 +146,19 @@ class Router {
 
         if (node) {
             for (const handler of node.handlers.get(method)) {
-                handlers[handler.seq] = handler;
+                handlers[handler.seq] = handler
             }
         }
+        
+        const result = {
+            params,
+            handlers: Object.values(handlers),
+            errorHandlers: Object.values(errorHandlers),
+        };
 
-        const value = { params, handlers: Object.values(handlers), errorHandlers: Object.values(errorHandlers) };
-        this.cache.set(key, value);
-        return value;
+        this.cache.set(key, result);
+
+        return result;
     }
 }
-module.exports.Router = Router;
+exports.Router = Router;

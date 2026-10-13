@@ -1,7 +1,7 @@
 const http = require("node:http");
-const App = require("../src/app");
-const Router = App;
-const { json } = require("../src/middleware"); // sesuaikan path
+const App = require("../src/index");
+const {Router} = App;
+const { json } = App; // sesuaikan path
 
 // ============================================================
 // SETUP: Router + body parser

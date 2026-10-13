@@ -1,12 +1,11 @@
 const { Pattern } = require("./pattern.js");
 
 class Node {
-    constructor(segment) {
+    constructor(segment = "") {
         this.segment = segment;
         this.pattern = new Pattern(segment);
-        /**@type {Map<string, Node>}*/
+        /**@type {Map<string,Node>}*/
         this.children = new Map();
-        /**@type {Map<string, FunctionHandler[]>}*/
         this.handlers = new Map([
             ["ALL", []],
             ["GET", []],
@@ -26,13 +25,11 @@ class Node {
         if (!this.children.has(segment)) {
             this.children.set(segment, new Node(segment));
         }
-
         return this.children.get(segment);
     }
 
     /**
      * @param {Node} node
-     * @param {Number} offset
      */
     merge(node, offset) {
         for (const [method, handlers] of node.handlers) {
@@ -52,9 +49,6 @@ class Node {
         }
     }
 
-    /**
-     * @param {Number} offset
-     */
     setSeqOffset(offset) {
         for (const [, handlers] of this.handlers) {
             for (const handler of handlers) {
@@ -79,8 +73,9 @@ class Node {
         for (const [, child] of this.children) {
             max = Math.max(max, child.getMaxSeq());
         }
-
+        
         return max;
     }
 }
+
 exports.Node = Node;
