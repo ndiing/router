@@ -1,3 +1,4 @@
+const { inspect } = require("node:util");
 const App = require("../src/index");
 const { Router } = App;
 
@@ -41,6 +42,8 @@ beforeAll(() => {
         res.statusCode = err.statusCode || 500;
         res.json({ error: err.message });
     });
+
+    // console.log(inspect(app,false,null,true))
 
     // ========================================
     // START SERVER

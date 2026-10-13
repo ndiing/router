@@ -1,6 +1,6 @@
+const { inspect } = require("node:util");
 const App = require("../src");
-const { cors } = require("../src/cors");
-const { Router, json } = App;
+const { Router, json, cors } = App;
 
 // const req = {
 //     method: "OPTIONS",
@@ -26,6 +26,20 @@ const { Router, json } = App;
 
 // console.log(cors({ origin: "*", credentials: true, headers: "*" })(req, res));
 // console.log(cors({ origin: "*", credentials: true, headers: ["Content-Encoding", "Kuma-Revision"] })(req, res));
+
+/* 
+Content-Security-Policy	Batasi sumber resource (script, style, img)
+Strict-Transport-Security	Paksa HTTPS
+X-Frame-Options	Cegah clickjacking (iframe)
+X-Content-Type-Options	Cegah MIME sniffing
+Referrer-Policy	Atur info referrer
+Permissions-Policy	Batasi fitur browser (kamera, mikrofon)
+Cross-Origin-Opener-Policy	Isolasi browsing context
+Cross-Origin-Resource-Policy	Batasi resource di-load cross-origin
+X-DNS-Prefetch-Control	Kontrol DNS prefetch
+X-Download-Options	(IE) cegah download otomatis
+X-Permitted-Cross-Domain-Policies	(Flash/PDF)
+*/
 
 const blogs = new Router();
 blogs.use((req) => {
@@ -58,12 +72,32 @@ admin.get("/", (req, res) => res.json({ method: req.method, path: req.path, para
 admin.patch("/:id", json(), (req, res) => res.json({ method: req.method, path: req.path, params: req.params, query: req.query, body: req.body }));
 admin.delete("/:id", (req, res) => res.json({ method: req.method, path: req.path, params: req.params, query: req.query, body: req.body }));
 
+const asdf3 = new Router();
+asdf3.get("/:id", (req, res) => res.json({}));
+
+const asdf2 = new Router();
+asdf2.use("/asdf3", asdf3);
+
+const asdf1 = new Router();
+asdf1.use("/asdf2", asdf2);
+
+const qwerty3 = new Router();
+
+const qwerty2 = new Router();
+qwerty2.use("/qwerty3", qwerty3);
+qwerty2.get("/:id", (req, res) => res.json({}));
+
+const qwerty1 = new Router();
+qwerty1.use("/qwerty2", qwerty2);
+
 const app = new App();
 app.use((req) => {
     /* middleware */
 });
 app.use("/blogs", blogs);
 app.use("/admin", admin);
+app.use("/asdf1", asdf1);
+app.use("/qwerty1", qwerty1);
 app.post("/", json(), (req, res) => res.json({ method: req.method, path: req.path, params: req.params, query: req.query, body: req.body }));
 app.get("/:id", async (req, res) => {
     await new Promise((resolve) => setTimeout(resolve, 60_000));
@@ -72,18 +106,18 @@ app.get("/:id", async (req, res) => {
 app.get("/", cors(), (req, res) => res.json({ method: req.method, path: req.path, params: req.params, query: req.query, body: req.body }));
 app.patch("/:id", json(), (req, res) => res.json({ method: req.method, path: req.path, params: req.params, query: req.query, body: req.body }));
 app.delete("/:id", (req, res) => res.json({ method: req.method, path: req.path, params: req.params, query: req.query, body: req.body }));
-// app.use((req, res) => {
-//     res.statusCode = 404;
-//     throw new Error("Tidak Ditemukan");
-// });
-// app.use((err, req, res) => {
-//     const error = {
-//         status: res.statusCode, // indicate custom
-//         message: err.message,
-//         stack: err.stack,
-//     };
-//     res.json({ error });
-// });
+app.use((req, res) => {
+    res.statusCode = 404;
+    throw new Error("Tidak Ditemukan");
+});
+app.use((err, req, res) => {
+    const error = {
+        status: res.statusCode, // indicate custom
+        message: err.message,
+        stack: err.stack,
+    };
+    res.json({ error });
+});
 
 // console.log(inspect(app, false, null, true));
 
@@ -98,14 +132,14 @@ app.delete("/:id", (req, res) => res.json({ method: req.method, path: req.path, 
 // console.log(app.find("GET", "/not/found/"));
 // console.log(app.find("GET", "/not/found/321"));
 
-const server = app.listen(0);
-const port = server.address().port;
-const base = `http://localhost:${port}`;
+// const server = app.listen(0);
+// const port = server.address().port;
+// const base = `http://localhost:${port}`;
 
-fetch(`${base}/`)
-    // .then((res) => res.json())
-    .then(console.log)
-    .catch(console.error);
+// fetch(`${base}/`)
+//     // .then((res) => res.json())
+//     .then(console.log)
+//     .catch(console.error);
 
 // fetch(`${base}/?user=name&pass=word`)
 //     // .then((res) => res.json())

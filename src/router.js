@@ -114,8 +114,9 @@ class Router {
         for (const input of this.split(path)) {
             let matched = node.children.get(input);
 
-            if (!matched) {
+            if (!matched && node.hasRegExpChildren) {
                 for (const [, child] of node.children) {
+                    if (!child.hasRegExp) continue;
                     const match = child.pattern.exec(input);
                     if (match) {
                         matched = child;
