@@ -8,7 +8,7 @@ function json({ limit = 100 * 1024 } = {}) {
         }
         return value;
     };
-    
+
     return async (req, res) => {
         if (!["POST", "PUT", "PATCH", "QUERY"].includes(req.method)) {
             return;

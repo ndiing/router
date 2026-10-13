@@ -73,7 +73,7 @@ class Node {
         for (const [, child] of this.children) {
             max = Math.max(max, child.getMaxSeq());
         }
-        
+
         return max;
     }
 }

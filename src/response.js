@@ -4,9 +4,9 @@ class Response extends http.ServerResponse {
     send(chunk) {
         this.end(chunk);
     }
-    
+
     json(value) {
-        this.setHeader("Content-Type","application/json")
+        this.setHeader("Content-Type", "application/json");
         this.end(JSON.stringify(value));
     }
 }

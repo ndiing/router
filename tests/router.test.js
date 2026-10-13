@@ -1,5 +1,5 @@
 const App = require("../src/index");
-const {Router} = App;
+const { Router } = App;
 
 // ============================================================
 // SETUP

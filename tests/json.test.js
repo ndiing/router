@@ -1,6 +1,6 @@
 const http = require("node:http");
 const App = require("../src/index");
-const {Router} = App;
+const { Router } = App;
 const { json } = App; // sesuaikan path
 
 // ============================================================

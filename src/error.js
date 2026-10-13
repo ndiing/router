@@ -11,7 +11,7 @@ class ErrorResponse extends Error {
         if (Error.captureStackTrace) {
             Error.captureStackTrace(this, this.constructor);
         }
-        
+
         this.statusCode = statusCode;
     }
 

@@ -7,9 +7,9 @@ function parseQueryString(queryString) {
     let match;
     while ((match = QUERY_STRING_REGEX.exec(queryString)) !== null) {
         const [, name = "", raw = ""] = match;
-        
+
         const value = decodeURIComponent(raw);
-        
+
         if (result[name]) {
             if (Array.isArray(result[name])) result[name].push(value);
             else result[name] = [result[name], value];

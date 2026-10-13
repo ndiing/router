@@ -1,5 +1,31 @@
 const App = require("../src");
-const { Router,json } = App
+const { cors } = require("../src/cors");
+const { Router, json } = App;
+
+// const req = {
+//     method: "OPTIONS",
+//     headers: {
+//         "access-control-request-method": "GET",
+//         "access-control-request-headers": "content-type,x-requested-with",
+//         origin: "https://www.example.com",
+//     },
+// };
+// const res = {
+//     setHeader: console.log,
+//     appendHeader: console.log,
+//     end: console.log,
+// };
+
+// console.log(cors({ origin: "*" })(req, res));
+// console.log(cors({ origin: null })(req, res));
+// console.log(cors({ origin: undefined })(req, res));
+// console.log(cors({ origin: "http://localhost" })(req, res));
+
+// console.log(cors({ origin: "*", credentials: true })(req, res));
+// console.log(cors({ origin: "*", credentials: false })(req, res));
+
+// console.log(cors({ origin: "*", credentials: true, headers: "*" })(req, res));
+// console.log(cors({ origin: "*", credentials: true, headers: ["Content-Encoding", "Kuma-Revision"] })(req, res));
 
 const blogs = new Router();
 blogs.use((req) => {
@@ -43,7 +69,7 @@ app.get("/:id", async (req, res) => {
     await new Promise((resolve) => setTimeout(resolve, 60_000));
     res.json({ method: req.method, path: req.path, params: req.params, query: req.query, body: req.body });
 });
-app.get("/", (req, res) => res.json({ method: req.method, path: req.path, params: req.params, query: req.query, body: req.body }));
+app.get("/", cors(), (req, res) => res.json({ method: req.method, path: req.path, params: req.params, query: req.query, body: req.body }));
 app.patch("/:id", json(), (req, res) => res.json({ method: req.method, path: req.path, params: req.params, query: req.query, body: req.body }));
 app.delete("/:id", (req, res) => res.json({ method: req.method, path: req.path, params: req.params, query: req.query, body: req.body }));
 // app.use((req, res) => {
@@ -80,82 +106,83 @@ fetch(`${base}/`)
     // .then((res) => res.json())
     .then(console.log)
     .catch(console.error);
-fetch(`${base}/?user=name&pass=word`)
-    // .then((res) => res.json())
-    .then(console.log)
-    .catch(console.error);
-fetch(`${base}/`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ user: "name", pass: "word" }) })
-    // .then((res) => res.json())
-    .then(console.log)
-    .catch(console.error);
-fetch(`${base}/321`)
-    // .then((res) => res.json())
-    .then(console.log)
-    .catch(console.error);
-fetch(`${base}/blogs/`)
-    // .then((res) => res.json())
-    .then(console.log)
-    .catch(console.error);
-fetch(`${base}/blogs/?user=name&pass=word`)
-    // .then((res) => res.json())
-    .then(console.log)
-    .catch(console.error);
-fetch(`${base}/blogs/`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ user: "name", pass: "word" }) })
-    // .then((res) => res.json())
-    .then(console.log)
-    .catch(console.error);
-fetch(`${base}/blogs/321`)
-    // .then((res) => res.json())
-    .then(console.log)
-    .catch(console.error);
-fetch(`${base}/admin/`)
-    // .then((res) => res.json())
-    .then(console.log)
-    .catch(console.error);
-fetch(`${base}/admin/?user=name&pass=word`)
-    // .then((res) => res.json())
-    .then(console.log)
-    .catch(console.error);
-fetch(`${base}/admin/`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ user: "name", pass: "word" }) })
-    // .then((res) => res.json())
-    .then(console.log)
-    .catch(console.error);
-fetch(`${base}/admin/321`)
-    // .then((res) => res.json())
-    .then(console.log)
-    .catch(console.error);
-fetch(`${base}/admin/users/`)
-    // .then((res) => res.json())
-    .then(console.log)
-    .catch(console.error);
-fetch(`${base}/admin/users/?user=name&pass=word`)
-    // .then((res) => res.json())
-    .then(console.log)
-    .catch(console.error);
-fetch(`${base}/admin/users/`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ user: "name", pass: "word" }) })
-    // .then((res) => res.json())
-    .then(console.log)
-    .catch(console.error);
-fetch(`${base}/admin/users/321`)
-    // .then((res) => res.json())
-    .then(console.log)
-    .catch(console.error);
-fetch(`${base}/not/found/`)
-    // .then((res) => res.json())
-    .then(console.log)
-    .catch(console.error);
-fetch(`${base}/not/found/?user=name&pass=word`)
-    // .then((res) => res.json())
-    .then(console.log)
-    .catch(console.error);
-fetch(`${base}/not/found/`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ user: "name", pass: "word" }) })
-    // .then((res) => res.json())
-    .then(console.log)
-    .catch(console.error);
-fetch(`${base}/not/found/321`)
-    // .then((res) => res.json())
-    .then(console.log)
-    .catch(console.error);
+
+// fetch(`${base}/?user=name&pass=word`)
+//     // .then((res) => res.json())
+//     .then(console.log)
+//     .catch(console.error);
+// fetch(`${base}/`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ user: "name", pass: "word" }) })
+//     // .then((res) => res.json())
+//     .then(console.log)
+//     .catch(console.error);
+// fetch(`${base}/321`)
+//     // .then((res) => res.json())
+//     .then(console.log)
+//     .catch(console.error);
+// fetch(`${base}/blogs/`)
+//     // .then((res) => res.json())
+//     .then(console.log)
+//     .catch(console.error);
+// fetch(`${base}/blogs/?user=name&pass=word`)
+//     // .then((res) => res.json())
+//     .then(console.log)
+//     .catch(console.error);
+// fetch(`${base}/blogs/`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ user: "name", pass: "word" }) })
+//     // .then((res) => res.json())
+//     .then(console.log)
+//     .catch(console.error);
+// fetch(`${base}/blogs/321`)
+//     // .then((res) => res.json())
+//     .then(console.log)
+//     .catch(console.error);
+// fetch(`${base}/admin/`)
+//     // .then((res) => res.json())
+//     .then(console.log)
+//     .catch(console.error);
+// fetch(`${base}/admin/?user=name&pass=word`)
+//     // .then((res) => res.json())
+//     .then(console.log)
+//     .catch(console.error);
+// fetch(`${base}/admin/`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ user: "name", pass: "word" }) })
+//     // .then((res) => res.json())
+//     .then(console.log)
+//     .catch(console.error);
+// fetch(`${base}/admin/321`)
+//     // .then((res) => res.json())
+//     .then(console.log)
+//     .catch(console.error);
+// fetch(`${base}/admin/users/`)
+//     // .then((res) => res.json())
+//     .then(console.log)
+//     .catch(console.error);
+// fetch(`${base}/admin/users/?user=name&pass=word`)
+//     // .then((res) => res.json())
+//     .then(console.log)
+//     .catch(console.error);
+// fetch(`${base}/admin/users/`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ user: "name", pass: "word" }) })
+//     // .then((res) => res.json())
+//     .then(console.log)
+//     .catch(console.error);
+// fetch(`${base}/admin/users/321`)
+//     // .then((res) => res.json())
+//     .then(console.log)
+//     .catch(console.error);
+// fetch(`${base}/not/found/`)
+//     // .then((res) => res.json())
+//     .then(console.log)
+//     .catch(console.error);
+// fetch(`${base}/not/found/?user=name&pass=word`)
+//     // .then((res) => res.json())
+//     .then(console.log)
+//     .catch(console.error);
+// fetch(`${base}/not/found/`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ user: "name", pass: "word" }) })
+//     // .then((res) => res.json())
+//     .then(console.log)
+//     .catch(console.error);
+// fetch(`${base}/not/found/321`)
+//     // .then((res) => res.json())
+//     .then(console.log)
+//     .catch(console.error);
 
 // {
 //     const app = require("express")();
@@ -194,7 +221,6 @@ autocannon -c 100 -d 1 -p 10 localhost:3003
 autocannon -c 100 -d 1 -p 10 localhost:3004
 
 */
-
 
 // function bench(label, fn, iterations = 1_000_000, runs = 10) {
 //     // warm-up dulu biar JIT optimize

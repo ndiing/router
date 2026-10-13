@@ -146,10 +146,10 @@ class Router {
 
         if (node) {
             for (const handler of node.handlers.get(method)) {
-                handlers[handler.seq] = handler
+                handlers[handler.seq] = handler;
             }
         }
-        
+
         const result = {
             params,
             handlers: Object.values(handlers),

@@ -5,8 +5,8 @@ class Request extends http.IncomingMessage {
     _path;
     _parsed;
     _query;
-    params={};
-    timeout=0;
+    params = {};
+    timeout = 0;
 
     get path() {
         if (this._path) return this._path;
@@ -16,11 +16,11 @@ class Request extends http.IncomingMessage {
             return this._path;
         }
 
-        this._parsed = parseUrl(this.url)
+        this._parsed = parseUrl(this.url);
         this._path = this._parsed.path;
         return this._path;
     }
-    
+
     get query() {
         if (this._query) return this._query;
 
@@ -28,7 +28,7 @@ class Request extends http.IncomingMessage {
             this._query = {};
             return this._query;
         }
-        
+
         this._query = parseQueryString(this._parsed.queryString);
         return this._query;
     }
