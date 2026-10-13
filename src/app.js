@@ -59,7 +59,11 @@ class App extends Router {
                 res.statusCode = err.statusCode || 500;
             }
 
-            res.json({ error: { message: err.message, stack: err.stack } });
+            const error = { message: err.message };
+            if (process.env.NODE_ENV === "development") {
+                error.stack = err.stack;
+            }
+            res.json({ error });
         }
     }
 

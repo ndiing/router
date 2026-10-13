@@ -294,3 +294,10 @@ autocannon -c 100 -d 1 -p 10 localhost:3004
 // });
 
 // console.log(`\nreg vs url: ${(a.avg / b.avg).toFixed(2)}x`);
+
+// const {parseUrl,parseQueryString} = require('../src/util')
+// // console.log(parseQueryString('='))
+// // console.log(parseQueryString('=%'))
+// // console.log(parseQueryString('name='))
+// console.log(parseQueryString('na%6De=value'))
+// console.log(new URLSearchParams('na%6De=value'))

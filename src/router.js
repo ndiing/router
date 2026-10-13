@@ -107,7 +107,7 @@ class Router {
 
         let node = this.root;
 
-        let params = {};
+        let params = Object.create(null);
         const handlers = {};
         const errorHandlers = {};
 
@@ -120,7 +120,14 @@ class Router {
                     const match = child.pattern.exec(input);
                     if (match) {
                         matched = child;
-                        Object.assign(params, match.groups);
+                        for (const name in match.groups) {
+                            const raw = match.groups[name];
+                            try {
+                                params[name] = decodeURIComponent(raw);
+                            } catch {
+                                params[name] = raw;
+                            }
+                        }
                         break;
                     }
                 }
@@ -128,7 +135,7 @@ class Router {
 
             if (!matched) {
                 node = null;
-                params = {};
+                params = Object.create(null);
                 break;
             }
 
