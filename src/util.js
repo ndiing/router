@@ -3,37 +3,32 @@ const QUERY_STRING_REGEX = /([^=&]*)?=([^&]*)?/g;
 
 function parseQueryString(queryString) {
     const result = Object.create(null);
-
     let match;
     while ((match = QUERY_STRING_REGEX.exec(queryString)) !== null) {
         const [, rawName = "", rawValue = ""] = match;
-
-        let name 
+        let name;
         try {
-            name = decodeURIComponent(rawName)
+            name = decodeURIComponent(rawName);
         } catch (error) {
-            name=rawName
+            name = rawName;
         }
-        
-        let value 
+        let value;
         try {
-            value = decodeURIComponent(rawValue)
+            value = decodeURIComponent(rawValue);
         } catch (error) {
-            value=rawValue
+            value = rawValue;
         }
-
-        if (result[name]) {
+        if (Object.hasOwn(result, name)) {
             if (Array.isArray(result[name])) result[name].push(value);
             else result[name] = [result[name], value];
         } else result[name] = value;
     }
-
     return result;
 }
 exports.parseQueryString = parseQueryString;
 
 function parseUrl(url) {
-    const [, path = "/", , queryString = ""] = URL_REGEX.exec(url);
-    return { path, queryString };
+    const [, rawPath = "", , queryString = ""] = URL_REGEX.exec(url);
+    return { path: rawPath || "/", queryString };
 }
 exports.parseUrl = parseUrl;

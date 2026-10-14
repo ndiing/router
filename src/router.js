@@ -3,8 +3,8 @@ const { Cache } = require("./cache.js");
 
 class Router {
     constructor(options = {}) {
+        this.timeout = options.timeout ?? 0;
         this.cacheSize = options.size ?? 1000;
-
         this.root = new Node();
         this.seq = 0;
         this.cache = new Cache(this.cacheSize);
@@ -19,9 +19,7 @@ class Router {
             handlers = [path, ...handlers];
             path = null;
         }
-
         let node = this.root;
-
         if (path !== null) {
             for (const segment of this.split(path)) {
                 node = node.add(segment);
@@ -31,10 +29,13 @@ class Router {
         for (const handler of handlers) {
             if (handler.root) {
                 node.merge(handler.root, this.seq);
-                this.seq = node.getMaxSeq() + 1;
+                this.seq += handler.root.getMaxSeq() + 1;
             } else {
-                handler.seq = this.seq++;
-                node.handlers.getOrInsert(method,[]).push(handler);
+                node.handlers.getOrInsert(method, []).push({
+                    handler,
+                    seq: this.seq++,
+                    isErrorHandler: handler.length === 3,
+                });
             }
         }
     }
@@ -94,6 +95,27 @@ class Router {
         return this;
     }
 
+    matchRegExp(node, input, params) {
+        let matched;
+        for (const [, child] of node.children) {
+            if (!child.pattern) continue;
+            const match = child.pattern.exec(input);
+            if (match) {
+                matched = child;
+                for (const name in match.groups) {
+                    const raw = match.groups[name];
+                    try {
+                        params[name] = decodeURIComponent(raw);
+                    } catch {
+                        params[name] = raw;
+                    }
+                }
+                break;
+            }
+        }
+        return matched;
+    }
+
     /**
      * @param {'GET'|'QUERY'|'HEAD'|'OPTIONS'|'TRACE'|'PUT'|'DELETE'|'POST'|'PATCH'|'CONNECT'} method
      * @param {String} path
@@ -101,73 +123,47 @@ class Router {
      */
     find(method, path) {
         const key = `${method} ${path}`;
-
         const cached = this.cache.get(key);
         if (cached) return cached;
-
         let node = this.root;
-
         let params = Object.create(null);
         const handlers = {};
         const errorHandlers = {};
-
         for (const input of this.split(path)) {
             let matched = node.children.get(input);
-
             if (!matched && node.hasRegExpChildren) {
-                for (const [, child] of node.children) {
-                    if (!child.pattern) continue;
-                    const match = child.pattern.exec(input);
-                    if (match) {
-                        matched = child;
-                        for (const name in match.groups) {
-                            const raw = match.groups[name];
-                            try {
-                                params[name] = decodeURIComponent(raw);
-                            } catch {
-                                params[name] = raw;
-                            }
-                        }
-                        break;
-                    }
-                }
+                matched = this.matchRegExp(node, input, params);
             }
-
             if (!matched) {
                 node = null;
                 params = Object.create(null);
                 break;
             }
-
             node = matched;
-
-            if(node.handlers.has("ALL"))
-            for (const handler of node.handlers.get("ALL")) {
-                if (handler.length === 3) errorHandlers[handler.seq] = handler;
-                else handlers[handler.seq] = handler;
+            if (node.handlers.has("ALL")) {
+                for (const entry of node.handlers.get("ALL")) {
+                    if (entry.isErrorHandler) errorHandlers[entry.seq] = entry.handler;
+                    else handlers[entry.seq] = entry.handler;
+                }
             }
         }
-
-        if(this.root.handlers.has("ALL"))
-        for (const handler of this.root.handlers.get("ALL")) {
-            if (handler.length === 3) errorHandlers[handler.seq] = handler;
-            else handlers[handler.seq] = handler;
-        }
-
-        if (node&&node.handlers.has(method)) {
-            for (const handler of node.handlers.get(method)) {
-                handlers[handler.seq] = handler;
+        if (this.root.handlers.has("ALL")) {
+            for (const entry of this.root.handlers.get("ALL")) {
+                if (entry.isErrorHandler) errorHandlers[entry.seq] = entry.handler;
+                else handlers[entry.seq] = entry.handler;
             }
         }
-
+        if (node && node.handlers.has(method)) {
+            for (const entry of node.handlers.get(method)) {
+                handlers[entry.seq] = entry.handler;
+            }
+        }
         const result = {
             params,
             handlers: Object.values(handlers),
             errorHandlers: Object.values(errorHandlers),
         };
-
         this.cache.set(key, result);
-
         return result;
     }
 }

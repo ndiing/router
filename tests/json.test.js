@@ -26,7 +26,8 @@ app.get("/", (req, res) => {
 
 // Error handler
 app.use((err, req, res) => {
-    res.json({ error: err.message });
+    res.statusCode = err.statusCode || 500;
+    res.json({ error: err.message, cause: err.cause?.message });
 });
 
 const server = app.listen(0); // port random

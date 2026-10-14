@@ -6,16 +6,13 @@ class Request extends http.IncomingMessage {
     _parsed;
     _query;
     params = {};
-    timeout = 0;
-
+    signal;
     get path() {
         if (this._path) return this._path;
-
-        if (this.url.indexOf("?") === -1) {
+        if (!/[?#]/.test(this.url)) {
             this._path = this.url;
             return this._path;
         }
-
         this._parsed = parseUrl(this.url);
         this._path = this._parsed.path;
         return this._path;
@@ -23,12 +20,10 @@ class Request extends http.IncomingMessage {
 
     get query() {
         if (this._query) return this._query;
-
         if (!this._parsed) {
             this._query = {};
             return this._query;
         }
-
         this._query = parseQueryString(this._parsed.queryString);
         return this._query;
     }

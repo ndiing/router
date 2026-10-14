@@ -1,4 +1,4 @@
-require('./polyfill.js')
+require("./polyfill.js");
 const { json } = require("./middleware/json.js");
 const { cors } = require("./middleware/cors.js");
 const { App } = require("./app.js");

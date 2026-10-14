@@ -1,10 +1,10 @@
 function pattern(string) {
     return new RegExp(
-        `(${String(string)
+        `^(${String(string)
             .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
             .replace(/ /g, "")
             .replace(/,/g, "|")
-            .replace(/\\\*/g, ".*")})`,
+            .replace(/\\\*/g, ".*")})$`,
         "i",
     );
 }
@@ -42,7 +42,6 @@ function cors({ origin = "*", credentials = false, headers, maxAge = 0, methods 
     function setAllowHeaders(req, res) {
         const reqHeaders = req.headers["access-control-request-headers"];
         if (!reqHeaders) return;
-
         let value;
         if (headers === "*" && !credentials) {
             value = "*";
@@ -59,7 +58,6 @@ function cors({ origin = "*", credentials = false, headers, maxAge = 0, methods 
     function setAllowMethods(req, res) {
         const reqMethod = req.headers["access-control-request-method"];
         if (!reqMethod) return;
-
         let value;
         if (methods === "*" && !credentials) {
             value = "*";
@@ -73,25 +71,21 @@ function cors({ origin = "*", credentials = false, headers, maxAge = 0, methods 
      * @param {import('http').IncomingMessage} req
      * @param {import('http').ServerResponse} res
      */
-    function setAllowOrigin(req, res) {
+    function setAllowOrigin(req, res, preflight = true) {
         const reqOrigin = req.headers["origin"];
 
         let value;
         let explicit;
-        if (origin === "*") {
-            if (!credentials) value = "*";
-            else {
-                value = reqOrigin;
-                explicit = true;
-            }
+        if (origin === "*" && !credentials) {
+            value = "*";
         } else if (origin === null) {
             value = "null";
-        } else if (typeof origin === "string" && ORIGIN_PATTERN.test(reqOrigin)) {
-            value = origin;
+        } else if (ORIGIN_PATTERN.test(reqOrigin)) {
+            value = reqOrigin;
             explicit = true;
         }
         if (value) res.setHeader("Access-Control-Allow-Origin", value);
-        if (explicit) res.appendHeader("Vary", "Origin");
+        if (!preflight && explicit) res.appendHeader("Vary", "Origin");
     }
 
     /**
@@ -122,16 +116,16 @@ function cors({ origin = "*", credentials = false, headers, maxAge = 0, methods 
      */
     return (req, res) => {
         setAllowCredentials(res);
-        setAllowOrigin(req, res);
         if (req.method === "OPTIONS") {
+            setAllowOrigin(req, res);
             setAllowHeaders(req, res);
             setAllowMethods(req, res);
             setMaxAge(res);
-
             res.statusCode = 204;
             res.setHeader("Content-Length", "0");
             res.end();
         } else {
+            setAllowOrigin(req, res, false);
             setExposeHeaders(res);
         }
     };

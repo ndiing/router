@@ -1,6 +1,5 @@
 const { Pattern } = require("./pattern.js");
 
-
 class Node {
     constructor(segment = "") {
         this.hasRegExpChildren = false;
@@ -11,58 +10,37 @@ class Node {
     }
 
     add(segment) {
-        const node = new Node(segment);
-        if (node.pattern) this.hasRegExpChildren = true; // node.hasRegExp;
-        return this.children.getOrInsert(segment,node);
+        return this.children.getOrInsertComputed(segment, () => {
+            const node = new Node(segment);
+            if (node.pattern) this.hasRegExpChildren = true;
+            return node;
+        });
     }
 
-    /**
-     * @param {Node} node
-     */
     merge(node, offset) {
-        for (const [method, handlers] of node.handlers) {
-            for (const handler of handlers) {
-                handler.seq += offset;
-                this.handlers.getOrInsert(method,[]).push(handler);
+        for (const [method, entries] of node.handlers) {
+            const target = this.handlers.getOrInsert(method, []);
+            for (const entry of entries) {
+                target.push({ ...entry, seq: entry.seq + offset });
             }
         }
-
         for (const [segment, child] of node.children) {
-            if (child.pattern) this.hasRegExpChildren = true; // child.hasRegExp;
-            if (!this.children.has(segment)) {
-                child.setSeqOffset(offset);
-                this.children.set(segment, child);
-            } else {
-                this.children.get(segment).merge(child, offset);
-            }
-        }
-    }
-
-    setSeqOffset(offset) {
-        for (const [, handlers] of this.handlers) {
-            for (const handler of handlers) {
-                handler.seq += offset;
-            }
-        }
-
-        for (const [, child] of this.children) {
-            child.setSeqOffset(offset);
+            const target = this.children.getOrInsertComputed(segment, () => new Node(segment));
+            if (target.pattern) this.hasRegExpChildren = true;
+            target.merge(child, offset);
         }
     }
 
     getMaxSeq() {
         let max = -1;
-
         for (const [, handlers] of this.handlers) {
-            for (const handler of handlers) {
-                max = Math.max(max, handler.seq);
+            for (const entry of handlers) {
+                max = Math.max(max, entry.seq);
             }
         }
-
         for (const [, child] of this.children) {
             max = Math.max(max, child.getMaxSeq());
         }
-
         return max;
     }
 }

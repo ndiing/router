@@ -11,13 +11,26 @@ const SERVER_OPTIONS = {
 };
 
 class App extends Router {
-    async withTimeout(handlerPromise, delay) {
-        let timeout;
+    async withTimeout(req, handlerPromise) {
+        const controller = new AbortController();
+        const { signal } = controller;
+
+        req.signal = signal;
+
+        const timeout = setTimeout(() => {
+            controller.abort(ErrorResponse.status(504));
+        }, this.timeout);
+
+        let handleAbort;
         const timeoutPromise = new Promise((_, reject) => {
-            timeout = setTimeout(() => reject(ErrorResponse.status(504)), delay);
+            handleAbort = () => reject(signal.reason);
+            signal.addEventListener("abort", handleAbort, { once: true });
         });
 
-        await Promise.race([handlerPromise, timeoutPromise]).finally(() => clearTimeout(timeout));
+        await Promise.race([handlerPromise(), timeoutPromise]).finally(() => {
+            signal.removeEventListener("abort", handleAbort);
+            clearTimeout(timeout);
+        });
     }
 
     /**
@@ -26,22 +39,19 @@ class App extends Router {
      */
     async handle(req, res) {
         const { params, handlers, errorHandlers } = this.find(req.method, req.path);
-        req.params = params;
-
+        req.params = Object.assign(Object.create(null), params);
         let err;
         try {
-            const handlerPromise = (async () => {
+            const handlerPromise = async () => {
                 for (const handler of handlers) {
                     if (res.writableEnded) break;
                     await handler(req, res);
                 }
-            })();
-
-            if (req.timeout) await this.withTimeout(handlerPromise, req.timeout);
-            else await handlerPromise;
+            };
+            if (this.timeout) await this.withTimeout(req, handlerPromise);
+            else await handlerPromise();
         } catch (error) {
             err = error;
-
             try {
                 for (const handler of errorHandlers) {
                     if (res.writableEnded) break;
@@ -51,14 +61,9 @@ class App extends Router {
                 err = new Error(error.message, { cause: err });
             }
         }
-
         if (!res.writableEnded) {
             if (!err) err = ErrorResponse.status(404);
-
-            if (!res.statusCode || res.statusCode < 400) {
-                res.statusCode = err.statusCode || 500;
-            }
-
+            res.statusCode = err.statusCode || 500;
             const error = { message: err.message };
             if (process.env.NODE_ENV === "development") {
                 error.stack = err.stack;

@@ -9,12 +9,12 @@ if (!Map.prototype.getOrInsert) {
 }
 // Polyfill for Map.prototype.getOrInsertComputed
 if (!Map.prototype.getOrInsertComputed) {
-    Map.prototype.getOrInsertComputed = function (key, callbackFunction) {
-        if (typeof callbackFunction !== 'function') {
-            throw new TypeError('The callback argument must be a function');
+    Map.prototype.getOrInsertComputed = function (key, callback) {
+        if (typeof callback !== "function") {
+            throw new TypeError("The callback argument must be a function");
         }
         if (!this.has(key)) {
-            this.set(key, callbackFunction(key));
+            this.set(key, callback(key));
         }
         return this.get(key);
     };
