@@ -1,37 +1,19 @@
 const { Pattern } = require("./pattern.js");
 
+
 class Node {
     constructor(segment = "") {
-        this.segment = segment;
-        this.hasRegExp = segment.startsWith(":") || segment.indexOf("*") !== -1;
         this.hasRegExpChildren = false;
-        this.pattern = this.hasRegExp && new Pattern(segment);
+        this.pattern = /[:*]/.test(segment) && new Pattern(segment);
         /**@type {Map<string,Node>}*/
         this.children = new Map();
-        this.handlers = new Map([
-            ["ALL", []],
-            ["GET", []],
-            ["QUERY", []],
-            ["HEAD", []],
-            ["OPTIONS", []],
-            ["TRACE", []],
-            ["PUT", []],
-            ["DELETE", []],
-            ["POST", []],
-            ["PATCH", []],
-            ["CONNECT", []],
-        ]);
-        // debug
-        Object.defineProperty(this, "handlers", { configurable: true, enumerable: false, writable: true });
+        this.handlers = new Map();
     }
 
     add(segment) {
-        if (!this.children.has(segment)) {
-            const node = new Node(segment);
-            if (node.hasRegExp) this.hasRegExpChildren = true; // node.hasRegExp;
-            this.children.set(segment, node);
-        }
-        return this.children.get(segment);
+        const node = new Node(segment);
+        if (node.pattern) this.hasRegExpChildren = true; // node.hasRegExp;
+        return this.children.getOrInsert(segment,node);
     }
 
     /**
@@ -41,12 +23,12 @@ class Node {
         for (const [method, handlers] of node.handlers) {
             for (const handler of handlers) {
                 handler.seq += offset;
-                this.handlers.get(method).push(handler);
+                this.handlers.getOrInsert(method,[]).push(handler);
             }
         }
 
         for (const [segment, child] of node.children) {
-            if (child.hasRegExp) this.hasRegExpChildren = true; // child.hasRegExp;
+            if (child.pattern) this.hasRegExpChildren = true; // child.hasRegExp;
             if (!this.children.has(segment)) {
                 child.setSeqOffset(offset);
                 this.children.set(segment, child);

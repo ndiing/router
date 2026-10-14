@@ -34,7 +34,7 @@ class Router {
                 this.seq = node.getMaxSeq() + 1;
             } else {
                 handler.seq = this.seq++;
-                node.handlers.get(method).push(handler);
+                node.handlers.getOrInsert(method,[]).push(handler);
             }
         }
     }
@@ -116,7 +116,7 @@ class Router {
 
             if (!matched && node.hasRegExpChildren) {
                 for (const [, child] of node.children) {
-                    if (!child.hasRegExp) continue;
+                    if (!child.pattern) continue;
                     const match = child.pattern.exec(input);
                     if (match) {
                         matched = child;
@@ -141,18 +141,20 @@ class Router {
 
             node = matched;
 
+            if(node.handlers.has("ALL"))
             for (const handler of node.handlers.get("ALL")) {
                 if (handler.length === 3) errorHandlers[handler.seq] = handler;
                 else handlers[handler.seq] = handler;
             }
         }
 
+        if(this.root.handlers.has("ALL"))
         for (const handler of this.root.handlers.get("ALL")) {
             if (handler.length === 3) errorHandlers[handler.seq] = handler;
             else handlers[handler.seq] = handler;
         }
 
-        if (node) {
+        if (node&&node.handlers.has(method)) {
             for (const handler of node.handlers.get(method)) {
                 handlers[handler.seq] = handler;
             }

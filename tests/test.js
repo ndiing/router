@@ -119,7 +119,7 @@ app.use((err, req, res) => {
     res.json({ error });
 });
 
-// console.log(inspect(app, false, null, true));
+console.log(inspect(app, false, null, true));
 
 // console.log(app.find("GET", "/"));
 // console.log(app.find("GET", "/321"));
