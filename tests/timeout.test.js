@@ -88,7 +88,7 @@ describe("timeout", () => {
         let baseUrl;
 
         beforeAll(() => {
-            const app = new App({ timeout: 200 });
+            const app = new App({ requestTimeout: 200 });
             app.get("/", (req, res) => res.json({ ok: true }));
             app.get("/slow", async (req, res) => {
                 await sleep(1000);
@@ -129,7 +129,7 @@ describe("timeout", () => {
 
         test("req.signal ada saat timeout aktif", async () => {
             let capturedSignal;
-            const app = new App({ timeout: 200 });
+            const app = new App({ requestTimeout: 200 });
             app.get("/signal", (req, res) => {
                 capturedSignal = req.signal;
                 res.json({ ok: true });
@@ -146,7 +146,7 @@ describe("timeout", () => {
 
         test("req.signal.aborted true setelah timeout", async () => {
             let capturedSignal;
-            const app = new App({ timeout: 100 });
+            const app = new App({ requestTimeout: 100 });
             app.get("/slow", async (req, res) => {
                 capturedSignal = req.signal;
                 await sleep(500);
@@ -164,7 +164,7 @@ describe("timeout", () => {
         });
 
         test("handler kooperatif — abort dan 504", async () => {
-            const app = new App({ timeout: 100 });
+            const app = new App({ requestTimeout: 100 });
             app.get("/slow", async (req, res) => {
                 await sleep(500, req.signal);
                 res.json({ ok: true });
@@ -185,7 +185,7 @@ describe("timeout", () => {
 
     describe("error handler", () => {
         test("error handler dipanggil setelah timeout", async () => {
-            const app = new App({ timeout: 100 });
+            const app = new App({ requestTimeout: 100 });
             let errorHandlerCalled = false;
             app.get("/slow", async (req, res) => {
                 await sleep(500);
@@ -207,7 +207,7 @@ describe("timeout", () => {
         });
 
         test("handler throw error — error handler, bukan timeout", async () => {
-            const app = new App({ timeout: 5000 });
+            const app = new App({ requestTimeout: 5000 });
             app.get("/error", () => {
                 throw new Error("Test error");
             });
@@ -233,7 +233,7 @@ describe("timeout", () => {
 
     describe("edge case", () => {
         test("handler nulis setelah timeout — nggak crash", async () => {
-            const app = new App({ timeout: 100 });
+            const app = new App({ requestTimeout: 100 });
             app.get("/slow", async (req, res) => {
                 await sleep(300);
                 res.json({ ok: true }); // <-- nulis setelah timeout
@@ -252,7 +252,7 @@ describe("timeout", () => {
         });
 
         test("handler reject setelah timeout — nggak unhandled rejection", async () => {
-            const app = new App({ timeout: 100 });
+            const app = new App({ requestTimeout: 100 });
             app.get("/slow", async (req, res) => {
                 await sleep(300);
                 throw new Error("Error after timeout");
@@ -269,7 +269,7 @@ describe("timeout", () => {
         });
 
         test("timeout 0 — nggak ada timeout", async () => {
-            const app = new App({ timeout: 0 });
+            const app = new App({ requestTimeout: 0 });
             app.get("/slow", async (req, res) => {
                 await sleep(100);
                 res.json({ ok: true });

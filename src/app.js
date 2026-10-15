@@ -19,7 +19,7 @@ class App extends Router {
 
         const timeout = setTimeout(() => {
             controller.abort(ErrorResponse.status(504));
-        }, this.timeout);
+        }, this.requestTimeout);
 
         let handleAbort;
         const timeoutPromise = new Promise((_, reject) => {
@@ -54,7 +54,7 @@ class App extends Router {
                     await handler(req, res);
                 }
             };
-            if (this.timeout) await this.withTimeout(req, handlerPromise);
+            if (this.requestTimeout) await this.withTimeout(req, handlerPromise);
             else await handlerPromise();
         } catch (error) {
             err = error;

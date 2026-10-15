@@ -198,18 +198,18 @@ Jika tidak ada handler yang mengirim response, router mengirim JSON otomatis:
 
 ## Timeout
 
-Aktifkan lewat opsi `timeout` (milidetik) pada `App`. Jika seluruh chain handler melebihi waktu tersebut, error `504 Gateway Timeout` dilempar dan diteruskan ke error handler.
+Aktifkan lewat opsi `requestTimeout` (milidetik) pada `App`. Jika seluruh chain handler melebihi waktu tersebut, error `504 Gateway Timeout` dilempar dan diteruskan ke error handler.
 
 ```js
-const app = new App({ timeout: 5000 });
+const app = new App({ requestTimeout: 5000 });
 ```
 
-- Tanpa opsi `timeout` (atau bernilai `0`), tidak ada batas waktu
+- Tanpa opsi `requestTimeout` (atau bernilai `0`), tidak ada batas waktu
 - Handler yang sudah berjalan tidak dihentikan paksa. Tetapi setelah response dikirim, `res.json()` dan `res.send()` mengabaikan penulisan berikutnya, dan handler selanjutnya di chain tidak dipanggil
 
 ### `req.signal`
 
-Saat `timeout` aktif, `req.signal` adalah `AbortSignal` yang di-abort ketika timeout terjadi (reason-nya error 504) atau ketika salah satu handler melempar error (reason-nya error tersebut). Teruskan ke operasi yang mendukungnya agar pekerjaan ikut dibatalkan:
+Saat `requestTimeout` aktif, `req.signal` adalah `AbortSignal` yang di-abort ketika timeout terjadi (reason-nya error 504) atau ketika salah satu handler melempar error (reason-nya error tersebut). Teruskan ke operasi yang mendukungnya agar pekerjaan ikut dibatalkan:
 
 ```js
 app.get("/proxy", async (req, res) => {
@@ -218,7 +218,7 @@ app.get("/proxy", async (req, res) => {
 });
 ```
 
-`req.signal` bernilai `undefined` jika `timeout` tidak diaktifkan.
+`req.signal` bernilai `undefined` jika `requestTimeout` tidak diaktifkan.
 
 ## Request
 
@@ -228,7 +228,7 @@ app.get("/proxy", async (req, res) => {
 | `req.query` | Object query string, di-parse secara lazy. Key yang berulang menjadi array, dan `+` di-decode menjadi spasi |
 | `req.params` | Parameter dari route dinamis (sudah di-decode) |
 | `req.body` | Hasil parse body (butuh middleware `json()`) |
-| `req.signal` | `AbortSignal` yang di-abort saat timeout atau error handler (hanya jika `timeout` aktif) |
+| `req.signal` | `AbortSignal` yang di-abort saat timeout atau error handler (hanya jika `requestTimeout` aktif) |
 
 ```js
 // GET /search?tag=a&tag=b&page=2
@@ -310,21 +310,21 @@ Perilaku:
 ## Opsi
 
 ```js
-const app = new App({ size: 1000, timeout: 5000 });
+const app = new App({ cacheSize: 1000, requestTimeout: 5000 });
 ```
 
 | Opsi | Default | Keterangan |
 | --- | --- | --- |
-| `size` | `1000` | Jumlah maksimum entri LRU cache untuk hasil lookup `METHOD path` |
-| `timeout` | - | Batas waktu handler dalam ms (khusus `App`). Lihat bagian [Timeout](#timeout) |
+| `cacheSize` | `1000` | Jumlah maksimum entri LRU cache untuk hasil lookup `METHOD path` |
+| `requestTimeout` | - | Batas waktu handler dalam ms (khusus `App`). Lihat bagian [Timeout](#requestTimeout) |
 
-`Router` hanya menerima `size`.
+`Router` hanya menerima `cacheSize`.
 
 ## API
 
 ### `new App([options])` / `new Router([options])`
 
-Membuat instance baru. `App` adalah `Router` ditambah `listen()` dan dukungan `timeout`.
+Membuat instance baru. `App` adalah `Router` ditambah `listen()` dan dukungan `requestTimeout`.
 
 ### `router.use([path], ...handlers | router)`
 

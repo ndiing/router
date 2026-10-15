@@ -4,8 +4,8 @@ const {  decodePathParam } = require("./util.js");
 
 class Router {
     constructor(options = {}) {
-        this.timeout = options.timeout ?? 0;
-        this.cacheSize = options.size ?? 1000;
+        this.requestTimeout = options.requestTimeout ?? 0;
+        this.cacheSize = options.cacheSize ?? 1000;
         this.root = new Node();
         this.seq = 0;
         this.cache = new Cache(this.cacheSize);
