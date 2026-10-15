@@ -123,10 +123,9 @@ describe("parseQueryString()", () => {
         });
     });
 
-    test("plus nggak jadi spasi", () => {
-        // Beda dari URLSearchParams
+    test("plus jadi spasi", () => {
         expect(toObjectLike(parseQueryString("user=hello+world"))).toEqual({
-            user: "hello+world",
+            user: "hello world",
         });
     });
 

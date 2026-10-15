@@ -27,7 +27,13 @@ class App extends Router {
             signal.addEventListener("abort", handleAbort, { once: true });
         });
 
-        await Promise.race([handlerPromise(), timeoutPromise]).finally(() => {
+        const promise = handlerPromise().catch((error) => {
+            if (!signal.aborted) {
+                controller.abort(error);
+            }
+        });
+
+        await Promise.race([promise, timeoutPromise]).finally(() => {
             signal.removeEventListener("abort", handleAbort);
             clearTimeout(timeout);
         });

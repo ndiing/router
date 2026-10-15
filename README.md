@@ -51,19 +51,23 @@ app.listen(3000);
 
 Yang diekspor adalah class `App`, dengan tiga properti tambahan:
 
-| Export       | Keterangan                               |
-| ------------ | ---------------------------------------- |
-| `App`        | Router + HTTP server (`listen`)          |
+| Export | Keterangan |
+| --- | --- |
+| `App` | Router + HTTP server (`listen`) |
 | `App.Router` | Router tanpa server, untuk nested router |
-| `App.json`   | Middleware JSON body parser              |
-| `App.cors`   | Middleware CORS                          |
+| `App.json` | Middleware JSON body parser |
+| `App.cors` | Middleware CORS |
 
 ## Routing
 
 Semua method mengembalikan `this`, jadi bisa di-chain.
 
 ```js
-app.get("/users", handler).post("/users", handler).put("/users/:id", handler).patch("/users/:id", handler).delete("/users/:id", handler);
+app.get("/users", handler)
+   .post("/users", handler)
+   .put("/users/:id", handler)
+   .patch("/users/:id", handler)
+   .delete("/users/:id", handler);
 ```
 
 Method yang tersedia: `get`, `post`, `put`, `patch`, `delete`, `head`, `options`, `trace`, `connect`, `query`, dan `use` (semua method).
@@ -205,7 +209,7 @@ const app = new App({ timeout: 5000 });
 
 ### `req.signal`
 
-Saat `timeout` aktif, `req.signal` adalah `AbortSignal` yang di-abort ketika timeout terjadi (reason-nya error 504). Teruskan ke operasi yang mendukungnya agar pekerjaan ikut dibatalkan:
+Saat `timeout` aktif, `req.signal` adalah `AbortSignal` yang di-abort ketika timeout terjadi (reason-nya error 504) atau ketika salah satu handler melempar error (reason-nya error tersebut). Teruskan ke operasi yang mendukungnya agar pekerjaan ikut dibatalkan:
 
 ```js
 app.get("/proxy", async (req, res) => {
@@ -218,13 +222,13 @@ app.get("/proxy", async (req, res) => {
 
 ## Request
 
-| Properti     | Keterangan                                                                 |
-| ------------ | -------------------------------------------------------------------------- |
-| `req.path`   | Pathname tanpa query string                                                |
-| `req.query`  | Object query string, di-parse secara lazy. Key yang berulang menjadi array |
-| `req.params` | Parameter dari route dinamis (sudah di-decode)                             |
-| `req.body`   | Hasil parse body (butuh middleware `json()`)                               |
-| `req.signal` | `AbortSignal` yang di-abort saat timeout (hanya jika `timeout` aktif)      |
+| Properti | Keterangan |
+| --- | --- |
+| `req.path` | Pathname tanpa query string |
+| `req.query` | Object query string, di-parse secara lazy. Key yang berulang menjadi array, dan `+` di-decode menjadi spasi |
+| `req.params` | Parameter dari route dinamis (sudah di-decode) |
+| `req.body` | Hasil parse body (butuh middleware `json()`) |
+| `req.signal` | `AbortSignal` yang di-abort saat timeout atau error handler (hanya jika `timeout` aktif) |
 
 ```js
 // GET /search?tag=a&tag=b&page=2
@@ -239,11 +243,11 @@ app.get("/search", (req, res) => {
 
 ## Response
 
-| Method             | Keterangan                                                  |
-| ------------------ | ----------------------------------------------------------- |
+| Method | Keterangan |
+| --- | --- |
 | `res.status(code)` | Set status code, mengembalikan `res` sehingga bisa di-chain |
-| `res.send(chunk)`  | Kirim response dan akhiri                                   |
-| `res.json(value)`  | Set `Content-Type: application/json`, serialize, lalu kirim |
+| `res.send(chunk)` | Kirim response dan akhiri |
+| `res.json(value)` | Set `Content-Type: application/json`, serialize, lalu kirim |
 
 ```js
 res.status(201).json({ created: true });
@@ -259,8 +263,8 @@ res.status(201).json({ created: true });
 app.use(App.json({ limit: 100 * 1024 })); // default 100 KB
 ```
 
-| Opsi    | Default  | Keterangan                      |
-| ------- | -------- | ------------------------------- |
+| Opsi | Default | Keterangan |
+| --- | --- | --- |
 | `limit` | `102400` | Ukuran body maksimum dalam byte |
 
 Perilaku:
@@ -285,19 +289,19 @@ app.use(
 );
 ```
 
-| Opsi          | Default | Keterangan                                                     |
-| ------------- | ------- | -------------------------------------------------------------- |
-| `origin`      | `"*"`   | `"*"`, string origin, atau `null`                              |
-| `credentials` | `false` | Mengirim `Access-Control-Allow-Credentials: true`              |
-| `headers`     | -       | `"*"` atau array nama header                                   |
-| `methods`     | -       | `"*"` atau array nama method                                   |
-| `maxAge`      | `0`     | Lama cache preflight (detik). `0` berarti header tidak dikirim |
+| Opsi | Default | Keterangan |
+| --- | --- | --- |
+| `origin` | `"*"` | `"*"`, satu origin, daftar dipisah koma, pola dengan `*` (misalnya `https://*.example.com`), atau `null` |
+| `credentials` | `false` | Mengirim `Access-Control-Allow-Credentials: true` |
+| `headers` | - | `"*"` atau array nama header |
+| `methods` | - | `"*"` atau array nama method |
+| `maxAge` | `0` | Lama cache preflight (detik). `0` berarti header tidak dikirim |
 
 Perilaku:
 
 - Request `OPTIONS` dijawab langsung dengan `204` dan chain berhenti
 - `Access-Control-Allow-Headers` dan `Access-Control-Allow-Methods` hanya dikirim pada preflight, jika nilai yang diminta ada di daftar
-- Dengan `origin: "*"` dan `credentials: true`, origin dari request dipantulkan dan header `Vary: Origin` ditambahkan
+- Jika `origin` berupa daftar atau pola (atau `"*"` dengan `credentials: true`), origin dari request dipantulkan bila cocok. Pencocokan dilakukan pada seluruh string (tanpa memperhatikan huruf besar/kecil), dan header `Vary: Origin` ditambahkan pada request non-preflight
 - Nilai `"*"` untuk `headers` dan `methods` diabaikan saat `credentials: true`, sesuai spesifikasi CORS
 - Pada request non-preflight, `headers` (jika array) dikirim sebagai `Access-Control-Expose-Headers`
 
@@ -309,10 +313,10 @@ Perilaku:
 const app = new App({ size: 1000, timeout: 5000 });
 ```
 
-| Opsi      | Default | Keterangan                                                                    |
-| --------- | ------- | ----------------------------------------------------------------------------- |
-| `size`    | `1000`  | Jumlah maksimum entri LRU cache untuk hasil lookup `METHOD path`              |
-| `timeout` | -       | Batas waktu handler dalam ms (khusus `App`). Lihat bagian [Timeout](#timeout) |
+| Opsi | Default | Keterangan |
+| --- | --- | --- |
+| `size` | `1000` | Jumlah maksimum entri LRU cache untuk hasil lookup `METHOD path` |
+| `timeout` | - | Batas waktu handler dalam ms (khusus `App`). Lihat bagian [Timeout](#timeout) |
 
 `Router` hanya menerima `size`.
 
@@ -351,11 +355,11 @@ console.log(server.address().port);
 
 Hello world dengan satu route `GET /`, diuji memakai `autocannon -c 100 -d 40 -p 10` di mesin lokal.
 
-|                       | Req/sec (avg) | Latency (avg) |
-| --------------------- | ------------- | ------------- |
-| Fastify               | 31.475        | 31,27 ms      |
-| **@ndiinginc/router** | 29.735        | 33,12 ms      |
-| Express               | 20.211        | 48,93 ms      |
+| | Req/sec (avg) | Latency (avg) |
+| --- | --- | --- |
+| Fastify | 31.475 | 31,27 ms |
+| **@ndiinginc/router** | 29.735 | 33,12 ms |
+| Express | 20.211 | 48,93 ms |
 
 Hasil bervariasi tergantung mesin, versi Node.js, dan jumlah route. Benchmark ini hanya menggambarkan overhead dasar, bukan performa aplikasi nyata.
 

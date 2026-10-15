@@ -37,6 +37,8 @@ console.log(app.find("GET", "/admin"));
 
 console.log();
 
+console.log(parseQueryString("test=test with plus"));
+console.log(parseQueryString("test=test+with+plus"));
 console.log(parseQueryString("a=b"));
 console.log(parseQueryString("a="));
 console.log(parseQueryString("=b"));
@@ -46,6 +48,8 @@ console.log(parseQueryString("=%"));
 console.log(parseQueryString("%="));
 console.log(parseQueryString("a=&a=b"));
 
+console.log(new URLSearchParams("test=test with plus"));
+console.log(new URLSearchParams("test=test+with+plus"));
 console.log(new URLSearchParams("a=b"));
 console.log(new URLSearchParams("a="));
 console.log(new URLSearchParams("=b"));

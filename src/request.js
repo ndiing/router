@@ -21,7 +21,7 @@ class Request extends http.IncomingMessage {
     get query() {
         if (this._query) return this._query;
         if (!this._parsed) {
-            this._query = {};
+            this._query = Object.create(null);
             return this._query;
         }
         this._query = parseQueryString(this._parsed.queryString);

@@ -1,5 +1,6 @@
 const { Node } = require("./node.js");
 const { Cache } = require("./cache.js");
+const {  decodePathParam } = require("./util.js");
 
 class Router {
     constructor(options = {}) {
@@ -103,12 +104,7 @@ class Router {
             if (match) {
                 matched = child;
                 for (const name in match.groups) {
-                    const raw = match.groups[name];
-                    try {
-                        params[name] = decodeURIComponent(raw);
-                    } catch {
-                        params[name] = raw;
-                    }
+                    params[name] = decodePathParam(match.groups[name]);
                 }
                 break;
             }
