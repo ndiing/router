@@ -355,11 +355,12 @@ console.log(server.address().port);
 
 Hello world dengan satu route `GET /`, diuji memakai `autocannon -c 100 -d 40 -p 10` di mesin lokal.
 
-| | Req/sec (avg) | Latency (avg) |
-| --- | --- | --- |
-| Fastify | 31.475 | 31,27 ms |
-| **@ndiinginc/router** | 29.735 | 33,12 ms |
-| Express | 20.211 | 48,93 ms |
+| package           | Latency  | Req/Sec  | Bytes/Sec | Result                                |
+| ----------------- | -------- | -------- | --------- | ------------------------------------- |
+| fastify           | 25.3 ms  | 38,738.4 | 7.24 MB   | 1550k requests in 40.06s, 290 MB read |
+| @ndiinginc/router | 28.45 ms | 34,541.4 | 5.91 MB   | 1383k requests in 40.06s, 236 MB read |
+| express           | 41 ms    | 24,095.6 | 6.05 MB   | 965k requests in 40.06s, 242 MB read  |
+
 
 Hasil bervariasi tergantung mesin, versi Node.js, dan jumlah route. Benchmark ini hanya menggambarkan overhead dasar, bukan performa aplikasi nyata.
 
