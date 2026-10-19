@@ -1,41 +1,32 @@
 class Node {
     constructor(segment = "") {
         this.segment = segment;
-        /**@type {Map<string, Node>}*/
-        this.staticChildren = new Map();
-        this.paramChild = null;
-        this.paramName = null;
-        this.wildcardChild = null;
-        /**@type {Map<string, Function[]>}*/
+        /** @type {Map<string, Node>} static children */
+        this.children = new Map();
+        /** @type {Map<string, Node>} param children, key = ':name' */
+        this.params = new Map();
+        /** @type {Node | null} wildcard child */
+        this.wildcard = null;
         this.handlers = new Map();
     }
-    /**
-     * @param {String} segment
-     * @returns {Node}
-     */
+
     add(segment) {
+        if (segment === "*") {
+            if (!this.wildcard) this.wildcard = new Node("*");
+            return this.wildcard;
+        }
+
         if (segment.startsWith(":")) {
-            if (this.paramChild) return this.paramChild;
-            this.paramChild = new Node(segment);
-            this.paramChild.paramName = segment.slice(1);
-            this.paramChild.type = "param";
-            return this.paramChild;
-        } else if (segment.startsWith("*")) {
-            if (this.wildcardChild) return this.wildcardChild;
-            this.wildcardChild = new Node(segment);
-            this.wildcardChild.type = "wildcard";
-            return this.wildcardChild;
-        } else {
-            return this.staticChildren.getOrInsertComputed(segment, (segment) => {
-                const node = new Node(segment);
-                node.type = "wildcard";
-                return node;
+            return this.params.getOrInsertComputed(segment, (segment) => {
+                return new Node(segment);
             });
         }
+
+        return this.children.getOrInsertComputed(segment, (segment) => {
+            return new Node(segment);
+        });
     }
-    /**
-     * @param {Node} node
-     */
+
     merge(node, offset) {
         for (const [method, entries] of node.handlers) {
             for (const entry of entries) {
@@ -46,37 +37,41 @@ class Node {
             }
         }
 
-        if (node.paramChild) {
-            this.add(node.paramChild.segment).merge(node.paramChild, offset);
+        if (node.wildcard) {
+            this.add("*").merge(node.wildcard, offset);
         }
-        if (node.wildcardChild) {
-            this.add(node.wildcardChild.segment).merge(node.wildcardChild, offset);
+
+        for (const [segment, child] of node.params) {
+            this.add(segment).merge(child, offset);
         }
-        for (const [segment, child] of node.staticChildren) {
+
+        for (const [segment, child] of node.children) {
             this.add(segment).merge(child, offset);
         }
     }
 
     getMaxSeq() {
         let max = -1;
-        for (const [method, entries] of this.handlers) {
+
+        for (const [, entries] of this.handlers) {
             for (const entry of entries) {
                 max = Math.max(max, entry.seq);
             }
         }
 
-        if (this.paramChild) {
-            max = Math.max(max, this.paramChild.getMaxSeq());
+        if (this.wildcard) {
+            max = Math.max(max, this.wildcard.getMaxSeq());
         }
-        if (this.wildcardChild) {
-            max = Math.max(max, this.wildcardChild.getMaxSeq());
+
+        for (const [, child] of this.params) {
+            max = Math.max(max, child.getMaxSeq());
         }
-        for (const [path, child] of this.staticChildren) {
+
+        for (const [, child] of this.children) {
             max = Math.max(max, child.getMaxSeq());
         }
 
         return max;
     }
 }
-
 exports.Node = Node;

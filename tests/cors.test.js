@@ -1,478 +1,251 @@
-const App = require("../src/index");
-const { Router, cors } = App;
+const { cors } = require("../src/middleware/cors");
 
-// ============================================================
-// SETUP
-// ============================================================
-
-let server;
-let baseUrl;
-
-function createApp(corsOptions) {
-    const app = new App();
-    app.use(cors(corsOptions));
-    app.get("/", (req, res) => res.json({ ok: true }));
-    app.post("/", (req, res) => res.json({ ok: true }));
-    return app;
+function makeReq({ method = "GET", headers = {} } = {}) {
+    return { method, headers };
 }
 
-function startServer(app) {
-    const server = app.listen(0);
-    const baseUrl = `http://localhost:${server.address().port}`;
-    return { server, baseUrl };
+function makeRes() {
+    const headers = Object.create(null);
+    return {
+        statusCode: 200,
+        ended: false,
+        headers,
+        setHeader(name, value) {
+            headers[name.toLowerCase()] = value;
+        },
+        appendHeader(name, value) {
+            const key = name.toLowerCase();
+            if (headers[key] === undefined) headers[key] = value;
+            else headers[key] = `${headers[key]}, ${value}`;
+        },
+        end() {
+            this.ended = true;
+        },
+    };
 }
 
-async function stopServer(server) {
-    await new Promise((resolve) => server.close(resolve));
+function run(mw, req) {
+    const res = makeRes();
+    mw(req, res);
+    return res;
 }
 
-// ============================================================
-// TESTS
-// ============================================================
-
-describe("cors()", () => {
-    // ----------------------------------------------------------
-    // ORIGIN: "*" (default)
-    // ----------------------------------------------------------
-
-    describe('origin: "*"', () => {
-        let server;
-        let baseUrl;
-
-        beforeAll(() => {
-            const app = createApp();
-            ({ server, baseUrl } = startServer(app));
+describe("cors", () => {
+    describe("default options (origin: *)", () => {
+        test("sets wildcard origin for simple request", () => {
+            const mw = cors();
+            const res = run(mw, makeReq({ headers: { origin: "https://x.com" } }));
+            expect(res.headers["access-control-allow-origin"]).toBe("*");
         });
 
-        afterAll(async () => {
-            await stopServer(server);
+        test("does not set Vary for wildcard", () => {
+            const mw = cors();
+            const res = run(mw, makeReq({ headers: { origin: "https://x.com" } }));
+            expect(res.headers["vary"]).toBe(undefined);
         });
 
-        test("GET — Allow-Origin: *", async () => {
-            const response = await fetch(`${baseUrl}/`);
-            expect(response.headers.get("access-control-allow-origin")).toBe("*");
-        });
-
-        test("GET — nggak ada Allow-Credentials", async () => {
-            const response = await fetch(`${baseUrl}/`);
-            expect(response.headers.get("access-control-allow-credentials")).toBe(null);
-        });
-
-        test("GET — nggak ada Vary: Origin", async () => {
-            const response = await fetch(`${baseUrl}/`);
-            const vary = response.headers.get("vary");
-            expect(vary === null || !vary.includes("Origin")).toBe(true);
-        });
-
-        test("GET dengan Origin header — Allow-Origin tetap *", async () => {
-            const response = await fetch(`${baseUrl}/`, {
-                headers: { origin: "http://example.com" },
-            });
-            expect(response.headers.get("access-control-allow-origin")).toBe("*");
-        });
-
-        test("OPTIONS — Allow-Origin: *, status 204", async () => {
-            const response = await fetch(`${baseUrl}/`, { method: "OPTIONS" });
-            expect(response.status).toBe(204);
-            expect(response.headers.get("access-control-allow-origin")).toBe("*");
-        });
-
-        test("OPTIONS — Content-Length: 0", async () => {
-            const response = await fetch(`${baseUrl}/`, { method: "OPTIONS" });
-            expect(response.headers.get("content-length")).toBe("0");
-        });
-
-        test("OPTIONS — body kosong", async () => {
-            const response = await fetch(`${baseUrl}/`, { method: "OPTIONS" });
-            const text = await response.text();
-            expect(text).toBe("");
+        test("does not end response for GET", () => {
+            const mw = cors();
+            const res = run(mw, makeReq());
+            expect(res.ended).toBe(false);
         });
     });
 
-    // ----------------------------------------------------------
-    // ORIGIN: "*" + credentials: true
-    // ----------------------------------------------------------
-
-    describe('origin: "*", credentials: true', () => {
-        let server;
-        let baseUrl;
-
-        beforeAll(() => {
-            const app = createApp({ origin: "*", credentials: true });
-            ({ server, baseUrl } = startServer(app));
+    describe("explicit origin", () => {
+        test("echoes matching origin", () => {
+            const mw = cors({ origin: "https://x.com" });
+            const res = run(mw, makeReq({ headers: { origin: "https://x.com" } }));
+            expect(res.headers["access-control-allow-origin"]).toBe("https://x.com");
         });
 
-        afterAll(async () => {
-            await stopServer(server);
+        test("sets Vary: Origin when echoed", () => {
+            const mw = cors({ origin: "https://x.com" });
+            const res = run(mw, makeReq({ headers: { origin: "https://x.com" } }));
+            expect(res.headers["vary"]).toBe("Origin");
         });
 
-        test("GET dengan Origin — echo origin request", async () => {
-            const response = await fetch(`${baseUrl}/`, {
-                headers: { origin: "http://example.com" },
-            });
-            expect(response.headers.get("access-control-allow-origin")).toBe("http://example.com");
+        test("does not set header for non-matching origin", () => {
+            const mw = cors({ origin: "https://x.com" });
+            const res = run(mw, makeReq({ headers: { origin: "https://evil.com" } }));
+            expect(res.headers["access-control-allow-origin"]).toBe(undefined);
         });
 
-        test("GET dengan Origin — Allow-Credentials: true", async () => {
-            const response = await fetch(`${baseUrl}/`, {
-                headers: { origin: "http://example.com" },
-            });
-            expect(response.headers.get("access-control-allow-credentials")).toBe("true");
+        test("array origin matches one", () => {
+            const mw = cors({ origin: ["https://a.com", "https://b.com"] });
+            const res = run(mw, makeReq({ headers: { origin: "https://b.com" } }));
+            expect(res.headers["access-control-allow-origin"]).toBe("https://b.com");
         });
 
-        test("GET dengan Origin — Vary: Origin", async () => {
-            const response = await fetch(`${baseUrl}/`, {
-                headers: { origin: "http://example.com" },
-            });
-            expect(response.headers.get("vary")).toContain("Origin");
-        });
-
-        test("GET tanpa Origin — Allow-Origin echo undefined", async () => {
-            const response = await fetch(`${baseUrl}/`);
-            // reqOrigin undefined → value = undefined → nggak di-set
-            expect(response.headers.get("access-control-allow-origin")).toBe(null);
-        });
-
-        test("OPTIONS dengan Origin — echo origin + 204", async () => {
-            const response = await fetch(`${baseUrl}/`, {
-                method: "OPTIONS",
-                headers: { origin: "http://example.com" },
-            });
-            expect(response.status).toBe(204);
-            expect(response.headers.get("access-control-allow-origin")).toBe("http://example.com");
+        test("array origin no match", () => {
+            const mw = cors({ origin: ["https://a.com", "https://b.com"] });
+            const res = run(mw, makeReq({ headers: { origin: "https://c.com" } }));
+            expect(res.headers["access-control-allow-origin"]).toBe(undefined);
         });
     });
 
-    // ----------------------------------------------------------
-    // ORIGIN: string spesifik
-    // ----------------------------------------------------------
-
-    describe('origin: "http://localhost:3000"', () => {
-        let server;
-        let baseUrl;
-
-        beforeAll(() => {
-            const app = createApp({ origin: "http://localhost:3000" });
-            ({ server, baseUrl } = startServer(app));
+    describe("origin: null (security)", () => {
+        test("does not set null origin", () => {
+            const mw = cors({ origin: null });
+            const res = run(mw, makeReq({ headers: { origin: "null" } }));
+            expect(res.headers["access-control-allow-origin"]).toBe(undefined);
         });
 
-        afterAll(async () => {
-            await stopServer(server);
-        });
-
-        test("GET dari origin yang match — Allow-Origin di-set", async () => {
-            const response = await fetch(`${baseUrl}/`, {
-                headers: { origin: "http://localhost:3000" },
-            });
-            expect(response.headers.get("access-control-allow-origin")).toBe("http://localhost:3000");
-        });
-
-        test("GET dari origin yang match — Vary: Origin", async () => {
-            const response = await fetch(`${baseUrl}/`, {
-                headers: { origin: "http://localhost:3000" },
-            });
-            expect(response.headers.get("vary")).toContain("Origin");
-        });
-
-        test("GET dari origin yang nggak match — Allow-Origin nggak di-set", async () => {
-            const response = await fetch(`${baseUrl}/`, {
-                headers: { origin: "http://evil.com" },
-            });
-            expect(response.headers.get("access-control-allow-origin")).toBe(null);
-        });
-
-        test("GET tanpa Origin — Allow-Origin nggak di-set", async () => {
-            const response = await fetch(`${baseUrl}/`);
-            expect(response.headers.get("access-control-allow-origin")).toBe(null);
+        test("does not set for any origin", () => {
+            const mw = cors({ origin: null });
+            const res = run(mw, makeReq({ headers: { origin: "https://x.com" } }));
+            expect(res.headers["access-control-allow-origin"]).toBe(undefined);
         });
     });
 
-    // ----------------------------------------------------------
-    // ORIGIN: null
-    // ----------------------------------------------------------
-
-    describe("origin: null", () => {
-        let server;
-        let baseUrl;
-
-        beforeAll(() => {
-            const app = createApp({ origin: null });
-            ({ server, baseUrl } = startServer(app));
+    describe("credentials", () => {
+        test("sets allow-credentials", () => {
+            const mw = cors({ credentials: true, origin: "https://x.com" });
+            const res = run(mw, makeReq({ headers: { origin: "https://x.com" } }));
+            expect(res.headers["access-control-allow-credentials"]).toBe("true");
         });
 
-        afterAll(async () => {
-            await stopServer(server);
+        test("wildcard + credentials echoes origin", () => {
+            const mw = cors({ credentials: true, origin: "*" });
+            const res = run(mw, makeReq({ headers: { origin: "https://x.com" } }));
+            expect(res.headers["access-control-allow-origin"]).toBe("https://x.com");
         });
 
-        test("GET — Allow-Origin: null", async () => {
-            const response = await fetch(`${baseUrl}/`);
-            expect(response.headers.get("access-control-allow-origin")).toBe("null");
-        });
-
-        test("GET — nggak ada Vary: Origin", async () => {
-            const response = await fetch(`${baseUrl}/`);
-            const vary = response.headers.get("vary");
-            expect(vary === null || !vary.includes("Origin")).toBe(true);
+        test("wildcard + credentials sets Vary", () => {
+            const mw = cors({ credentials: true, origin: "*" });
+            const res = run(mw, makeReq({ headers: { origin: "https://x.com" } }));
+            expect(res.headers["vary"]).toBe("Origin");
         });
     });
 
-    // ----------------------------------------------------------
-    // HEADERS: "*"
-    // ----------------------------------------------------------
-
-    describe('headers: "*", credentials: false', () => {
-        let server;
-        let baseUrl;
-
-        beforeAll(() => {
-            const app = createApp({ headers: "*" });
-            ({ server, baseUrl } = startServer(app));
-        });
-
-        afterAll(async () => {
-            await stopServer(server);
-        });
-
-        test("OPTIONS dengan ACRH — Allow-Headers: *", async () => {
-            const response = await fetch(`${baseUrl}/`, {
+    describe("preflight", () => {
+        const preflightReq = (extra = {}) =>
+            makeReq({
                 method: "OPTIONS",
                 headers: {
-                    origin: "http://example.com",
-                    "access-control-request-headers": "content-type",
+                    origin: "https://x.com",
+                    "access-control-request-method": "POST",
+                    ...extra,
                 },
             });
-            expect(response.headers.get("access-control-allow-headers")).toBe("*");
+
+        test("ends response with 204", () => {
+            const mw = cors();
+            const res = run(mw, preflightReq());
+            expect(res.statusCode).toBe(204);
+            expect(res.ended).toBe(true);
         });
 
-        test("OPTIONS tanpa ACRH — Allow-Headers nggak di-set", async () => {
-            const response = await fetch(`${baseUrl}/`, {
-                method: "OPTIONS",
-                headers: { origin: "http://example.com" },
-            });
-            expect(response.headers.get("access-control-allow-headers")).toBe(null);
+        test("sets content-length 0", () => {
+            const mw = cors();
+            const res = run(mw, preflightReq());
+            expect(res.headers["content-length"]).toBe("0");
         });
 
-        test("GET — Expose-Headers: *", async () => {
-            const response = await fetch(`${baseUrl}/`);
-            expect(response.headers.get("access-control-expose-headers")).toBe("*");
-        });
-    });
-
-    describe('headers: "*", credentials: true', () => {
-        let server;
-        let baseUrl;
-
-        beforeAll(() => {
-            const app = createApp({ headers: "*", credentials: true });
-            ({ server, baseUrl } = startServer(app));
+        test("sets allow-methods echo when methods undefined", () => {
+            const mw = cors();
+            const res = run(mw, preflightReq());
+            expect(res.headers["access-control-allow-methods"]).toEqual(["POST"]);
         });
 
-        afterAll(async () => {
-            await stopServer(server);
+        test("sets allow-methods when methods configured and match", () => {
+            const mw = cors({ methods: ["GET", "POST"] });
+            const res = run(mw, preflightReq());
+            expect(res.headers["access-control-allow-methods"]).toEqual(["GET", "POST"]);
         });
 
-        test("OPTIONS — Allow-Headers nggak di-set", async () => {
-            const response = await fetch(`${baseUrl}/`, {
-                method: "OPTIONS",
-                headers: {
-                    origin: "http://example.com",
-                    "access-control-request-headers": "content-type",
-                },
-            });
-            expect(response.headers.get("access-control-allow-headers")).toBe(null);
+        test("does not set allow-methods when configured but no match", () => {
+            const mw = cors({ methods: ["GET"] });
+            const res = run(mw, preflightReq({ "access-control-request-method": "DELETE" }));
+            expect(res.headers["access-control-allow-methods"]).toBe(undefined);
         });
 
-        test("GET — Expose-Headers nggak di-set", async () => {
-            const response = await fetch(`${baseUrl}/`, {
-                headers: { origin: "http://example.com" },
-            });
-            expect(response.headers.get("access-control-expose-headers")).toBe(null);
-        });
-    });
-
-    // ----------------------------------------------------------
-    // HEADERS: array
-    // ----------------------------------------------------------
-
-    describe('headers: ["content-type", "authorization"]', () => {
-        let server;
-        let baseUrl;
-
-        beforeAll(() => {
-            const app = createApp({ headers: ["content-type", "authorization"] });
-            ({ server, baseUrl } = startServer(app));
+        test("sets allow-headers echo when headers undefined", () => {
+            const mw = cors();
+            const res = run(mw, preflightReq({ "access-control-request-headers": "X-Custom, Content-Type" }));
+            expect(res.headers["access-control-allow-headers"]).toEqual(["x-custom", "content-type"]);
         });
 
-        afterAll(async () => {
-            await stopServer(server);
+        test("sets allow-headers when all requested allowed", () => {
+            const mw = cors({ headers: ["x-custom", "content-type"] });
+            const res = run(mw, preflightReq({ "access-control-request-headers": "X-Custom, Content-Type" }));
+            expect(res.headers["access-control-allow-headers"]).toEqual(["x-custom", "content-type"]);
         });
 
-        test("OPTIONS dengan ACRH match — Allow-Headers di-set", async () => {
-            const response = await fetch(`${baseUrl}/`, {
-                method: "OPTIONS",
-                headers: {
-                    origin: "http://example.com",
-                    "access-control-request-headers": "content-type",
-                },
-            });
-            const value = response.headers.get("access-control-allow-headers");
-            expect(value).toContain("content-type");
-            expect(value).toContain("authorization");
+        test("does not set allow-headers when some not allowed", () => {
+            const mw = cors({ headers: ["x-custom"] });
+            const res = run(mw, preflightReq({ "access-control-request-headers": "X-Custom, X-Other" }));
+            expect(res.headers["access-control-allow-headers"]).toBe(undefined);
         });
 
-        test("OPTIONS dengan ACRH nggak match — Allow-Headers nggak di-set", async () => {
-            const response = await fetch(`${baseUrl}/`, {
-                method: "OPTIONS",
-                headers: {
-                    origin: "http://example.com",
-                    "access-control-request-headers": "x-custom",
-                },
-            });
-            expect(response.headers.get("access-control-allow-headers")).toBe(null);
+        test("sets max-age when > 0", () => {
+            const mw = cors({ maxAge: 3600 });
+            const res = run(mw, preflightReq());
+            expect(res.headers["access-control-max-age"]).toBe(3600);
         });
 
-        test("GET — Expose-Headers di-set", async () => {
-            const response = await fetch(`${baseUrl}/`);
-            const value = response.headers.get("access-control-expose-headers");
-            expect(value).toContain("content-type");
-            expect(value).toContain("authorization");
+        test("does not set max-age when 0", () => {
+            const mw = cors({ maxAge: 0 });
+            const res = run(mw, preflightReq());
+            expect(res.headers["access-control-max-age"]).toBe(undefined);
+        });
+
+        test("preflight sets Vary: Origin for explicit origin", () => {
+            const mw = cors({ origin: "https://x.com" });
+            const res = run(mw, preflightReq());
+            expect(res.headers["vary"]).toBe("Origin");
+        });
+
+        test("preflight wildcard does not set Vary", () => {
+            const mw = cors();
+            const res = run(mw, preflightReq());
+            expect(res.headers["vary"]).toBe(undefined);
+        });
+
+        test("sets allow-headers wildcard when headers='*' and no credentials", () => {
+            const mw = cors({ headers: "*" });
+            const res = run(mw, preflightReq({ "access-control-request-headers": "X-Custom" }));
+            expect(res.headers["access-control-allow-headers"]).toBe("*");
+        });
+
+        test("sets allow-methods wildcard when methods='*' and no credentials", () => {
+            const mw = cors({ methods: "*" });
+            const res = run(mw, preflightReq());
+            expect(res.headers["access-control-allow-methods"]).toBe("*");
         });
     });
 
-    // ----------------------------------------------------------
-    // METHODS
-    // ----------------------------------------------------------
-
-    describe('methods: "*", credentials: false', () => {
-        let server;
-        let baseUrl;
-
-        beforeAll(() => {
-            const app = createApp({ methods: "*" });
-            ({ server, baseUrl } = startServer(app));
+    describe("OPTIONS non-preflight", () => {
+        test("does not end response", () => {
+            const mw = cors();
+            // OPTIONS tanpa Access-Control-Request-Method = bukan preflight
+            const res = run(mw, makeReq({ method: "OPTIONS", headers: { origin: "https://x.com" } }));
+            expect(res.ended).toBe(false);
         });
 
-        afterAll(async () => {
-            await stopServer(server);
-        });
-
-        test("OPTIONS dengan ACRM — Allow-Methods: *", async () => {
-            const response = await fetch(`${baseUrl}/`, {
-                method: "OPTIONS",
-                headers: {
-                    origin: "http://example.com",
-                    "access-control-request-method": "GET",
-                },
-            });
-            expect(response.headers.get("access-control-allow-methods")).toBe("*");
-        });
-
-        test("OPTIONS tanpa ACRM — Allow-Methods nggak di-set", async () => {
-            const response = await fetch(`${baseUrl}/`, {
-                method: "OPTIONS",
-                headers: { origin: "http://example.com" },
-            });
-            expect(response.headers.get("access-control-allow-methods")).toBe(null);
+        test("sets allow-origin", () => {
+            const mw = cors();
+            const res = run(mw, makeReq({ method: "OPTIONS", headers: { origin: "https://x.com" } }));
+            expect(res.headers["access-control-allow-origin"]).toBe("*");
         });
     });
 
-    describe('methods: ["GET", "POST"]', () => {
-        let server;
-        let baseUrl;
-
-        beforeAll(() => {
-            const app = createApp({ methods: ["GET", "POST"] });
-            ({ server, baseUrl } = startServer(app));
+    describe("expose headers", () => {
+        test("sets expose-headers when configured", () => {
+            const mw = cors({ headers: ["x-custom", "x-other"] });
+            const res = run(mw, makeReq({ headers: { origin: "https://x.com" } }));
+            expect(res.headers["access-control-expose-headers"]).toEqual(["x-custom", "x-other"]);
         });
 
-        afterAll(async () => {
-            await stopServer(server);
+        test("does not set expose-headers when not configured", () => {
+            const mw = cors();
+            const res = run(mw, makeReq({ headers: { origin: "https://x.com" } }));
+            expect(res.headers["access-control-expose-headers"]).toBe(undefined);
         });
 
-        test("OPTIONS dengan ACRM match — Allow-Methods di-set", async () => {
-            const response = await fetch(`${baseUrl}/`, {
-                method: "OPTIONS",
-                headers: {
-                    origin: "http://example.com",
-                    "access-control-request-method": "GET",
-                },
-            });
-            const value = response.headers.get("access-control-allow-methods");
-            expect(value).toContain("GET");
-            expect(value).toContain("POST");
+        test("wildcard + no credentials sets *", () => {
+            const mw = cors({ headers: "*" });
+            const res = run(mw, makeReq({ headers: { origin: "https://x.com" } }));
+            expect(res.headers["access-control-expose-headers"]).toBe("*");
         });
-
-        test("OPTIONS dengan ACRM nggak match — Allow-Methods nggak di-set", async () => {
-            const response = await fetch(`${baseUrl}/`, {
-                method: "OPTIONS",
-                headers: {
-                    origin: "http://example.com",
-                    "access-control-request-method": "DELETE",
-                },
-            });
-            expect(response.headers.get("access-control-allow-methods")).toBe(null);
-        });
-    });
-
-    // ----------------------------------------------------------
-    // MAX AGE
-    // ----------------------------------------------------------
-
-    describe("maxAge", () => {
-        test("maxAge: 3600 — Max-Age di-set", async () => {
-            const app = createApp({ maxAge: 3600 });
-            const { server, baseUrl } = startServer(app);
-
-            const response = await fetch(`${baseUrl}/`, {
-                method: "OPTIONS",
-                headers: { origin: "http://example.com" },
-            });
-            expect(response.headers.get("access-control-max-age")).toBe("3600");
-
-            await stopServer(server);
-        });
-
-        test("maxAge: 0 — Max-Age nggak di-set", async () => {
-            const app = createApp({ maxAge: 0 });
-            const { server, baseUrl } = startServer(app);
-
-            const response = await fetch(`${baseUrl}/`, {
-                method: "OPTIONS",
-                headers: { origin: "http://example.com" },
-            });
-            expect(response.headers.get("access-control-max-age")).toBe(null);
-
-            await stopServer(server);
-        });
-    });
-
-    test("OPTIONS dengan Origin — Vary: Origin", async () => {
-        const app = createApp({ maxAge: 0 });
-        const { server, baseUrl } = startServer(app);
-        const response = await fetch(`${baseUrl}/`, {
-            method: "OPTIONS",
-            headers: { origin: "http://example.com" },
-        });
-        expect(response.headers.get("vary")).toBe(null);
-    });
-
-    test("OPTIONS — Vary: Origin nggak di-set", async () => {
-        const app = createApp({ maxAge: 0 });
-        const { server, baseUrl } = startServer(app);
-        const response = await fetch(`${baseUrl}/`, {
-            method: "OPTIONS",
-            headers: { origin: "http://example.com" },
-        });
-        const vary = response.headers.get("vary");
-        expect(vary === null || !vary.includes("Origin")).toBe(true);
-    });
-
-    test("GET dengan Origin — Vary: Origin di-set", async () => {
-        const app = createApp({ maxAge: 0, origin: ["http://example.com"] });
-        const { server, baseUrl } = startServer(app);
-        const response = await fetch(`${baseUrl}/`, {
-            headers: { origin: "http://example.com" },
-        });
-        expect(response.headers.get("vary")).toBe("Origin");
     });
 });

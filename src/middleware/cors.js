@@ -1,89 +1,83 @@
 /**
  * @typedef CORSOptions
- * @property {String} [origin="*"]
+ * @property {String|Array|Null} [origin="*"]
  * @property {Boolean} [credentials=false]
- * @property {String|Array} headers
+ * @property {String|Array} [headers]
  * @property {Number} [maxAge=0]
- * @property {String|Array} methods
+ * @property {String|Array} [methods]
  */
 
 /**
  * @param {CORSOptions} options
  */
 function cors({ origin = "*", credentials = false, headers, maxAge = 0, methods } = {}) {
-    if (headers && Array.isArray(headers)) {
-        headers = headers.map((header) => header.toLowerCase());
+    if (Array.isArray(headers)) {
+        headers = headers.map((h) => h.toLowerCase());
     }
-    if (methods && Array.isArray(methods)) {
-        methods = methods.map((method) => method.toUpperCase());
+    if (Array.isArray(methods)) {
+        methods = methods.map((m) => m.toUpperCase());
     }
 
-    /**
-     * @param {import('http').ServerResponse} res
-     */
     function setAllowCredentials(res) {
         if (credentials) {
             res.setHeader("Access-Control-Allow-Credentials", "true");
         }
     }
 
-    /**
-     * @param {import('http').IncomingMessage} req
-     * @param {import('http').ServerResponse} res
-     */
+    function setAllowOrigin(req, res) {
+        const reqOrigin = req.headers["origin"];
+        let value;
+        let explicit = false;
+
+        if (origin === "*" && !credentials) {
+            value = "*";
+        } else if (origin === "*" || origin === reqOrigin || (Array.isArray(origin) && origin.includes(reqOrigin))) {
+            value = reqOrigin;
+            explicit = true;
+        }
+        // origin === null -> skip (jangan set "null", celah keamanan)
+
+        if (value) res.setHeader("Access-Control-Allow-Origin", value);
+        if (explicit) res.appendHeader("Vary", "Origin");
+    }
+
     function setAllowHeaders(req, res) {
-        let reqHeaders = req.headers["access-control-request-headers"];
+        const reqHeaders = req.headers["access-control-request-headers"];
         if (!reqHeaders) return;
-        reqHeaders = reqHeaders.split(",").map((header) => header.trim().toLowerCase());
+
+        const requested = reqHeaders.split(",").map((h) => h.trim().toLowerCase());
+
         let value;
         if (headers === "*" && !credentials) {
             value = "*";
-        } else if (Array.isArray(headers) && reqHeaders.every((reqHeader) => headers.some((header) => header === reqHeader))) {
-            value = headers;
+        } else if (Array.isArray(headers)) {
+            const allowed = requested.filter((h) => headers.includes(h));
+            if (allowed.length === requested.length) value = headers;
+        } else {
+            // headers undefined -> echo request headers (wajib per spec)
+            value = requested;
         }
         if (value) res.setHeader("Access-Control-Allow-Headers", value);
     }
 
-    /**
-     * @param {import('http').IncomingMessage} req
-     * @param {import('http').ServerResponse} res
-     */
     function setAllowMethods(req, res) {
         const reqMethod = req.headers["access-control-request-method"];
         if (!reqMethod) return;
+
+        const method = reqMethod.toUpperCase();
+
         let value;
         if (methods === "*" && !credentials) {
             value = "*";
-        } else if (Array.isArray(methods) && methods.some((method) => method === reqMethod.toUpperCase())) {
-            value = methods;
+        } else if (Array.isArray(methods)) {
+            if (methods.includes(method)) value = methods;
+        } else {
+            // methods undefined -> echo request method
+            value = [method];
         }
         if (value) res.setHeader("Access-Control-Allow-Methods", value);
     }
 
-    /**
-     * @param {import('http').IncomingMessage} req
-     * @param {import('http').ServerResponse} res
-     */
-    function setAllowOrigin(req, res, preflight = true) {
-        const reqOrigin = req.headers["origin"];
-
-        let value;
-        let explicit;
-        if (origin === "*" && !credentials) {
-            value = "*";
-        } else if (origin === null) {
-            value = "null";
-        } else if (origin === "*" || origin === reqOrigin || (Array.isArray(origin) && origin.some((origin) => origin === reqOrigin))) {
-            value = reqOrigin;
-            explicit = true;
-        }
-        if (value) res.setHeader("Access-Control-Allow-Origin", value);
-        if (!preflight && explicit) res.appendHeader("Vary", "Origin");
-    }
-
-    /**
-     * @param {import('http').ServerResponse} res
-     */
     function setExposeHeaders(res) {
         let value;
         if (headers === "*" && !credentials) {
@@ -94,22 +88,17 @@ function cors({ origin = "*", credentials = false, headers, maxAge = 0, methods 
         if (value) res.setHeader("Access-Control-Expose-Headers", value);
     }
 
-    /**
-     * @param {import('http').ServerResponse} res
-     */
     function setMaxAge(res) {
         if (maxAge > 0) {
             res.setHeader("Access-Control-Max-Age", maxAge);
         }
     }
 
-    /**
-     * @param {import('http').IncomingMessage} req
-     * @param {import('http').ServerResponse} res
-     */
     return (req, res) => {
         setAllowCredentials(res);
-        if (req.method === "OPTIONS") {
+
+        if (req.method === "OPTIONS" && req.headers["access-control-request-method"]) {
+            // preflight
             setAllowOrigin(req, res);
             setAllowHeaders(req, res);
             setAllowMethods(req, res);
@@ -118,9 +107,11 @@ function cors({ origin = "*", credentials = false, headers, maxAge = 0, methods 
             res.setHeader("Content-Length", "0");
             res.end();
         } else {
-            setAllowOrigin(req, res, false);
+            // normal response (termasuk OPTIONS non-preflight)
+            setAllowOrigin(req, res);
             setExposeHeaders(res);
         }
     };
 }
+
 exports.cors = cors;

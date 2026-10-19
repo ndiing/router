@@ -1,276 +1,477 @@
-const { inspect } = require("node:util");
-const App = require("../src/index");
-const { Router } = App;
+const { Router } = require("../src/router");
 
-// ============================================================
-// SETUP
-// ============================================================
+// helper buat handler dummy (arity 2 = middleware/handler biasa)
+const h = () => () => {};
+// helper buat error handler (arity 3 = CATCH)
+const eh = () => (err, req, res) => {};
 
-let server;
-let baseUrl;
+describe("Router", () => {
+    describe("split", () => {
+        test("splits path into segments", () => {
+            const r = new Router();
+            expect(r.split("/api/users")).toEqual(["api", "users"]);
+        });
 
-beforeAll(() => {
-    // ========================================
-    // BUILD ROUTER
-    // ========================================
-    const blogs = new Router();
-    blogs.use((req, res) => {}); // middleware
-    blogs.get("/:id", (req, res) => res.json({ path: req.path, params: req.params }));
-    blogs.get("/", (req, res) => res.json({ path: req.path }));
+        test("root path returns empty array", () => {
+            const r = new Router();
+            expect(r.split("/")).toEqual([]);
+        });
 
-    const users = new Router();
-    users.use((req, res) => {});
-    users.get("/:id", (req, res) => res.json({ path: req.path, params: req.params }));
-    users.get("/", (req, res) => res.json({ path: req.path }));
+        test("trailing slash ignored", () => {
+            const r = new Router();
+            expect(r.split("/api/")).toEqual(["api"]);
+        });
 
-    const admin = new Router();
-    admin.use((req, res) => {});
-    admin.use("/users", users);
-    admin.get("/:id", (req, res) => res.json({ path: req.path, params: req.params }));
-    admin.get("/", (req, res) => res.json({ path: req.path }));
-
-    const app = new App();
-    app.use((req, res) => {}); // global middleware
-    app.use("/blogs", blogs);
-    app.use("/admin", admin);
-
-    app.get("/:id", (req, res) => res.json({ path: req.path, params: req.params }));
-    app.get("/", (req, res) => res.json({ hello: "world" }));
-
-    // Error handler
-    app.use((err, req, res) => {
-        res.statusCode = err.statusCode || 500;
-        res.json({ error: err.message });
+        test("leading double slash filtered", () => {
+            const r = new Router();
+            expect(r.split("//api//users")).toEqual(["api", "users"]);
+        });
     });
 
-    // console.log(inspect(app,false,null,true))
+    describe("add", () => {
+        test("add static route", () => {
+            const r = new Router();
+            r.get("/api", h());
+            expect(r.root.children.has("api")).toBe(true);
+        });
 
-    // ========================================
-    // START SERVER
-    // ========================================
-    server = app.listen(0); // port random
-    baseUrl = `http://localhost:${server.address().port}`;
+        test("add param route", () => {
+            const r = new Router();
+            r.get("/:id", h());
+            expect(r.root.params.has(":id")).toBe(true);
+        });
+
+        test("add wildcard route", () => {
+            const r = new Router();
+            r.get("/*", h());
+            expect(r.root.wildcard !== null).toBe(true);
+        });
+
+        test("add handler with method", () => {
+            const r = new Router();
+            r.get("/api", h());
+            const api = r.root.children.get("api");
+            expect(api.handlers.has("GET")).toBe(true);
+            expect(api.handlers.get("GET").length).toBe(1);
+        });
+
+        test("add multiple methods same path", () => {
+            const r = new Router();
+            r.get("/api", h());
+            r.post("/api", h());
+            const api = r.root.children.get("api");
+            expect(api.handlers.has("GET")).toBe(true);
+            expect(api.handlers.has("POST")).toBe(true);
+        });
+
+        test("use registers as ALL", () => {
+            const r = new Router();
+            r.use(h());
+            expect(r.root.handlers.has("ALL")).toBe(true);
+        });
+
+        test("arity 3 registers as CATCH", () => {
+            const r = new Router();
+            r.use(eh());
+            expect(r.root.handlers.has("CATCH")).toBe(true);
+        });
+
+        test("seq increments per handler", () => {
+            const r = new Router();
+            r.get("/a", h());
+            r.get("/b", h());
+            const a = r.root.children.get("a");
+            const b = r.root.children.get("b");
+            expect(a.handlers.get("GET")[0].seq).toBe(0);
+            expect(b.handlers.get("GET")[0].seq).toBe(1);
+        });
+    });
+
+    describe("find - static routing", () => {
+        test("matches exact static path", () => {
+            const r = new Router();
+            r.get("/api/users", h());
+            const res = r.find("GET", "/api/users");
+            expect(res.matched).toBe(true);
+            expect(res.handlers.length).toBe(1);
+        });
+
+        test("does not match different static path", () => {
+            const r = new Router();
+            r.get("/api/users", h());
+            const res = r.find("GET", "/api/posts");
+            expect(res.matched).toBe(false);
+            expect(res.handlers.length).toBe(0);
+        });
+
+        test("does not match different method", () => {
+            const r = new Router();
+            r.get("/api", h());
+            const res = r.find("POST", "/api");
+            expect(res.matched).toBe(true);
+            // matched path, tapi method handler kosong
+            expect(res.handlers.length).toBe(0);
+        });
+
+        test("root path", () => {
+            const r = new Router();
+            r.get("/", h());
+            const res = r.find("GET", "/");
+            expect(res.matched).toBe(true);
+            expect(res.handlers.length).toBe(1);
+        });
+
+        test("root path with trailing slash", () => {
+            const r = new Router();
+            r.get("/", h());
+            const res = r.find("GET", "//");
+            expect(res.matched).toBe(true);
+        });
+    });
+
+    describe("find - param routing", () => {
+        test("matches single param", () => {
+            const r = new Router();
+            r.get("/:id", h());
+            const res = r.find("GET", "/321");
+            expect(res.matched).toBe(true);
+            expect(res.params.id).toBe("321");
+        });
+
+        test("matches multiple params", () => {
+            const r = new Router();
+            r.get("/:user/:post", h());
+            const res = r.find("GET", "/alice/42");
+            expect(res.matched).toBe(true);
+            expect(res.params.user).toBe("alice");
+            expect(res.params.post).toBe("42");
+        });
+
+        test("param takes priority over wildcard", () => {
+            const r = new Router();
+            r.get("/:id", h());
+            r.get("/*", h());
+            const res = r.find("GET", "/321");
+            expect(res.matched).toBe(true);
+            expect(res.params.id).toBe("321");
+        });
+
+        test("static takes priority over param", () => {
+            const r = new Router();
+            r.get("/:id", h());
+            r.get("/api", h());
+            const res = r.find("GET", "/api");
+            expect(res.matched).toBe(true);
+            // static match, params harus kosong
+            expect(res.params.id).toBe(undefined);
+        });
+
+        test("decodes param", () => {
+            const r = new Router();
+            r.get("/:id", h());
+            const res = r.find("GET", "/hello%20world");
+            expect(res.params.id).toBe("hello world");
+        });
+
+        test("multiple param children both tried", () => {
+            const r = new Router();
+            r.get("/:id", h());
+            r.get("/:userid/details", h());
+            const res = r.find("GET", "/321/details");
+            expect(res.matched).toBe(true);
+            expect(res.params.userid).toBe("321");
+        });
+    });
+
+    describe("find - wildcard", () => {
+        test("wildcard matches single segment", () => {
+            const r = new Router();
+            r.get("/*", h());
+            const res = r.find("GET", "/api");
+            expect(res.matched).toBe(true);
+            expect(res.params.wildcard).toBe("api");
+        });
+
+        test("wildcard matches multiple segments", () => {
+            const r = new Router();
+            r.get("/*", h());
+            const res = r.find("GET", "/api/users/321");
+            expect(res.matched).toBe(true);
+            expect(res.params.wildcard).toBe("api/users/321");
+        });
+
+        test("wildcard on subpath", () => {
+            const r = new Router();
+            r.get("/api/*", h());
+            const res = r.find("GET", "/api/users/321");
+            expect(res.matched).toBe(true);
+            expect(res.params.wildcard).toBe("users/321");
+        });
+
+        test("wildcard lowest priority", () => {
+            const r = new Router();
+            r.get("/api", h());
+            r.get("/*", h());
+            const res = r.find("GET", "/api");
+            // static match, bukan wildcard
+            expect(res.params.wildcard).toBe(undefined);
+        });
+    });
+
+    describe("find - middleware", () => {
+        test("ALL middleware collected", () => {
+            const r = new Router();
+            r.use(h());
+            r.get("/api", h());
+            const res = r.find("GET", "/api");
+            expect(res.handlers.length).toBe(2);
+        });
+
+        test("middleware on partial path still collected", () => {
+            const r = new Router();
+            r.use(h());
+            r.use("/api", h());
+            const res = r.find("GET", "/api/not/registered");
+            expect(res.matched).toBe(false);
+            // middleware root + api tetap dikumpulkan
+            expect(res.handlers.length).toBe(2);
+        });
+
+        test("error handler collected", () => {
+            const r = new Router();
+            r.use(eh());
+            r.get("/api", h());
+            const res = r.find("GET", "/api");
+            expect(res.errorHandlers.length).toBe(1);
+        });
+
+        test("method handler only on leaf", () => {
+            const r = new Router();
+            r.get("/api", h());
+            r.get("/api/users", h());
+            const res = r.find("GET", "/api/users");
+            // handler /api tidak jalan (bukan middleware)
+            expect(res.handlers.length).toBe(1);
+        });
+    });
+
+    describe("find - nested router", () => {
+        test("nested router merge", () => {
+            const child = new Router();
+            child.get("/users", h());
+
+            const parent = new Router();
+            parent.use("/api", child);
+
+            const res = parent.find("GET", "/api/users");
+            expect(res.matched).toBe(true);
+            expect(res.handlers.length).toBe(1);
+        });
+
+        test("nested router with params", () => {
+            const child = new Router();
+            child.get("/:id", h());
+
+            const parent = new Router();
+            parent.use("/users", child);
+
+            const res = parent.find("GET", "/users/321");
+            expect(res.matched).toBe(true);
+            expect(res.params.id).toBe("321");
+        });
+
+        test("nested router seq preserved order", () => {
+            const child = new Router();
+            child.get("/x", h());
+
+            const parent = new Router();
+            parent.use(h()); // seq 0
+            parent.use("/api", child); // child seq 0 -> parent seq 1
+            parent.get("/y", h()); // seq 2
+
+            const res = parent.find("GET", "/api/x");
+            expect(res.handlers.length).toBe(2); // middleware + child handler
+        });
+    });
+
+    describe("find - partial match", () => {
+        test("partial match returns middleware", () => {
+            const r = new Router();
+            r.use("/api", h());
+            r.get("/api/users", h());
+
+            const res = r.find("GET", "/api/posts");
+            expect(res.matched).toBe(false);
+            // middleware /api tetap dikumpulkan
+            expect(res.handlers.length).toBe(1);
+        });
+
+        test("partial match keeps partial params", () => {
+            const r = new Router();
+            r.use("/:id", h());
+
+            const res = r.find("GET", "/321/unknown");
+            expect(res.matched).toBe(false);
+            expect(res.params.id).toBe("321");
+        });
+
+        test("no match at all returns root middleware only", () => {
+            const r = new Router();
+            r.use(h());
+            r.get("/api", h());
+
+            const res = r.find("GET", "/unknown");
+            expect(res.matched).toBe(false);
+            expect(res.handlers.length).toBe(1);
+        });
+    });
+
+    describe("find - paramsLength", () => {
+        test("paramsLength 0 when no params", () => {
+            const r = new Router();
+            r.get("/api", h());
+            const res = r.find("GET", "/api");
+            expect(res.paramsLength).toBe(0);
+        });
+
+        test("paramsLength counts params", () => {
+            const r = new Router();
+            r.get("/:a/:b", h());
+            const res = r.find("GET", "/x/y");
+            expect(res.paramsLength).toBe(2);
+        });
+    });
+});
+describe("method shorthand", () => {
+    test("put registers PUT", () => {
+        const r = new Router();
+        r.put("/api", h());
+        expect(r.root.children.get("api").handlers.has("PUT")).toBe(true);
+    });
+
+    test("query registers QUERY", () => {
+        const r = new Router();
+        r.query("/api", h());
+        expect(r.root.children.get("api").handlers.has("QUERY")).toBe(true);
+    });
+
+    test("head registers HEAD", () => {
+        const r = new Router();
+        r.head("/api", h());
+        expect(r.root.children.get("api").handlers.has("HEAD")).toBe(true);
+    });
+
+    test("options registers OPTIONS", () => {
+        const r = new Router();
+        r.options("/api", h());
+        expect(r.root.children.get("api").handlers.has("OPTIONS")).toBe(true);
+    });
+
+    test("trace registers TRACE", () => {
+        const r = new Router();
+        r.trace("/api", h());
+        expect(r.root.children.get("api").handlers.has("TRACE")).toBe(true);
+    });
+
+    test("connect registers CONNECT", () => {
+        const r = new Router();
+        r.connect("/api", h());
+        expect(r.root.children.get("api").handlers.has("CONNECT")).toBe(true);
+    });
 });
 
-afterAll((done) => {
-    server.close(done);
+test("patch registers PATCH", () => {
+    const r = new Router();
+    r.patch("/api", h());
+    expect(r.root.children.get("api").handlers.has("PATCH")).toBe(true);
 });
 
-// ============================================================
-// TESTS: find() — UNIT LEVEL
-// ============================================================
-
-describe("find()", () => {
-    let app;
-
-    beforeAll(() => {
-        app = new Router();
-        app.use((req, res) => {}); // middleware
-        app.get("/:id", (req, res) => {});
-        app.get("/", (req, res) => {});
-        app.use((err, req, res) => {}); // error handler
-    });
-
-    test("GET /asdf/asdf/asdf — no match, cuma global middleware", () => {
-        const result = app.find("GET", "/asdf/asdf/asdf");
-        expect(result.handlers.length).toBe(1); // cuma global middleware
-        expect(result.errorHandlers.length).toBe(1); // error handler
-    });
-
-    test("GET / — match root, middleware + handler + error handler", () => {
-        const result = app.find("GET", "/");
-        expect(result.handlers.length).toBe(2); // middleware + handler
-        expect(result.errorHandlers.length).toBe(1);
-    });
-
-    test("GET /1 — match dynamic param", () => {
-        const result = app.find("GET", "/1");
-        expect(result.params.id).toBe("1");
-    });
-
-    test("GET /1 — handler chain length", () => {
-        const result = app.find("GET", "/1");
-        expect(result.handlers.length).toBe(2); // middleware + handler
-    });
-
-    test("GET /unknown — no match, cuma middleware", () => {
-        const result = app.find("GET", "/a/b/c");
-        expect(result.handlers.length).toBe(1); // cuma middleware
-        // expect(result.params.length).toBe(0);
-    });
-
-    test("POST / — method nggak match", () => {
-        const result = app.find("POST", "/");
-        // Cuma middleware + error handler, nggak ada handler POST
-        expect(result.handlers.length).toBe(1);
-    });
+test("delete registers DELETE", () => {
+    const r = new Router();
+    r.delete("/api", h());
+    expect(r.root.children.get("api").handlers.has("DELETE")).toBe(true);
 });
 
-// ============================================================
-// TESTS: fetch() — INTEGRATION LEVEL
-// ============================================================
+test("nested same param name", () => {
+    const r = new Router();
+    r.get("/:id/:id", h());
+    const res = r.find("GET", "/a/b");
+    expect(res.matched).toBe(true);
+    // params.id = "b" (yang terakhir menang)
+    expect(res.params.id).toBe("b");
+});
+test("same param name nested - failed match restores prev", () => {
+    const r = new Router();
+    r.get("/:id/:id/details", h());
+    const res = r.find("GET", "/a/b/unknown");
+    expect(res.matched).toBe(false);
+});
 
-describe("fetch() — integration", () => {
-    // ----------------------------------------
-    // BASIC ROUTING
-    // ----------------------------------------
-
-    test("GET /", async () => {
-        const response = await fetch(`${baseUrl}/`);
-        expect(response.status).toBe(200);
-        const result = await response.json();
-        expect(result).toEqual({ hello: "world" });
+describe("cache", () => {
+    test("cache hit returns same result", () => {
+        const r = new Router();
+        r.get("/api", h());
+        const a = r.find("GET", "/api");
+        const b = r.find("GET", "/api");
+        expect(a).toBe(b);
     });
 
-    test("GET /?age=30 — query string diabaikan", async () => {
-        const response = await fetch(`${baseUrl}/?age=30`);
-        expect(response.status).toBe(200);
-        const result = await response.json();
-        expect(result).toEqual({ hello: "world" });
+    test("cache miss for different path", () => {
+        const r = new Router();
+        r.get("/api", h());
+        r.get("/other", h());
+        const a = r.find("GET", "/api");
+        const b = r.find("GET", "/other");
+        expect(a !== b).toBe(true);
     });
 
-    test("GET /1 — dynamic param", async () => {
-        const response = await fetch(`${baseUrl}/1`);
-        expect(response.status).toBe(200);
-        const result = await response.json();
-        expect(result).toEqual({ path: "/1", params: { id: "1" } });
+    test("cache miss for different method", () => {
+        const r = new Router();
+        r.get("/api", h());
+        r.post("/api", h());
+        const a = r.find("GET", "/api");
+        const b = r.find("POST", "/api");
+        expect(a !== b).toBe(true);
     });
 
-    test("GET /abc — dynamic param dengan string", async () => {
-        const response = await fetch(`${baseUrl}/abc`);
-        expect(response.status).toBe(200);
-        const result = await response.json();
-        expect(result).toEqual({ path: "/abc", params: { id: "abc" } });
+    test("add invalidates cache", () => {
+        const r = new Router();
+        r.get("/api", h());
+        const before = r.find("GET", "/api");
+        expect(before.handlers.length).toBe(1);
+
+        r.post("/api", h()); // tambah handler
+        const after = r.find("GET", "/api");
+        // cache cleared -> recompute, handler count tetap 1 (GET)
+        // tapi object baru (bukan cache lama)
+        expect(after !== before).toBe(true);
     });
 
-    // ----------------------------------------
-    // NESTED ROUTER
-    // ----------------------------------------
+    test("add invalidates stale match", () => {
+        const r = new Router();
+        const before = r.find("GET", "/api");
+        expect(before.matched).toBe(false);
 
-    test("GET /blogs — nested router root", async () => {
-        const response = await fetch(`${baseUrl}/blogs`);
-        expect(response.status).toBe(200);
-        const result = await response.json();
-        expect(result.path).toBe("/blogs");
+        r.get("/api", h()); // tambah route
+        const after = r.find("GET", "/api");
+        // cache cleared -> sekarang match
+        expect(after.matched).toBe(true);
+        expect(after.handlers.length).toBe(1);
     });
 
-    test("GET /blogs/123 — nested router dengan param", async () => {
-        const response = await fetch(`${baseUrl}/blogs/123`);
-        expect(response.status).toBe(200);
-        const result = await response.json();
-        expect(result.path).toBe("/blogs/123");
-        expect(result.params.id).toBe("123");
+    test("cacheSize 0 disables cache", () => {
+        const r = new Router({ cacheSize: 0 });
+        r.get("/api", h());
+        const a = r.find("GET", "/api");
+        const b = r.find("GET", "/api");
+        // cache disabled -> object baru tiap find
+        expect(a !== b).toBe(true);
     });
 
-    test("GET /admin — nested router admin", async () => {
-        const response = await fetch(`${baseUrl}/admin`);
-        expect(response.status).toBe(200);
-        const result = await response.json();
-        expect(result.path).toBe("/admin");
-    });
-
-    test("GET /admin/users — nested router 2 level", async () => {
-        const response = await fetch(`${baseUrl}/admin/users`);
-        expect(response.status).toBe(200);
-        const result = await response.json();
-        expect(result.path).toBe("/admin/users");
-    });
-
-    test("GET /admin/users/456 — nested router 2 level dengan param", async () => {
-        const response = await fetch(`${baseUrl}/admin/users/456`);
-        expect(response.status).toBe(200);
-        const result = await response.json();
-        expect(result.path).toBe("/admin/users/456");
-        expect(result.params.id).toBe("456");
-    });
-
-    // ----------------------------------------
-    // 404
-    // ----------------------------------------
-
-    test("GET /unknown/deep/path — 404", async () => {
-        const response = await fetch(`${baseUrl}/unknown/deep/path`);
-        expect(response.status).toBe(404);
-        const result = await response.json();
-        // expect(result.error).toBeDefined();
-        // expect(result.error.message).toBeDefined();
-    });
-
-    // ----------------------------------------
-    // ERROR HANDLER
-    // ----------------------------------------
-
-    test("GET /error — error handler dipanggil", async () => {
-        // Tambahin route yang throw
-        const testApp = new App();
-        testApp.get("/error", () => {
-            throw new Error("Test error");
-        });
-        testApp.use((err, req, res) => {
-            res.statusCode = 500;
-            res.json({ error: err.message });
-        });
-
-        const testServer = testApp.listen(0);
-        const testUrl = `http://localhost:${testServer.address().port}`;
-
-        const response = await fetch(`${testUrl}/error`);
-        expect(response.status).toBe(500);
-        const result = await response.json();
-        expect(result.error).toBe("Test error");
-
-        testServer.close();
-    });
-
-    // ----------------------------------------
-    // MIDDLEWARE
-    // ----------------------------------------
-
-    test("Middleware dijalankan sebelum handler", async () => {
-        const order = [];
-        const testApp = new App();
-
-        testApp.use((req, res) => {
-            order.push("middleware-1");
-        });
-        testApp.use((req, res) => {
-            order.push("middleware-2");
-        });
-        testApp.get("/", (req, res) => {
-            order.push("handler");
-            res.json({ order });
-        });
-
-        const testServer = testApp.listen(0);
-        const testUrl = `http://localhost:${testServer.address().port}`;
-
-        const response = await fetch(`${testUrl}/`);
-        const result = await response.json();
-
-        expect(result.order).toEqual(["middleware-1", "middleware-2", "handler"]);
-
-        testServer.close();
-    });
-
-    test("Middleware bisa stop chain dengan res.done", async () => {
-        const testApp = new App();
-
-        testApp.use((req, res) => {
-            res.statusCode = 401;
-            res.json({ error: "Unauthorized" });
-        });
-        testApp.get("/", (req, res) => {
-            res.json({ hello: "world" }); // nggak akan kepanggil
-        });
-
-        const testServer = testApp.listen(0);
-        const testUrl = `http://localhost:${testServer.address().port}`;
-
-        const response = await fetch(`${testUrl}/`);
-        expect(response.status).toBe(401);
-        const result = await response.json();
-        expect(result.error).toBe("Unauthorized");
-
-        testServer.close();
+    test("cache param frozen", () => {
+        const r = new Router();
+        r.get("/:id", h());
+        const res = r.find("GET", "/321");
+        expect(Object.isFrozen(res.params)).toBe(true);
     });
 });

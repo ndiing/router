@@ -1,8 +1,8 @@
-require("./polyfill.js");
-const { json } = require("./middleware/json.js");
-const { cors } = require("./middleware/cors.js");
-const { App } = require("./app.js");
-const { Router } = require("./router.js");
+require("./polyfill");
+const { App } = require("./app");
+const { Router } = require("./router");
+const { json } = require("./middleware/json");
+const { cors } = require("./middleware/cors");
 
 App.Router = Router;
 App.json = json;

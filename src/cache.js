@@ -13,6 +13,7 @@ class Cache {
     }
 
     set(key, value) {
+        if (this.size <= 0) return; // disabled
         if (this.map.has(key)) this.map.delete(key);
         else if (this.map.size >= this.size) {
             this.map.delete(this.map.keys().next().value);
@@ -24,5 +25,4 @@ class Cache {
         this.map.clear();
     }
 }
-
 exports.Cache = Cache;

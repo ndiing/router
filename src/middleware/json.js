@@ -1,5 +1,4 @@
-const http = require("node:http");
-const { ErrorResponse } = require("../error.js");
+const http = require("http");
 
 function json({ limit = 100 * 1024 } = {}) {
     const reviver = (key, value) => {
@@ -18,14 +17,16 @@ function json({ limit = 100 * 1024 } = {}) {
         }
         const contentLength = parseInt(req.headers["content-length"], 10);
         if (contentLength && contentLength > limit) {
-            throw ErrorResponse.status(413);
+            res.statusCode = 413;
+            throw new Error(http.STATUS_CODES[res.statusCode]);
         }
         let chunkLength = 0;
         const chunks = [];
         for await (const chunk of req) {
             chunkLength += chunk.length;
             if (chunkLength > limit) {
-                throw ErrorResponse.status(413);
+                res.statusCode = 413;
+                throw new Error(http.STATUS_CODES[res.statusCode]);
             }
             chunks.push(chunk);
         }
@@ -36,9 +37,9 @@ function json({ limit = 100 * 1024 } = {}) {
         try {
             req.body = JSON.parse(Buffer.concat(chunks), reviver);
         } catch (error) {
-            throw new ErrorResponse({ statusCode: 400, message: "Invalid JSON body" }, { cause: error });
+            res.statusCode = 400;
+            throw new Error(http.STATUS_CODES[res.statusCode], { cause: error });
         }
     };
 }
-
 exports.json = json;

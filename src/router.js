@@ -1,6 +1,6 @@
-const { Node } = require("./node.js");
-const { Cache } = require("./cache.js");
-const { decodePathParam } = require("./util.js");
+const { decodeParam } = require("./util");
+const { Node } = require("./node");
+const { Cache } = require("./cache");
 
 class Router {
     constructor(options = {}) {
@@ -22,10 +22,12 @@ class Router {
             handlers = [path, ...handlers];
             path = null;
         }
+
         let node = this.root;
+
         if (path) {
-            for (const part of this.split(path)) {
-                node = node.add(part);
+            for (const segment of this.split(path)) {
+                node = node.add(segment);
             }
         }
 
@@ -34,8 +36,8 @@ class Router {
                 node.merge(handler.root, this.seq);
                 this.seq += handler.root.getMaxSeq() + 1;
             } else {
-                const newMethod = handler.length === 3 ? "CATCH" : method;
-                node.handlers.getOrInsert(newMethod, []).push({
+                const key = handler.length === 3 ? "CATCH" : method;
+                node.handlers.getOrInsert(key, []).push({
                     handler,
                     seq: this.seq++,
                 });
@@ -98,96 +100,127 @@ class Router {
         return this;
     }
 
-    collectMiddleware(node, handlers, errorHandlers) {
-        if (node.handlers.has("ALL")) {
-            for (const entry of node.handlers.get("ALL")) {
+    /**
+     * @param {Node} node
+     * @param {string[]} segments
+     * @param {number} index
+     * @param {Node[]} path
+     * @param {Record<string, string>} params
+     * @param {{ best: { nodes: Node[], params: Record<string, string> } }} state
+     * @returns {{ nodes: Node[], params: Record<string, string>, matched: boolean }}
+     */
+    search(node, segments, index, path, params, state) {
+        path.push(node);
+
+        // habis segmen -> full match
+        if (index === segments.length) {
+            return { nodes: path.slice(), params: { ...params }, matched: true };
+        }
+
+        const segment = segments[index];
+
+        // 1. static (prioritas tertinggi)
+        const staticChild = node.children.get(segment);
+        if (staticChild) {
+            const res = this.search(staticChild, segments, index + 1, path, params, state);
+            if (res.matched) return res;
+        }
+
+        // 2. semua param child (bisa lebih dari satu)
+        for (const [key, child] of node.params) {
+            const name = key.slice(1); // buang ':'
+            const prev = params[name];
+            params[name] = decodeParam(segment);
+            const res = this.search(child, segments, index + 1, path, params, state);
+            if (res.matched) return res;
+            // backtrack param value
+            if (prev === undefined) delete params[name];
+            else params[name] = prev;
+        }
+
+        // 3. wildcard (prioritas terendah, menyerap sisa segmen)
+        if (node.wildcard) {
+            const rest = segments.slice(index).join("/");
+            params["wildcard"] = decodeParam(rest);
+            path.push(node.wildcard);
+            return { nodes: path.slice(), params: { ...params }, matched: true };
+        }
+
+        // tidak match di sini -> update partial terpanjang
+        // path.length > state.best.nodes.length artinya kita sudah lebih dalam
+        if (path.length > state.best.nodes.length) {
+            state.best = { nodes: path.slice(), params: { ...params } };
+        }
+
+        path.pop();
+        return { matched: false };
+    }
+
+    collectHandler(r, method, handlers) {
+        if (r.handlers.has(method)) {
+            for (const entry of r.handlers.get(method)) {
                 handlers[entry.seq] = entry.handler;
             }
         }
-        if (node.handlers.has("CATCH")) {
-            for (const entry of node.handlers.get("CATCH")) {
+    }
+
+    collectErrorHandler(r, errorHandlers) {
+        if (r.handlers.has("CATCH")) {
+            for (const entry of r.handlers.get("CATCH")) {
                 errorHandlers[entry.seq] = entry.handler;
             }
         }
     }
 
-    collectHandler(node, method, handlers) {
-        if (node && node.handlers.has(method)) {
-            for (const entry of node.handlers.get(method)) {
-                handlers[entry.seq] = entry.handler;
-            }
-        }
-    }
-
-    /**
-     * @param {Node} node
-     * @param {*} parts
-     * @param {*} i
-     * @param {*} params
-     * @param {*} path
-     * @returns
-     */
-    search(node, parts, i, params, path) {
-        if (!node) return null;
-        path.push(node);
-        if (i === parts.length) return path;
-
-        const part = parts[i];
-
-        if (node.staticChildren.has(part)) {
-            const r = this.search(node.staticChildren.get(part), parts, i + 1, params, path);
-            if (r) return r;
-        }
-
-        if (node.paramChild) {
-            const saved = params[node.paramChild.paramName];
-            params[node.paramChild.paramName] = decodePathParam(part);
-            const r = this.search(node.paramChild, parts, i + 1, params, path);
-            if (r) return r;
-            if (saved === undefined) delete params[node.paramChild.paramName];
-            else params[node.paramChild.paramName] = saved;
-        }
-
-        if (node.wildcardChild) {
-            params[0] = decodePathParam(parts.slice(i).join("/"));
-            path.push(node.wildcardChild);
-            return path;
-        }
-
-        path.pop();
-        return null;
+    collectMiddleware(r, handlers, errorHandlers) {
+        this.collectHandler(r, "ALL", handlers);
+        this.collectErrorHandler(r, errorHandlers);
     }
 
     find(method, path) {
         const key = `${method} ${path}`;
+
         const cached = this.cache.get(key);
         if (cached) return cached;
 
-        const parts = this.split(path);
-        const params = {};
-        const nodePath = [];
-        const result = this.search(this.root, parts, 0, params, nodePath);
+        const segments = this.split(path);
 
+        const params = {};
         const handlers = {};
         const errorHandlers = {};
 
-        if (result) {
-            for (const n of result) {
-                this.collectMiddleware(n, handlers, errorHandlers);
-            }
-            this.collectHandler(result[result.length - 1], method, handlers);
-        } else {
-            this.collectMiddleware(this.root, handlers, errorHandlers);
+        /** @type {{ best: { nodes: Node[], params: Record<string, string> } }} */
+        const state = { best: { nodes: [], params: {} } };
+
+        const res = this.search(this.root, segments, 0, [], params, state);
+
+        const matchedNodes = res.matched ? res.nodes : state.best.nodes;
+        const finalParams = res.matched ? res.params : state.best.params;
+
+        // middleware dari semua node di jalur (partial atau full)
+        for (const r of matchedNodes) {
+            this.collectMiddleware(r, handlers, errorHandlers);
         }
 
-        const value = {
-            params,
+        // method handler HANYA kalau full match
+        if (res.matched) {
+            const leaf = matchedNodes[matchedNodes.length - 1];
+            this.collectHandler(leaf, method, handlers);
+        }
+
+        Object.freeze(finalParams);
+
+        const result = {
+            matched: res.matched,
+            params: finalParams,
+            paramsLength: Object.keys(finalParams).length,
             handlers: Object.values(handlers),
             errorHandlers: Object.values(errorHandlers),
         };
-        this.cache.set(key, value);
 
-        return value;
+        this.cache.set(key, result);
+
+        return result;
     }
 }
 exports.Router = Router;

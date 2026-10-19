@@ -11,7 +11,7 @@ Router HTTP kecil, cepat, dan **zero-dependency** untuk Node.js. Dibangun langsu
 - Nested router dengan `use(path, router)`
 - Middleware global dan per-path, mendukung `async`
 - Error handler dengan signature `(err, req, res)`
-- Timeout per request yang menghasilkan `504`, dengan `req.signal` untuk pembatalan kooperatif
+- Timeout per request, dengan `req.controller` (`AbortController`) untuk pembatalan kooperatif
 - `req.path`, `req.query`, `req.params`, `req.body`
 - Helper `res.status()`, `res.send()`, dan `res.json()`
 - Middleware bawaan: `json()` (dengan limit dan proteksi prototype pollution) dan `cors()`
@@ -93,15 +93,21 @@ app.get("/posts/:postId/comments/:commentId", (req, res) => {
 
 Satu segmen adalah satu parameter utuh; nama parameter tidak bisa digabung dengan teks lain dalam segmen yang sama (`:id.json` akan dianggap parameter bernama `id.json`).
 
-> Di setiap level hanya ada satu parameter. Jika `/users/:id` dan `/users/:userId/posts` didaftarkan bersamaan, keduanya memakai nama yang pertama didaftarkan (`id`). Pakai nama yang sama untuk level yang sama.
+Beberapa parameter dengan nama berbeda boleh ada di level yang sama. Router mencoba semuanya sesuai urutan pendaftaran, dan memakai yang cocok sampai akhir path:
+
+```js
+app.get("/users/:id", handler);
+app.get("/users/:userId/posts", handler);
+// GET /users/5/posts -> req.params.userId === "5"
+```
 
 ### Wildcard
 
-Segmen `*` menangkap **seluruh sisa path** (termasuk `/`) dan nilainya tersedia di `req.params[0]`.
+Segmen `*` menangkap **seluruh sisa path** (termasuk `/`) dan nilainya tersedia di `req.params.wildcard`.
 
 ```js
 app.get("/files/*", (req, res) => {
-    res.json({ file: req.params[0] });
+    res.json({ file: req.params.wildcard });
 });
 
 // GET /files/images/logo.png -> { file: "images/logo.png" }
@@ -111,8 +117,8 @@ Wildcard butuh minimal satu segmen tersisa, jadi `/files/*` tidak cocok dengan `
 
 ### Aturan matching
 
-- Di setiap level, router mencoba **static dulu, lalu parameter, lalu wildcard**. Jadi `/users/me` menang atas `/users/:id` bila keduanya terdaftar.
-- Jika cabang static gagal di tengah jalan, router mundur (backtrack) dan mencoba parameter, lalu wildcard.
+- Di setiap level, router mencoba **static dulu, lalu parameter (sesuai urutan pendaftaran), lalu wildcard**. Jadi `/users/me` menang atas `/users/:id` bila keduanya terdaftar.
+- Jika sebuah cabang gagal di tengah jalan, router mundur (backtrack) dan mencoba cabang berikutnya.
 - Trailing slash dan slash ganda diabaikan: `/users`, `/users/`, dan `//users` dianggap sama.
 
 ## Middleware
@@ -135,7 +141,7 @@ app.use("/admin", async (req, res) => {
 
 Chain berhenti otomatis begitu response selesai dikirim (`res.writableEnded`), jadi handler berikutnya tidak dipanggil.
 
-> Jika path tidak cocok dengan route mana pun, hanya middleware global (tanpa path) yang dijalankan sebelum respons 404 dikirim.
+> Jika tidak ada route yang cocok sepenuhnya, middleware pada bagian path yang cocok paling dalam tetap dijalankan sebelum respons 404. Contohnya, middleware `/admin` tetap jalan untuk `/admin/tidak-ada`, begitu juga middleware global.
 
 ## Nested Router
 
@@ -164,31 +170,31 @@ app.use("/admin", admin);
 
 Handler dengan **tiga argumen** `(err, req, res)` dikenali sebagai error handler. Dipanggil saat handler atau middleware melempar error (sync maupun async).
 
-```js
-app.get("/boom", () => {
-    throw new Error("Something broke");
-});
-
-app.use((err, req, res) => {
-    res.status(err.statusCode || 500).json({ error: { message: err.message } });
-});
-```
-
 > Deteksi error handler memakai `handler.length === 3`. Jangan memakai default parameter atau rest parameter di signature handler, karena mengubah `length`.
 
 ### Menentukan status code
 
-Status code diambil dari properti `statusCode` pada error. Tanpa properti itu, hasilnya `500`.
+Status code diambil dari `res.statusCode`. Set sebelum melempar error:
 
 ```js
-app.get("/admin", () => {
-    const err = new Error("Forbidden");
-    err.statusCode = 403;
-    throw err;
+app.get("/admin", (req, res) => {
+    res.status(403);
+    throw new Error("Forbidden");
 });
 ```
 
-> `res.statusCode` atau `res.status()` yang diset **sebelum** error dilempar tidak dipakai oleh respons default. Gunakan `err.statusCode`, atau tangani sendiri di error handler.
+Jika `res.statusCode` masih di bawah 400 saat error ditangani, hasilnya `500`. Properti `statusCode` pada objek error tidak dipakai.
+
+### Error handler sendiri
+
+Di error handler, `res.statusCode` masih bernilai awal (`200`) bila error dilempar tanpa mengatur status, jadi atur sendiri:
+
+```js
+app.use((err, req, res) => {
+    const status = res.statusCode >= 400 ? res.statusCode : 500;
+    res.status(status).json({ error: { message: err.message } });
+});
+```
 
 ### Respons default
 
@@ -199,34 +205,34 @@ Jika tidak ada handler yang mengirim response, router mengirim JSON otomatis:
 ```
 
 - Tidak ada route cocok: `404 Not Found`
-- Error dengan `statusCode`: status tersebut dipakai
-- Error tanpa `statusCode`: `500`
+- `res.statusCode` sudah `>= 400`: dipakai apa adanya
+- `res.statusCode` masih `< 400`: diganti `500`
 - Jika error handler sendiri melempar error, error baru dibuat dengan `cause` menunjuk error asli
 - Field `stack` hanya disertakan saat `NODE_ENV=development`
 
 ## Timeout
 
-Aktifkan lewat opsi `requestTimeout` (milidetik) pada `App`. Jika seluruh chain handler melebihi waktu tersebut, error `504 Gateway Timeout` dilempar dan diteruskan ke error handler.
+Aktifkan lewat opsi `requestTimeout` (milidetik) pada `App`. Jika seluruh chain handler melebihi waktu tersebut, `res.statusCode` diset `502` dan error `Bad Gateway` dilempar ke error handler.
 
 ```js
 const app = new App({ requestTimeout: 5000 });
 ```
 
 - Tanpa opsi `requestTimeout` (atau bernilai `0`), tidak ada batas waktu
-- Handler yang sudah berjalan tidak dihentikan paksa. Tetapi setelah response dikirim, `res.json()` dan `res.send()` mengabaikan penulisan berikutnya, dan handler selanjutnya di chain tidak dipanggil
+- Handler yang sudah berjalan tidak dihentikan paksa. Setelah response dikirim, handler berikutnya di chain tidak dipanggil, dan error yang dilempar handler setelah timeout hanya dicatat lewat `console.error`
 
-### `req.signal`
+### `req.controller`
 
-Saat `requestTimeout` aktif, `req.signal` adalah `AbortSignal` yang di-abort ketika timeout terjadi (reason-nya error 504) atau ketika salah satu handler melempar error (reason-nya error tersebut). Teruskan ke operasi yang mendukungnya agar pekerjaan ikut dibatalkan:
+`req.controller` adalah `AbortController` milik request (dibuat saat pertama kali diakses). Saat `requestTimeout` aktif, `req.controller.signal` di-abort ketika timeout terjadi atau ketika salah satu handler melempar error; reason-nya adalah error terkait. Teruskan signal ke operasi yang mendukungnya agar pekerjaan ikut dibatalkan:
 
 ```js
 app.get("/proxy", async (req, res) => {
-    const upstream = await fetch("https://example.com/api", { signal: req.signal });
+    const upstream = await fetch("https://example.com/api", {
+        signal: req.controller.signal,
+    });
     res.json(await upstream.json());
 });
 ```
-
-`req.signal` bernilai `undefined` jika `requestTimeout` tidak diaktifkan.
 
 ## Request
 
@@ -234,9 +240,9 @@ app.get("/proxy", async (req, res) => {
 | --- | --- |
 | `req.path` | Pathname tanpa query string |
 | `req.query` | Object query string, di-parse secara lazy. Key yang berulang menjadi array, dan `+` di-decode menjadi spasi |
-| `req.params` | Parameter dari route dinamis (sudah di-decode). Wildcard `*` ada di `req.params[0]` |
+| `req.params` | Parameter dari route dinamis (sudah di-decode). Wildcard `*` ada di `req.params.wildcard` |
 | `req.body` | Hasil parse body (butuh middleware `json()`) |
-| `req.signal` | `AbortSignal` yang di-abort saat timeout atau error handler (hanya jika `requestTimeout` aktif) |
+| `req.controller` | `AbortController` untuk request ini. Di-abort saat timeout atau error handler (jika `requestTimeout` aktif) |
 
 ```js
 // GET /search?tag=a&tag=b&page=2
@@ -245,7 +251,7 @@ app.get("/search", (req, res) => {
 });
 ```
 
-`req.query` dan `req.params` yang sampai ke handler memakai object tanpa prototype, jadi gunakan `Object.hasOwn(req.query, "key")` atau `"key" in req.query`, bukan `req.query.hasOwnProperty(...)`.
+`req.query` dan `req.params` memakai object tanpa prototype, jadi gunakan `Object.hasOwn(req.query, "key")` atau `"key" in req.query`, bukan `req.query.hasOwnProperty(...)`.
 
 `Request` adalah turunan `http.IncomingMessage`, jadi `req.headers`, `req.method`, dan lainnya tetap tersedia.
 
@@ -255,13 +261,13 @@ app.get("/search", (req, res) => {
 | --- | --- |
 | `res.status(code)` | Set status code, mengembalikan `res` sehingga bisa di-chain |
 | `res.send(chunk)` | Kirim response dan akhiri |
-| `res.json(value)` | Set `Content-Type: application/json`, serialize, lalu kirim |
+| `res.json(value)` | Set `Content-Type: application/json; charset=utf-8`, serialize, lalu kirim |
 
 ```js
 res.status(201).json({ created: true });
 ```
 
-`Response` adalah turunan `http.ServerResponse`, jadi `res.statusCode`, `res.setHeader()`, dan lainnya tetap tersedia.
+`res.send()` dan `res.json()` tidak melakukan apa-apa jika response sudah selesai dikirim. `Response` adalah turunan `http.ServerResponse`, jadi `res.statusCode`, `res.setHeader()`, dan lainnya tetap tersedia.
 
 ## Middleware Bawaan
 
@@ -278,8 +284,8 @@ app.use(App.json({ limit: 100 * 1024 })); // default 100 KB
 Perilaku:
 
 - Hanya memproses method `POST`, `PUT`, `PATCH`, dan `QUERY` dengan `Content-Type: application/json`
-- Body melebihi `limit` menghasilkan `413 Payload Too Large` (dicek lewat `Content-Length` dan saat streaming)
-- JSON tidak valid menghasilkan `400` dengan pesan `Invalid JSON body`
+- Body melebihi `limit` menghasilkan `413` (dicek lewat `Content-Length` dan saat streaming)
+- JSON tidak valid menghasilkan `400`, dengan error asli di `cause`
 - Body kosong menghasilkan `req.body = null`
 - Key `__proto__`, `constructor`, dan `prototype` dibuang untuk mencegah prototype pollution
 
@@ -299,7 +305,7 @@ app.use(
 
 | Opsi | Default | Keterangan |
 | --- | --- | --- |
-| `origin` | `"*"` | `"*"`, satu origin, array origin, atau `null` |
+| `origin` | `"*"` | `"*"`, satu origin, atau array origin. `null` tidak mengirim header `Access-Control-Allow-Origin` sama sekali |
 | `credentials` | `false` | Mengirim `Access-Control-Allow-Credentials: true` |
 | `headers` | - | `"*"` atau array nama header (tidak membedakan huruf besar/kecil) |
 | `methods` | - | `"*"` atau array nama method (tidak membedakan huruf besar/kecil) |
@@ -307,11 +313,13 @@ app.use(
 
 Perilaku:
 
-- Request `OPTIONS` dijawab langsung dengan `204` dan chain berhenti
-- Origin dicocokkan **persis sama** (case-sensitive) dengan header `Origin` dari request. Jika cocok, origin tersebut dipantulkan, dan header `Vary: Origin` ditambahkan pada request non-preflight
-- `Access-Control-Allow-Headers` dan `Access-Control-Allow-Methods` hanya dikirim pada preflight, dan hanya jika **semua** header atau method yang diminta ada di daftar
-- Nilai `"*"` untuk `headers` dan `methods` diabaikan saat `credentials: true`, sesuai spesifikasi CORS
-- Pada request non-preflight, `headers` (jika array) dikirim sebagai `Access-Control-Expose-Headers`
+- **Preflight** adalah request `OPTIONS` dengan header `Access-Control-Request-Method`. Preflight dijawab langsung dengan `204` dan chain berhenti. `OPTIONS` biasa diteruskan ke handler berikutnya
+- Origin dicocokkan **persis sama** (case-sensitive) dengan header `Origin` dari request. Jika cocok, origin tersebut dipantulkan dan header `Vary: Origin` ditambahkan
+- `Access-Control-Allow-Headers`: jika `headers` berupa array, header hanya dikirim bila **semua** header yang diminta ada di daftar
+- `Access-Control-Allow-Methods`: jika `methods` berupa array, header hanya dikirim bila method yang diminta ada di daftar
+- Jika `headers` atau `methods` tidak diisi, nilai yang diminta di preflight dipantulkan apa adanya
+- `"*"` untuk `headers` dan `methods` hanya dikirim sebagai `*` bila `credentials: false`. Dengan `credentials: true`, nilainya diperlakukan seperti tidak diisi (dipantulkan)
+- Pada request non-preflight, `headers` (jika array atau `"*"`) dikirim sebagai `Access-Control-Expose-Headers`
 
 > `origin: "*"` bersama `credentials: true` memantulkan **semua** origin dengan credentials. Pakai hanya untuk development; di production sebutkan origin secara eksplisit.
 
@@ -323,7 +331,7 @@ const app = new App({ cacheSize: 1000, requestTimeout: 5000 });
 
 | Opsi | Default | Keterangan |
 | --- | --- | --- |
-| `cacheSize` | `1000` | Jumlah maksimum entri LRU cache untuk hasil lookup `METHOD path`. Cache dikosongkan setiap ada route baru didaftarkan |
+| `cacheSize` | `1000` | Jumlah maksimum entri LRU cache untuk hasil lookup `METHOD path`. `0` menonaktifkan cache. Cache dikosongkan setiap ada route baru didaftarkan |
 | `requestTimeout` | `0` | Batas waktu handler dalam ms (khusus `App`). Lihat bagian [Timeout](#timeout) |
 
 `Router` hanya menerima `cacheSize`.
@@ -344,10 +352,10 @@ Mendaftarkan handler untuk method tertentu. `path` opsional; jika dihilangkan, h
 
 ### `router.find(method, path)`
 
-Mencari route tanpa menjalankannya. Hasilnya di-cache. Berguna untuk testing.
+Mencari route tanpa menjalankannya. Hasilnya di-cache dan `params`-nya di-freeze. Berguna untuk testing.
 
 ```js
-const { params, handlers, errorHandlers } = app.find("GET", "/users/1");
+const { matched, params, paramsLength, handlers, errorHandlers } = app.find("GET", "/users/1");
 ```
 
 ### `app.listen(...args)`
@@ -358,6 +366,18 @@ Membuat `http.Server` dengan `Request` dan `Response` milik router, lalu memangg
 const server = app.listen(0); // port acak
 console.log(server.address().port);
 ```
+
+## Benchmark
+
+Hello world dengan satu route `GET /`, diuji memakai `autocannon -c 100 -d 40 -p 10` di mesin lokal.
+
+| | Req/sec (avg) | Latency (avg) |
+| --- | --- | --- |
+| Fastify | 31.475 | 31,27 ms |
+| **@ndiinginc/router** | 29.735 | 33,12 ms |
+| Express | 20.211 | 48,93 ms |
+
+Hasil bervariasi tergantung mesin, versi Node.js, dan jumlah route. Benchmark ini hanya menggambarkan overhead dasar, bukan performa aplikasi nyata.
 
 ## Testing
 

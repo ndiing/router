@@ -1,22 +1,19 @@
-const http = require("node:http");
+const http = require("http");
 
 class Response extends http.ServerResponse {
-    status(statusCode) {
-        this.statusCode = statusCode;
+    status(code) {
+        this.statusCode = code;
         return this;
     }
     send(chunk) {
         if (this.writableEnded) return;
-        this.end(chunk, null, null); //avoid ArgumentsAdaptorTrampoline from V8
+        this.end(chunk, null, null);
     }
     json(value) {
-        if (this.writableEnded) return;
-        if (this.headersSent) {
-            this.end();
-            return;
+        if (!this.headersSent) {
+            this.setHeader("Content-Type", "application/json; charset=utf-8");
         }
-        this.setHeader("Content-Type", "application/json");
-        this.end(JSON.stringify(value), null, null); //avoid ArgumentsAdaptorTrampoline from V8
+        this.send(JSON.stringify(value));
     }
 }
 exports.Response = Response;
