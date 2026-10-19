@@ -7,7 +7,7 @@ class Response extends http.ServerResponse {
     }
     send(chunk) {
         if (this.writableEnded) return;
-        this.end(chunk,null,null);//avoid ArgumentsAdaptorTrampoline from V8
+        this.end(chunk, null, null); //avoid ArgumentsAdaptorTrampoline from V8
     }
     json(value) {
         if (this.writableEnded) return;
@@ -16,7 +16,7 @@ class Response extends http.ServerResponse {
             return;
         }
         this.setHeader("Content-Type", "application/json");
-        this.end(JSON.stringify(value),null,null);//avoid ArgumentsAdaptorTrampoline from V8
+        this.end(JSON.stringify(value), null, null); //avoid ArgumentsAdaptorTrampoline from V8
     }
 }
 exports.Response = Response;

@@ -1,5 +1,5 @@
 class Cache {
-    constructor(size) {
+    constructor(size = 0) {
         this.size = size;
         this.map = new Map();
     }
@@ -18,6 +18,10 @@ class Cache {
             this.map.delete(this.map.keys().next().value);
         }
         this.map.set(key, value);
+    }
+
+    clear() {
+        this.map.clear();
     }
 }
 

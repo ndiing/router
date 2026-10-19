@@ -5,8 +5,8 @@ Router HTTP kecil, cepat, dan **zero-dependency** untuk Node.js. Dibangun langsu
 ## Fitur
 
 - Zero dependency, murni `node:http`
-- Routing berbasis tree per segmen (static match diprioritaskan, lalu dynamic)
-- Parameter dinamis `:id` dan wildcard `*`
+- Routing berbasis tree per segmen: static, lalu `:param`, lalu wildcard `*`, dengan backtracking
+- Parameter dinamis `:id` dan wildcard `*` yang menangkap sisa path
 - LRU cache untuk hasil lookup route
 - Nested router dengan `use(path, router)`
 - Middleware global dan per-path, mendukung `async`
@@ -82,7 +82,7 @@ app.get("/profile", authenticate, loadUser, (req, res) => {
 
 ### Parameter dinamis
 
-Nilai parameter otomatis di-decode dengan `decodeURIComponent`. Jika formatnya tidak valid (misalnya `%`), nilai mentah dipakai apa adanya.
+Segmen yang diawali `:` adalah parameter. Nilainya otomatis di-decode dengan `decodeURIComponent`; jika formatnya tidak valid (misalnya `%`), nilai mentah dipakai apa adanya.
 
 ```js
 app.get("/posts/:postId/comments/:commentId", (req, res) => {
@@ -91,20 +91,28 @@ app.get("/posts/:postId/comments/:commentId", (req, res) => {
 });
 ```
 
+Satu segmen adalah satu parameter utuh; nama parameter tidak bisa digabung dengan teks lain dalam segmen yang sama (`:id.json` akan dianggap parameter bernama `id.json`).
+
+> Di setiap level hanya ada satu parameter. Jika `/users/:id` dan `/users/:userId/posts` didaftarkan bersamaan, keduanya memakai nama yang pertama didaftarkan (`id`). Pakai nama yang sama untuk level yang sama.
+
 ### Wildcard
 
-`*` cocok dengan karakter apa pun **di dalam satu segmen**. Wildcard tidak melintasi `/`.
+Segmen `*` menangkap **seluruh sisa path** (termasuk `/`) dan nilainya tersedia di `req.params[0]`.
 
 ```js
-app.get("/files/report-*", (req, res) => {
-    res.json({ path: req.path });
+app.get("/files/*", (req, res) => {
+    res.json({ file: req.params[0] });
 });
+
+// GET /files/images/logo.png -> { file: "images/logo.png" }
 ```
+
+Wildcard butuh minimal satu segmen tersisa, jadi `/files/*` tidak cocok dengan `/files`.
 
 ### Aturan matching
 
-- Untuk setiap segmen, router mencoba **static match dulu**, baru pattern dinamis. Jadi `/users/me` menang atas `/users/:id` bila keduanya terdaftar.
-- Jika ada beberapa pattern dinamis di level yang sama, yang **terdaftar lebih dulu** yang dipakai (tanpa backtracking).
+- Di setiap level, router mencoba **static dulu, lalu parameter, lalu wildcard**. Jadi `/users/me` menang atas `/users/:id` bila keduanya terdaftar.
+- Jika cabang static gagal di tengah jalan, router mundur (backtrack) dan mencoba parameter, lalu wildcard.
 - Trailing slash dan slash ganda diabaikan: `/users`, `/users/`, dan `//users` dianggap sama.
 
 ## Middleware
@@ -127,7 +135,7 @@ app.use("/admin", async (req, res) => {
 
 Chain berhenti otomatis begitu response selesai dikirim (`res.writableEnded`), jadi handler berikutnya tidak dipanggil.
 
-> Middleware tetap dijalankan walaupun tidak ada route yang cocok, sebelum respons 404 dikirim.
+> Jika path tidak cocok dengan route mana pun, hanya middleware global (tanpa path) yang dijalankan sebelum respons 404 dikirim.
 
 ## Nested Router
 
@@ -226,7 +234,7 @@ app.get("/proxy", async (req, res) => {
 | --- | --- |
 | `req.path` | Pathname tanpa query string |
 | `req.query` | Object query string, di-parse secara lazy. Key yang berulang menjadi array, dan `+` di-decode menjadi spasi |
-| `req.params` | Parameter dari route dinamis (sudah di-decode) |
+| `req.params` | Parameter dari route dinamis (sudah di-decode). Wildcard `*` ada di `req.params[0]` |
 | `req.body` | Hasil parse body (butuh middleware `json()`) |
 | `req.signal` | `AbortSignal` yang di-abort saat timeout atau error handler (hanya jika `requestTimeout` aktif) |
 
@@ -237,7 +245,7 @@ app.get("/search", (req, res) => {
 });
 ```
 
-`req.query` dan `req.params` memakai object tanpa prototype, jadi gunakan `Object.hasOwn(req.query, "key")` atau `"key" in req.query`, bukan `req.query.hasOwnProperty(...)`.
+`req.query` dan `req.params` yang sampai ke handler memakai object tanpa prototype, jadi gunakan `Object.hasOwn(req.query, "key")` atau `"key" in req.query`, bukan `req.query.hasOwnProperty(...)`.
 
 `Request` adalah turunan `http.IncomingMessage`, jadi `req.headers`, `req.method`, dan lainnya tetap tersedia.
 
@@ -280,7 +288,7 @@ Perilaku:
 ```js
 app.use(
     App.cors({
-        origin: "https://example.com",
+        origin: ["https://example.com", "https://app.example.com"],
         credentials: true,
         methods: ["GET", "POST", "PUT", "DELETE"],
         headers: ["Content-Type", "Authorization"],
@@ -291,17 +299,17 @@ app.use(
 
 | Opsi | Default | Keterangan |
 | --- | --- | --- |
-| `origin` | `"*"` | `"*"`, satu origin, daftar dipisah koma, pola dengan `*` (misalnya `https://*.example.com`), atau `null` |
+| `origin` | `"*"` | `"*"`, satu origin, array origin, atau `null` |
 | `credentials` | `false` | Mengirim `Access-Control-Allow-Credentials: true` |
-| `headers` | - | `"*"` atau array nama header |
-| `methods` | - | `"*"` atau array nama method |
+| `headers` | - | `"*"` atau array nama header (tidak membedakan huruf besar/kecil) |
+| `methods` | - | `"*"` atau array nama method (tidak membedakan huruf besar/kecil) |
 | `maxAge` | `0` | Lama cache preflight (detik). `0` berarti header tidak dikirim |
 
 Perilaku:
 
 - Request `OPTIONS` dijawab langsung dengan `204` dan chain berhenti
-- `Access-Control-Allow-Headers` dan `Access-Control-Allow-Methods` hanya dikirim pada preflight, jika nilai yang diminta ada di daftar
-- Jika `origin` berupa daftar atau pola (atau `"*"` dengan `credentials: true`), origin dari request dipantulkan bila cocok. Pencocokan dilakukan pada seluruh string (tanpa memperhatikan huruf besar/kecil), dan header `Vary: Origin` ditambahkan pada request non-preflight
+- Origin dicocokkan **persis sama** (case-sensitive) dengan header `Origin` dari request. Jika cocok, origin tersebut dipantulkan, dan header `Vary: Origin` ditambahkan pada request non-preflight
+- `Access-Control-Allow-Headers` dan `Access-Control-Allow-Methods` hanya dikirim pada preflight, dan hanya jika **semua** header atau method yang diminta ada di daftar
 - Nilai `"*"` untuk `headers` dan `methods` diabaikan saat `credentials: true`, sesuai spesifikasi CORS
 - Pada request non-preflight, `headers` (jika array) dikirim sebagai `Access-Control-Expose-Headers`
 
@@ -315,8 +323,8 @@ const app = new App({ cacheSize: 1000, requestTimeout: 5000 });
 
 | Opsi | Default | Keterangan |
 | --- | --- | --- |
-| `cacheSize` | `1000` | Jumlah maksimum entri LRU cache untuk hasil lookup `METHOD path` |
-| `requestTimeout` | - | Batas waktu handler dalam ms (khusus `App`). Lihat bagian [Timeout](#requestTimeout) |
+| `cacheSize` | `1000` | Jumlah maksimum entri LRU cache untuk hasil lookup `METHOD path`. Cache dikosongkan setiap ada route baru didaftarkan |
+| `requestTimeout` | `0` | Batas waktu handler dalam ms (khusus `App`). Lihat bagian [Timeout](#timeout) |
 
 `Router` hanya menerima `cacheSize`.
 
@@ -350,19 +358,6 @@ Membuat `http.Server` dengan `Request` dan `Response` milik router, lalu memangg
 const server = app.listen(0); // port acak
 console.log(server.address().port);
 ```
-
-## Benchmark
-
-Hello world dengan satu route `GET /`, diuji memakai `autocannon -c 100 -d 40 -p 10` di mesin lokal.
-
-| package           | Latency  | Req/Sec  | Bytes/Sec | Result                                |
-| ----------------- | -------- | -------- | --------- | ------------------------------------- |
-| fastify           | 25.3 ms  | 38,738.4 | 7.24 MB   | 1550k requests in 40.06s, 290 MB read |
-| @ndiinginc/router | 28.45 ms | 34,541.4 | 5.91 MB   | 1383k requests in 40.06s, 236 MB read |
-| express           | 41 ms    | 24,095.6 | 6.05 MB   | 965k requests in 40.06s, 242 MB read  |
-
-
-Hasil bervariasi tergantung mesin, versi Node.js, dan jumlah route. Benchmark ini hanya menggambarkan overhead dasar, bukan performa aplikasi nyata.
 
 ## Testing
 

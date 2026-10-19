@@ -1,6 +1,6 @@
 const { Node } = require("./node.js");
 const { Cache } = require("./cache.js");
-const {  decodePathParam } = require("./util.js");
+const { decodePathParam } = require("./util.js");
 
 class Router {
     constructor(options = {}) {
@@ -16,14 +16,16 @@ class Router {
     }
 
     add(method, path, ...handlers) {
+        this.cache.clear();
+
         if (typeof path === "function") {
             handlers = [path, ...handlers];
             path = null;
         }
         let node = this.root;
-        if (path !== null) {
-            for (const segment of this.split(path)) {
-                node = node.add(segment);
+        if (path) {
+            for (const part of this.split(path)) {
+                node = node.add(part);
             }
         }
 
@@ -32,10 +34,10 @@ class Router {
                 node.merge(handler.root, this.seq);
                 this.seq += handler.root.getMaxSeq() + 1;
             } else {
-                node.handlers.getOrInsert(method, []).push({
+                const newMethod = handler.length === 3 ? "CATCH" : method;
+                node.handlers.getOrInsert(newMethod, []).push({
                     handler,
                     seq: this.seq++,
-                    isErrorHandler: handler.length === 3,
                 });
             }
         }
@@ -96,71 +98,96 @@ class Router {
         return this;
     }
 
-    matchRegExp(node, input, params) {
-        let matched;
-        for (const [, child] of node.children) {
-            if (!child.pattern) continue;
-            const match = child.pattern.exec(input);
-            if (match) {
-                matched = child;
-                for (const name in match.groups) {
-                    params[name] = decodePathParam(match.groups[name]);
-                }
-                break;
+    collectMiddleware(node, handlers, errorHandlers) {
+        if (node.handlers.has("ALL")) {
+            for (const entry of node.handlers.get("ALL")) {
+                handlers[entry.seq] = entry.handler;
             }
         }
-        return matched;
+        if (node.handlers.has("CATCH")) {
+            for (const entry of node.handlers.get("CATCH")) {
+                errorHandlers[entry.seq] = entry.handler;
+            }
+        }
     }
 
-    /**
-     * @param {'GET'|'QUERY'|'HEAD'|'OPTIONS'|'TRACE'|'PUT'|'DELETE'|'POST'|'PATCH'|'CONNECT'} method
-     * @param {String} path
-     * @returns {{params: {};handlers: any[];errorHandlers: any[];}}
-     */
-    find(method, path) {
-        const key = `${method} ${path}`;
-        const cached = this.cache.get(key);
-        if (cached) return cached;
-        let node = this.root;
-        let params = Object.create(null);
-        const handlers = {};
-        const errorHandlers = {};
-        for (const input of this.split(path)) {
-            let matched = node.children.get(input);
-            if (!matched && node.hasRegExpChildren) {
-                matched = this.matchRegExp(node, input, params);
-            }
-            if (!matched) {
-                node = null;
-                params = Object.create(null);
-                break;
-            }
-            node = matched;
-            if (node.handlers.has("ALL")) {
-                for (const entry of node.handlers.get("ALL")) {
-                    if (entry.isErrorHandler) errorHandlers[entry.seq] = entry.handler;
-                    else handlers[entry.seq] = entry.handler;
-                }
-            }
-        }
-        if (this.root.handlers.has("ALL")) {
-            for (const entry of this.root.handlers.get("ALL")) {
-                if (entry.isErrorHandler) errorHandlers[entry.seq] = entry.handler;
-                else handlers[entry.seq] = entry.handler;
-            }
-        }
+    collectHandler(node, method, handlers) {
         if (node && node.handlers.has(method)) {
             for (const entry of node.handlers.get(method)) {
                 handlers[entry.seq] = entry.handler;
             }
         }
-        const result = {
+    }
+
+    /**
+     * @param {Node} node
+     * @param {*} parts
+     * @param {*} i
+     * @param {*} params
+     * @param {*} path
+     * @returns
+     */
+    search(node, parts, i, params, path) {
+        if (!node) return null;
+        path.push(node);
+        if (i === parts.length) return path;
+
+        const part = parts[i];
+
+        if (node.staticChildren.has(part)) {
+            const r = this.search(node.staticChildren.get(part), parts, i + 1, params, path);
+            if (r) return r;
+        }
+
+        if (node.paramChild) {
+            const saved = params[node.paramChild.paramName];
+            params[node.paramChild.paramName] = decodePathParam(part);
+            const r = this.search(node.paramChild, parts, i + 1, params, path);
+            if (r) return r;
+            if (saved === undefined) delete params[node.paramChild.paramName];
+            else params[node.paramChild.paramName] = saved;
+        }
+
+        if (node.wildcardChild) {
+            params[0] = decodePathParam(parts.slice(i).join("/"));
+            path.push(node.wildcardChild);
+            return path;
+        }
+
+        path.pop();
+        return null;
+    }
+
+    find(method, path) {
+        const key = `${method} ${path}`;
+        const cached = this.cache.get(key);
+        if (cached) return cached;
+
+        const parts = this.split(path);
+        const params = {};
+        const nodePath = [];
+        const result = this.search(this.root, parts, 0, params, nodePath);
+
+        const handlers = {};
+        const errorHandlers = {};
+
+        if (result) {
+            for (const n of result) {
+                this.collectMiddleware(n, handlers, errorHandlers);
+            }
+            this.collectHandler(result[result.length - 1], method, handlers);
+        } else {
+            this.collectMiddleware(this.root, handlers, errorHandlers);
+        }
+
+        const value = {
             params,
             handlers: Object.values(handlers),
             errorHandlers: Object.values(errorHandlers),
         };
-        this.cache.set(key, result);
-        return result;
+        this.cache.set(key, value);
+
+        return value;
     }
 }
 exports.Router = Router;

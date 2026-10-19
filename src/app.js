@@ -67,6 +67,10 @@ class App extends Router {
                 err = new Error(error.message, { cause: err });
             }
         }
+        err = this.fallback(res, err);
+    }
+
+    fallback(res, err) {
         if (!res.writableEnded) {
             if (!err) err = ErrorResponse.status(404);
             res.statusCode = err.statusCode || 500;
@@ -76,6 +80,7 @@ class App extends Router {
             }
             res.json({ error });
         }
+        return err;
     }
 
     listen(...params) {

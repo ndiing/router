@@ -453,7 +453,7 @@ describe("cors()", () => {
             method: "OPTIONS",
             headers: { origin: "http://example.com" },
         });
-        expect(response.headers.get("vary")).toBe(null); // <-- mungkin gagal
+        expect(response.headers.get("vary")).toBe(null);
     });
 
     test("OPTIONS — Vary: Origin nggak di-set", async () => {

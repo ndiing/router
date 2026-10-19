@@ -172,4 +172,8 @@ describe("parseQueryString()", () => {
     test("decode gagal di dua-duanya", () => {
         expect(toObjectLike(parseQueryString("%=%"))).toEqual({ "%": "%" });
     });
+
+    test("a=1& hang?", () => {
+        expect(toObjectLike(parseQueryString("a=1&"))).toEqual({ a: "1" });
+    });
 });

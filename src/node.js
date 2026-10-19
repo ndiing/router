@@ -1,46 +1,80 @@
-const { Pattern } = require("./pattern.js");
-
 class Node {
     constructor(segment = "") {
-        this.hasRegExpChildren = false;
-        this.pattern = /[:*]/.test(segment) && new Pattern(segment);
-        /**@type {Map<string,Node>}*/
-        this.children = new Map();
+        this.segment = segment;
+        /**@type {Map<string, Node>}*/
+        this.staticChildren = new Map();
+        this.paramChild = null;
+        this.paramName = null;
+        this.wildcardChild = null;
+        /**@type {Map<string, Function[]>}*/
         this.handlers = new Map();
     }
-
+    /**
+     * @param {String} segment
+     * @returns {Node}
+     */
     add(segment) {
-        return this.children.getOrInsertComputed(segment, () => {
-            const node = new Node(segment);
-            if (node.pattern) this.hasRegExpChildren = true;
-            return node;
-        });
+        if (segment.startsWith(":")) {
+            if (this.paramChild) return this.paramChild;
+            this.paramChild = new Node(segment);
+            this.paramChild.paramName = segment.slice(1);
+            this.paramChild.type = "param";
+            return this.paramChild;
+        } else if (segment.startsWith("*")) {
+            if (this.wildcardChild) return this.wildcardChild;
+            this.wildcardChild = new Node(segment);
+            this.wildcardChild.type = "wildcard";
+            return this.wildcardChild;
+        } else {
+            return this.staticChildren.getOrInsertComputed(segment, (segment) => {
+                const node = new Node(segment);
+                node.type = "wildcard";
+                return node;
+            });
+        }
     }
-
+    /**
+     * @param {Node} node
+     */
     merge(node, offset) {
         for (const [method, entries] of node.handlers) {
-            const target = this.handlers.getOrInsert(method, []);
             for (const entry of entries) {
-                target.push({ ...entry, seq: entry.seq + offset });
+                this.handlers.getOrInsert(method, []).push({
+                    ...entry,
+                    seq: entry.seq + offset,
+                });
             }
         }
-        for (const [segment, child] of node.children) {
-            const target = this.children.getOrInsertComputed(segment, () => new Node(segment));
-            if (target.pattern) this.hasRegExpChildren = true;
-            target.merge(child, offset);
+
+        if (node.paramChild) {
+            this.add(node.paramChild.segment).merge(node.paramChild, offset);
+        }
+        if (node.wildcardChild) {
+            this.add(node.wildcardChild.segment).merge(node.wildcardChild, offset);
+        }
+        for (const [segment, child] of node.staticChildren) {
+            this.add(segment).merge(child, offset);
         }
     }
 
     getMaxSeq() {
         let max = -1;
-        for (const [, handlers] of this.handlers) {
-            for (const entry of handlers) {
+        for (const [method, entries] of this.handlers) {
+            for (const entry of entries) {
                 max = Math.max(max, entry.seq);
             }
         }
-        for (const [, child] of this.children) {
+
+        if (this.paramChild) {
+            max = Math.max(max, this.paramChild.getMaxSeq());
+        }
+        if (this.wildcardChild) {
+            max = Math.max(max, this.wildcardChild.getMaxSeq());
+        }
+        for (const [path, child] of this.staticChildren) {
             max = Math.max(max, child.getMaxSeq());
         }
+
         return max;
     }
 }

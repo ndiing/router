@@ -1,11 +1,9 @@
-const URL_REGEX = /^([^?#]*)(\?([^#]*))?(#.*)?$/;
-const QUERY_STRING_REGEX = /([^=&]*)?=([^&]*)?/g;
-
 function decodeQueryParam(encoded) {
+    const normalize = encoded.replace(/\+/g, " ");
     try {
-        return decodeURIComponent(encoded.replace(/\+/g, " "));
+        return decodeURIComponent(normalize);
     } catch (error) {
-        return encoded;
+        return normalize;
     }
 }
 exports.decodeQueryParam = decodeQueryParam;
@@ -17,26 +15,32 @@ function decodePathParam(encoded) {
         return encoded;
     }
 }
-exports.decodePathParam=decodePathParam
+
+exports.decodePathParam = decodePathParam;
 
 function parseQueryString(queryString) {
-    const result = Object.create(null);
+    const query = Object.create(null);
+    if (!queryString) return query;
+    const regex = /([^=&]*)?=([^&]*)?/g;
     let match;
-    while ((match = QUERY_STRING_REGEX.exec(queryString)) !== null) {
+    while ((match = regex.exec(queryString))) {
         const [, rawName = "", rawValue = ""] = match;
         const name = decodeQueryParam(rawName);
         const value = decodeQueryParam(rawValue);
-        if (Object.hasOwn(result, name)) {
-            if (Array.isArray(result[name])) result[name].push(value);
-            else result[name] = [result[name], value];
-        } else result[name] = value;
+        if (Object.hasOwn(query, name)) {
+            if (Array.isArray(query[name])) query[name].push(value);
+            else query[name] = [query[name], value];
+        } else {
+            query[name] = value;
+        }
     }
-    return result;
+    return query;
 }
 exports.parseQueryString = parseQueryString;
 
 function parseUrl(url) {
-    const [, rawPath = "", , queryString = ""] = URL_REGEX.exec(url);
-    return { path: rawPath || "/", queryString };
+    const regex = /^([^?#]*)(\?([^#]*))?(#.*)?$/;
+    const [, path = "/", , queryString = ""] = regex.exec(url);
+    return { path: path || "/", queryString };
 }
 exports.parseUrl = parseUrl;
