@@ -13,7 +13,6 @@ class Router {
     }
 
     add(method, path, ...handlers) {
-
         if (typeof path === "function") {
             handlers = [path, ...handlers];
             path = null;
@@ -105,12 +104,23 @@ class Router {
      * @param {{ best: { nodes: Node[], params: Record<string, string> } }} state
      * @returns {{ nodes: Node[], params: Record<string, string>, matched: boolean }}
      */
-    search(node, segments, index, path, params, state) {
+    search(node, segments, index, path, params, state,method) {
         path.push(node);
 
         // habis segmen -> full match
+        // if (index === segments.length) {
+        //     return { nodes: path.slice(), params: { ...params }, matched: true };
+        // }
         if (index === segments.length) {
-            return { nodes: path.slice(), params: { ...params }, matched: true };
+            if (node.handlers.has(method)) {
+                return { nodes: path.slice(), params: { ...params }, matched: true };
+            }
+            // node ada tapi tidak punya handler method ini: catat sebagai partial, lalu coba cabang lain
+            if (path.length > state.best.nodes.length) {
+                state.best = { nodes: path.slice(), params: { ...params } };
+            }
+            path.pop();
+            return { matched: false };
         }
 
         const segment = segments[index];
@@ -118,7 +128,7 @@ class Router {
         // 1. static (prioritas tertinggi)
         const staticChild = node.children.get(segment);
         if (staticChild) {
-            const res = this.search(staticChild, segments, index + 1, path, params, state);
+            const res = this.search(staticChild, segments, index + 1, path, params, state,method);
             if (res.matched) return res;
         }
 
@@ -127,7 +137,7 @@ class Router {
             const name = key.slice(1); // buang ':'
             const prev = params[name];
             params[name] = decodeParam(segment);
-            const res = this.search(child, segments, index + 1, path, params, state);
+            const res = this.search(child, segments, index + 1, path, params, state,method);
             if (res.matched) return res;
             // backtrack param value
             if (prev === undefined) delete params[name];
@@ -174,7 +184,6 @@ class Router {
     }
 
     find(method, path) {
-
         const segments = this.split(path);
 
         const params = {};
@@ -184,7 +193,7 @@ class Router {
         /** @type {{ best: { nodes: Node[], params: Record<string, string> } }} */
         const state = { best: { nodes: [], params: {} } };
 
-        const res = this.search(this.root, segments, 0, [], params, state);
+        const res = this.search(this.root, segments, 0, [], params, state,method);
 
         const matchedNodes = res.matched ? res.nodes : state.best.nodes;
         const finalParams = res.matched ? res.params : state.best.params;

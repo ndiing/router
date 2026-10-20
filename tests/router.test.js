@@ -108,7 +108,7 @@ describe("Router", () => {
             const r = new Router();
             r.get("/api", h());
             const res = r.find("POST", "/api");
-            expect(res.matched).toBe(true);
+            expect(res.matched).toBe(false);
             // matched path, tapi method handler kosong
             expect(res.handlers.length).toBe(0);
         });
@@ -406,4 +406,17 @@ test("same param name nested - failed match restores prev", () => {
     const res = r.find("GET", "/a/b/unknown");
     expect(res.matched).toBe(false);
 });
+test("PUT /users/me falls back to /users/:id", () => {
+    const calls = [];
+    const r = new Router();
+    r.get("/users/me", () => calls.push("get me"));
+    r.get("/users/:id", () => calls.push("get id"));
+    r.put("/users/:id", () => calls.push("put id"));
 
+    const res = r.find("PUT", "/users/me");
+    expect(res.matched).toBe(true);
+    expect(res.params.id).toBe("me");
+    expect(res.handlers.length).toBe(1);
+    res.handlers[0]();
+    expect(calls).toEqual(["put id"]);
+});

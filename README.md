@@ -1,13 +1,12 @@
 # @ndiinginc/router
 
-Router HTTP kecil, cepat, dan **zero-dependency** untuk Node.js. Dibangun langsung di atas `node:http`, dengan routing berbasis tree, LRU cache untuk lookup route, nested router, middleware async, error handler, timeout per request, serta middleware `json` dan `cors` bawaan.
+Router HTTP kecil, cepat, dan **zero-dependency** untuk Node.js. Dibangun langsung di atas `node:http`, dengan routing berbasis tree, nested router, middleware async, error handler, timeout per request, serta middleware `json` dan `cors` bawaan.
 
 ## Fitur
 
 - Zero dependency, murni `node:http`
 - Routing berbasis tree per segmen: static, lalu `:param`, lalu wildcard `*`, dengan backtracking
 - Parameter dinamis `:id` dan wildcard `*` yang menangkap sisa path
-- LRU cache untuk hasil lookup route
 - Nested router dengan `use(path, router)`
 - Middleware global dan per-path, mendukung `async`
 - Error handler dengan signature `(err, req, res)`
@@ -119,6 +118,7 @@ Wildcard butuh minimal satu segmen tersisa, jadi `/files/*` tidak cocok dengan `
 
 - Di setiap level, router mencoba **static dulu, lalu parameter (sesuai urutan pendaftaran), lalu wildcard**. Jadi `/users/me` menang atas `/users/:id` bila keduanya terdaftar.
 - Jika sebuah cabang gagal di tengah jalan, router mundur (backtrack) dan mencoba cabang berikutnya.
+- Pemilihan cabang memperhatikan method. Jika route static tidak punya handler untuk method request, router mencoba cabang parameter atau wildcard. Contoh: dengan `GET /users/me` dan `PUT /users/:id`, request `PUT /users/me` ditangani oleh `PUT /users/:id`.
 - Trailing slash dan slash ganda diabaikan: `/users`, `/users/`, dan `//users` dianggap sama.
 
 ## Middleware
@@ -212,7 +212,7 @@ Jika tidak ada handler yang mengirim response, router mengirim JSON otomatis:
 
 ## Timeout
 
-Aktifkan lewat opsi `requestTimeout` (milidetik) pada `App`. Jika seluruh chain handler melebihi waktu tersebut, `res.statusCode` diset `502` dan error `Bad Gateway` dilempar ke error handler.
+Aktifkan lewat opsi `requestTimeout` (milidetik) pada `App`. Jika seluruh chain handler melebihi waktu tersebut, `res.statusCode` diset `504` dan error `Gateway Timeout` dilempar ke error handler.
 
 ```js
 const app = new App({ requestTimeout: 5000 });
@@ -326,15 +326,14 @@ Perilaku:
 ## Opsi
 
 ```js
-const app = new App({ cacheSize: 1000, requestTimeout: 5000 });
+const app = new App({ requestTimeout: 5000 });
 ```
 
 | Opsi | Default | Keterangan |
 | --- | --- | --- |
-| `cacheSize` | `1000` | Jumlah maksimum entri LRU cache untuk hasil lookup `METHOD path`. `0` menonaktifkan cache. Cache dikosongkan setiap ada route baru didaftarkan |
 | `requestTimeout` | `0` | Batas waktu handler dalam ms (khusus `App`). Lihat bagian [Timeout](#timeout) |
 
-`Router` hanya menerima `cacheSize`.
+`Router` tidak memiliki opsi sendiri; `requestTimeout` hanya dipakai oleh `App`.
 
 ## API
 
@@ -352,7 +351,7 @@ Mendaftarkan handler untuk method tertentu. `path` opsional; jika dihilangkan, h
 
 ### `router.find(method, path)`
 
-Mencari route tanpa menjalankannya. Hasilnya di-cache dan `params`-nya di-freeze. Berguna untuk testing.
+Mencari route tanpa menjalankannya. Berguna untuk testing.
 
 ```js
 const { matched, params, paramsLength, handlers, errorHandlers } = app.find("GET", "/users/1");
@@ -366,6 +365,32 @@ Membuat `http.Server` dengan `Request` dan `Response` milik router, lalu memangg
 const server = app.listen(0); // port acak
 console.log(server.address().port);
 ```
+
+### Server sendiri
+
+`App.SERVER_OPTIONS` berisi opsi `IncomingMessage` dan `ServerResponse` yang dipakai `listen()`. Jika ingin membuat server sendiri (misalnya HTTPS), sertakan opsi itu dan panggil `app.handle(req, res)`:
+
+```js
+const https = require("https");
+
+const server = https.createServer(
+    { ...App.SERVER_OPTIONS, key, cert },
+    (req, res) => app.handle(req, res),
+);
+server.listen(443);
+```
+
+## Benchmark
+
+Hello world dengan satu route `GET /`, diuji memakai `autocannon -c 100 -d 40 -p 10` di mesin lokal.
+
+| | Req/sec (avg) | Latency (avg) |
+| --- | --- | --- |
+| Fastify | 31.475 | 31,27 ms |
+| **@ndiinginc/router** | 29.735 | 33,12 ms |
+| Express | 20.211 | 48,93 ms |
+
+Hasil bervariasi tergantung mesin, versi Node.js, dan jumlah route. Benchmark ini hanya menggambarkan overhead dasar, bukan performa aplikasi nyata.
 
 ## Testing
 
