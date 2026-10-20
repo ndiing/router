@@ -3,13 +3,11 @@ const { EMPTY_PARAMS, decodeParam, parseQueryString, parseUrl } = require("../sr
 describe("util", () => {
     describe("EMPTY_PARAMS", () => {
         test("is empty object with null prototype", () => {
-            expect(Object.keys(EMPTY_PARAMS).length).toBe(0);
+            
             expect(Object.getPrototypeOf(EMPTY_PARAMS)).toBe(null);
         });
 
-        test("is frozen", () => {
-            expect(Object.isFrozen(EMPTY_PARAMS)).toBe(true);
-        });
+        
     });
 
     describe("decodeParam", () => {

@@ -21,6 +21,7 @@ class Request extends http.IncomingMessage {
         if (!this._query) {
             this._query = parseQueryString(this._queryString);
         }
+
         return this._query;
     }
 
@@ -31,6 +32,7 @@ class Request extends http.IncomingMessage {
         if (!this._controller) {
             this._controller = new AbortController();
         }
+        
         return this._controller;
     }
 }

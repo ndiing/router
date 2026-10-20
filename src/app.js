@@ -45,13 +45,16 @@ class App extends Router {
                 res.statusCode = 404;
                 err = new Error(http.STATUS_CODES[res.statusCode]);
             }
+
             if (res.statusCode < 400) {
                 res.statusCode = 500;
             }
+
             const error = { message: err.message };
             if (process.env.NODE_ENV === "development") {
                 error.stack = err.stack;
             }
+
             res.json({ error });
         }
     }
@@ -72,6 +75,7 @@ class App extends Router {
                     await handler(req, res);
                 }
             };
+
             if (this.requestTimeout) {
                 await this.withTimeout(req, res, handlerPromise);
             } else {
@@ -79,6 +83,7 @@ class App extends Router {
             }
         } catch (error) {
             err = error;
+            
             try {
                 for (const handler of errorHandlers) {
                     if (res.writableEnded) break;

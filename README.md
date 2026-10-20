@@ -367,18 +367,6 @@ const server = app.listen(0); // port acak
 console.log(server.address().port);
 ```
 
-## Benchmark
-
-Hello world dengan satu route `GET /`, diuji memakai `autocannon -c 100 -d 40 -p 10` di mesin lokal.
-
-| | Req/sec (avg) | Latency (avg) |
-| --- | --- | --- |
-| Fastify | 31.475 | 31,27 ms |
-| **@ndiinginc/router** | 29.735 | 33,12 ms |
-| Express | 20.211 | 48,93 ms |
-
-Hasil bervariasi tergantung mesin, versi Node.js, dan jumlah route. Benchmark ini hanya menggambarkan overhead dasar, bukan performa aplikasi nyata.
-
 ## Testing
 
 ```bash

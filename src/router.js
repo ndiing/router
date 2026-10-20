@@ -1,14 +1,11 @@
 const { decodeParam } = require("./util");
 const { Node } = require("./node");
-const { Cache } = require("./cache");
 
 class Router {
     constructor(options = {}) {
         this.requestTimeout = options.requestTimeout ?? 0;
-        this.cacheSize = options.cacheSize ?? 1000;
         this.root = new Node();
         this.seq = 0;
-        this.cache = new Cache(this.cacheSize);
     }
 
     split(path) {
@@ -16,7 +13,6 @@ class Router {
     }
 
     add(method, path, ...handlers) {
-        this.cache.clear();
 
         if (typeof path === "function") {
             handlers = [path, ...handlers];
@@ -178,10 +174,6 @@ class Router {
     }
 
     find(method, path) {
-        const key = `${method} ${path}`;
-
-        const cached = this.cache.get(key);
-        if (cached) return cached;
 
         const segments = this.split(path);
 
@@ -208,19 +200,13 @@ class Router {
             this.collectHandler(leaf, method, handlers);
         }
 
-        Object.freeze(finalParams);
-
-        const result = {
+        return {
             matched: res.matched,
             params: finalParams,
             paramsLength: Object.keys(finalParams).length,
             handlers: Object.values(handlers),
             errorHandlers: Object.values(errorHandlers),
         };
-
-        this.cache.set(key, result);
-
-        return result;
     }
 }
 exports.Router = Router;
