@@ -1,6 +1,9 @@
 class Node {
     constructor(segment = "") {
         this.segment = segment;
+        if (segment.startsWith(":")) {
+            this.name = segment.slice(1);
+        }
         /** @type {Map<string, Node>} static children */
         this.children = new Map();
         /** @type {Map<string, Node>} param children, key = ':name' */

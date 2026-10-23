@@ -101,44 +101,66 @@ class Router {
      * @param {{ best: { nodes: Node[], params: Record<string, string> } }} state
      * @returns {{ nodes: Node[], params: Record<string, string>, matched: boolean }}
      */
-    search(node, segments, index, path, params, state, method) {
+    search(method, segments, node, path = [], params = {}, state = { path: [], params: {} }, index = 0) {
         path.push(node);
         if (index === segments.length) {
-            if (node.handlers.has(method)) {
-                return { nodes: path.slice(), params: { ...params }, matched: true };
+            if (node.handlers.has(method) || node.handlers.has("ALL")) {
+                return { path, params, matched: true };
             }
-            if (path.length > state.best.nodes.length) {
-                state.best = { nodes: path.slice(), params: { ...params } };
+            if (path.length > state.path.length) {
+                state.path = path.slice();
+                state.params = { ...params };
             }
             path.pop();
-            return { matched: false };
+            return { path: state.path, params: state.params, matched: false };
         }
         const segment = segments[index];
-        const staticChild = node.children.get(segment);
-        if (staticChild) {
-            const res = this.search(staticChild, segments, index + 1, path, params, state, method);
+        if (node.children.has(segment)) {
+            const res = this.search(
+                //
+                method,
+                segments,
+                node.children.get(segment),
+                path,
+                params,
+                state,
+                index + 1,
+            );
             if (res.matched) return res;
         }
-        for (const [key, child] of node.params) {
-            const name = key.slice(1);
-            const prev = params[name];
-            params[name] = decodeParam(segment);
-            const res = this.search(child, segments, index + 1, path, params, state, method);
-            if (res.matched) return res;
-            if (prev === undefined) delete params[name];
-            else params[name] = prev;
+        if (node.params.size) {
+            for (const [, child] of node.params) {
+                const prev = params[child.name];
+                params[child.name] = decodeParam(segment);
+                const res = this.search(
+                    //
+                    method,
+                    segments,
+                    child,
+                    path,
+                    params,
+                    state,
+                    index + 1,
+                );
+                if (res.matched) return res;
+                if (prev === undefined) {
+                    const { [child.name]: _, ...rest } = params;
+                    params = rest;
+                } else params[child.name] = prev;
+            }
         }
-        if (node.wildcard) {
+        if (node.wildcard && (node.wildcard.handlers.get(method) || node.wildcard.handlers.get("ALL"))) {
             const rest = segments.slice(index).join("/");
             params["wildcard"] = decodeParam(rest);
             path.push(node.wildcard);
-            return { nodes: path.slice(), params: { ...params }, matched: true };
+            return { path, params, matched: true };
         }
-        if (path.length > state.best.nodes.length) {
-            state.best = { nodes: path.slice(), params: { ...params } };
+        if (path.length > state.path.length) {
+            state.path = path.slice();
+            state.params = { ...params };
         }
         path.pop();
-        return { matched: false };
+        return { path: state.path, params: state.params, matched: false };
     }
 
     collectHandler(r, method, handlers) {
@@ -155,26 +177,24 @@ class Router {
     }
 
     find(method, path) {
-        const segments = this.split(path);
-        const params = {};
+        const res = this.search(
+            //
+            method,
+            this.split(path),
+            this.root,
+        );
         const handlers = {};
         const errorHandlers = {};
-        /** @type {{ best: { nodes: Node[], params: Record<string, string> } }} */
-        const state = { best: { nodes: [], params: {} } };
-        const res = this.search(this.root, segments, 0, [], params, state, method);
-        const matchedNodes = res.matched ? res.nodes : state.best.nodes;
-        const finalParams = res.matched ? res.params : state.best.params;
-        for (const r of matchedNodes) {
+        for (const r of res.path) {
             this.collectMiddleware(r, handlers, errorHandlers);
         }
         if (res.matched) {
-            const leaf = matchedNodes[matchedNodes.length - 1];
-            this.collectHandler(leaf, method, handlers);
+            this.collectHandler(res.path.at(-1), method, handlers);
         }
         return {
             matched: res.matched,
-            params: finalParams,
-            paramsLength: Object.keys(finalParams).length,
+            params: res.params,
+            paramsLength: Object.keys(res.params).length,
             handlers: Object.values(handlers),
             errorHandlers: Object.values(errorHandlers),
         };
