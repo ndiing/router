@@ -17,15 +17,12 @@ class Router {
             handlers = [path, ...handlers];
             path = null;
         }
-
         let node = this.root;
-
         if (path) {
             for (const segment of this.split(path)) {
                 node = node.add(segment);
             }
         }
-
         for (const handler of handlers) {
             if (handler.root) {
                 node.merge(handler.root, this.seq);
@@ -104,60 +101,42 @@ class Router {
      * @param {{ best: { nodes: Node[], params: Record<string, string> } }} state
      * @returns {{ nodes: Node[], params: Record<string, string>, matched: boolean }}
      */
-    search(node, segments, index, path, params, state,method) {
+    search(node, segments, index, path, params, state, method) {
         path.push(node);
-
-        // habis segmen -> full match
-        // if (index === segments.length) {
-        //     return { nodes: path.slice(), params: { ...params }, matched: true };
-        // }
         if (index === segments.length) {
             if (node.handlers.has(method)) {
                 return { nodes: path.slice(), params: { ...params }, matched: true };
             }
-            // node ada tapi tidak punya handler method ini: catat sebagai partial, lalu coba cabang lain
             if (path.length > state.best.nodes.length) {
                 state.best = { nodes: path.slice(), params: { ...params } };
             }
             path.pop();
             return { matched: false };
         }
-
         const segment = segments[index];
-
-        // 1. static (prioritas tertinggi)
         const staticChild = node.children.get(segment);
         if (staticChild) {
-            const res = this.search(staticChild, segments, index + 1, path, params, state,method);
+            const res = this.search(staticChild, segments, index + 1, path, params, state, method);
             if (res.matched) return res;
         }
-
-        // 2. semua param child (bisa lebih dari satu)
         for (const [key, child] of node.params) {
-            const name = key.slice(1); // buang ':'
+            const name = key.slice(1);
             const prev = params[name];
             params[name] = decodeParam(segment);
-            const res = this.search(child, segments, index + 1, path, params, state,method);
+            const res = this.search(child, segments, index + 1, path, params, state, method);
             if (res.matched) return res;
-            // backtrack param value
             if (prev === undefined) delete params[name];
             else params[name] = prev;
         }
-
-        // 3. wildcard (prioritas terendah, menyerap sisa segmen)
         if (node.wildcard) {
             const rest = segments.slice(index).join("/");
             params["wildcard"] = decodeParam(rest);
             path.push(node.wildcard);
             return { nodes: path.slice(), params: { ...params }, matched: true };
         }
-
-        // tidak match di sini -> update partial terpanjang
-        // path.length > state.best.nodes.length artinya kita sudah lebih dalam
         if (path.length > state.best.nodes.length) {
             state.best = { nodes: path.slice(), params: { ...params } };
         }
-
         path.pop();
         return { matched: false };
     }
@@ -185,30 +164,21 @@ class Router {
 
     find(method, path) {
         const segments = this.split(path);
-
         const params = {};
         const handlers = {};
         const errorHandlers = {};
-
         /** @type {{ best: { nodes: Node[], params: Record<string, string> } }} */
         const state = { best: { nodes: [], params: {} } };
-
-        const res = this.search(this.root, segments, 0, [], params, state,method);
-
+        const res = this.search(this.root, segments, 0, [], params, state, method);
         const matchedNodes = res.matched ? res.nodes : state.best.nodes;
         const finalParams = res.matched ? res.params : state.best.params;
-
-        // middleware dari semua node di jalur (partial atau full)
         for (const r of matchedNodes) {
             this.collectMiddleware(r, handlers, errorHandlers);
         }
-
-        // method handler HANYA kalau full match
         if (res.matched) {
             const leaf = matchedNodes[matchedNodes.length - 1];
             this.collectHandler(leaf, method, handlers);
         }
-
         return {
             matched: res.matched,
             params: finalParams,

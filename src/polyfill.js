@@ -1,5 +1,3 @@
-
-// Polyfill for Map.prototype.getOrInsert
 if (!Map.prototype.getOrInsert) {
     Map.prototype.getOrInsert = function (key, defaultValue) {
         if (!this.has(key)) {
@@ -8,7 +6,7 @@ if (!Map.prototype.getOrInsert) {
         return this.get(key);
     };
 }
-// Polyfill for Map.prototype.getOrInsertComputed
+
 if (!Map.prototype.getOrInsertComputed) {
     Map.prototype.getOrInsertComputed = function (key, callback) {
         if (typeof callback !== "function") {

@@ -58,7 +58,7 @@ describe("polyfill", () => {
 
         test("throws if callback not function", () => {
             const map = new Map();
-            expect(() => map.getOrInsertComputed("a", "not function")).toThrow('The callback argument must be a function');
+            expect(() => map.getOrInsertComputed("a", "not function")).toThrow("The callback argument must be a function");
         });
     });
 });

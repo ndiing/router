@@ -10,7 +10,7 @@ class Response extends http.ServerResponse {
         if (this.writableEnded) return;
         this.end(chunk, null, null);
     }
-    
+
     json(value) {
         if (!this.headersSent) {
             this.setHeader("Content-Type", "application/json; charset=utf-8");

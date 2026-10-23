@@ -17,20 +17,16 @@ class App extends Router {
             handleAbort = () => reject(req.controller.signal.reason);
             req.controller.signal.addEventListener("abort", handleAbort, { once: true });
         });
-
         const timeout = setTimeout(() => {
             res.statusCode = 504;
             req.controller.abort(new Error(http.STATUS_CODES[res.statusCode]));
         }, this.requestTimeout);
-
         const promise = handlerPromise().catch((error) => {
             if (!req.controller.signal.aborted) {
                 req.controller.abort(error);
             } else {
-                console.error(error); // swallow error?
             }
         });
-
         try {
             await Promise.race([promise, timeoutPromise]);
         } finally {
@@ -45,16 +41,13 @@ class App extends Router {
                 res.statusCode = 404;
                 err = new Error(http.STATUS_CODES[res.statusCode]);
             }
-
             if (res.statusCode < 400) {
                 res.statusCode = 500;
             }
-
             const error = { message: err.message };
             if (process.env.NODE_ENV === "development") {
                 error.stack = err.stack;
             }
-
             res.json({ error });
         }
     }
@@ -66,7 +59,6 @@ class App extends Router {
     async handle(req, res) {
         const { params, paramsLength, handlers, errorHandlers } = this.find(req.method, req.path);
         req.params = paramsLength ? Object.assign(Object.create(null), params) : EMPTY_PARAMS;
-
         let err;
         try {
             const handlerPromise = async () => {
@@ -75,7 +67,6 @@ class App extends Router {
                     await handler(req, res);
                 }
             };
-
             if (this.requestTimeout) {
                 await this.withTimeout(req, res, handlerPromise);
             } else {
@@ -83,7 +74,6 @@ class App extends Router {
             }
         } catch (error) {
             err = error;
-            
             try {
                 for (const handler of errorHandlers) {
                     if (res.writableEnded) break;
@@ -93,7 +83,6 @@ class App extends Router {
                 err = new Error(error.message, { cause: err });
             }
         }
-
         this.fallback(res, err);
     }
 
@@ -105,6 +94,6 @@ class App extends Router {
     }
 }
 
-App.SERVER_OPTIONS=SERVER_OPTIONS
+App.SERVER_OPTIONS = SERVER_OPTIONS;
 
 exports.App = App;

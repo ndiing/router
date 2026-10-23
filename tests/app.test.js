@@ -304,8 +304,6 @@ describe("App", () => {
     });
 
     describe("params freeze", () => {
-        
-
         test("non-empty params not frozen", async () => {
             const app = new App();
             app.get("/:id", (req, res) => {
@@ -412,4 +410,3 @@ test("handler throw before timeout aborts controller", async () => {
         await new Promise((resolve) => server.close(resolve));
     }
 });
-
