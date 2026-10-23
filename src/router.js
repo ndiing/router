@@ -149,17 +149,9 @@ class Router {
         }
     }
 
-    collectErrorHandler(r, errorHandlers) {
-        if (r.handlers.has("CATCH")) {
-            for (const entry of r.handlers.get("CATCH")) {
-                errorHandlers[entry.seq] = entry.handler;
-            }
-        }
-    }
-
     collectMiddleware(r, handlers, errorHandlers) {
         this.collectHandler(r, "ALL", handlers);
-        this.collectErrorHandler(r, errorHandlers);
+        this.collectHandler(r, "CATCH", errorHandlers);
     }
 
     find(method, path) {

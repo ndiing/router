@@ -22,6 +22,6 @@
         "@ndiinginc/test": "^1.17.0",
         "@types/jest": "^30.0.0",
         "@types/node": "^26.6.5",
-        "autocannon": "^8.0.0"
+        "autocannon": "^2.0.1"
     }
 }
