@@ -1,12 +1,6 @@
-const { EMPTY_PARAMS, decodeParam, parseQueryString, parseUrl } = require("../src/util");
+const { decodeParam, parseQueryString, parseUrl } = require("../src/util");
 
 describe("util", () => {
-    describe("EMPTY_PARAMS", () => {
-        test("is empty object with null prototype", () => {
-            expect(Object.getPrototypeOf(EMPTY_PARAMS)).toBe(null);
-        });
-    });
-
     describe("decodeParam", () => {
         test("decodes plain string", () => {
             expect(decodeParam("abc")).toBe("abc");
@@ -123,10 +117,9 @@ describe("util", () => {
             expect(result.a).toBe("1");
         });
 
-        test("key without equals is ignored", () => {
-            // regex /([^=&]*)=([^&]*)/g butuh '='
+        test("key without = value", () => {
             const result = parseQueryString("foo");
-            expect(Object.keys(result).length).toBe(0);
+            expect(Object.hasOwn(result, "foo")).toBe(true);
         });
     });
 

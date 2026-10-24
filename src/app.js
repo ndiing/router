@@ -1,5 +1,4 @@
 const http = require("http");
-const { EMPTY_PARAMS } = require("./util");
 const { Router } = require("./router");
 const { Request } = require("./request");
 const { Response } = require("./response");
@@ -67,7 +66,7 @@ class App extends Router {
      */
     async handle(req, res) {
         const { params, paramsLength, handlers, errorHandlers } = this.find(req.method, req.path);
-        req.params = paramsLength ? Object.assign(Object.create(null), params) : EMPTY_PARAMS;
+        req.params = paramsLength ? Object.assign(Object.create(null), params) : Object.create(null);
         let err;
         try {
             const handlerPromise = async () => {
