@@ -23,9 +23,6 @@ class Request extends http.IncomingMessage {
         return this._query;
     }
 
-    /**
-     * @returns {AbortController}
-     */
     get controller() {
         if (!this._controller) {
             this._controller = new AbortController();

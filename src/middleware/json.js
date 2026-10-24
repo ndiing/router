@@ -1,6 +1,20 @@
 const http = require("http");
+/**
+ * @typedef {Object} Options
+ * @property {Number} [limit=1.024e+5]
+ */
 
-function json({ limit = 100 * 1024 } = {}) {
+/**
+ * @callback Callback
+ * @param {import('../request')} req
+ * @param {import('../response')} res
+ */
+
+/**
+ * @param {Options} Options
+ * @returns {Callback}
+ */
+function json({ limit = 1.024e5 } = {}) {
     const reviver = (key, value) => {
         if (key === "__proto__" || key === "constructor" || key === "prototype") {
             return undefined;

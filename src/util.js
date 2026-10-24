@@ -1,6 +1,10 @@
 const EMPTY_PARAMS = Object.create(null);
 exports.EMPTY_PARAMS = EMPTY_PARAMS;
 
+/**
+ * @param {String} raw
+ * @returns {String}
+ */
 function decodeParam(raw) {
     try {
         return decodeURIComponent(raw);
@@ -10,6 +14,10 @@ function decodeParam(raw) {
 }
 exports.decodeParam = decodeParam;
 
+/**
+ * @param {String} raw
+ * @returns {String}
+ */
 function decodeQuery(raw) {
     const normalized = raw.replace(/\+/g, " ");
     try {
@@ -19,6 +27,10 @@ function decodeQuery(raw) {
     }
 }
 
+/**
+ * @param {String} queryString
+ * @returns {Object}
+ */
 function parseQueryString(queryString) {
     if (queryString === "") return Object.create(null);
     const regex = /([^=&]*)=([^&]*)/g;
@@ -38,6 +50,10 @@ function parseQueryString(queryString) {
 }
 exports.parseQueryString = parseQueryString;
 
+/**
+ * @param {String} url
+ * @returns {{path: any;queryString: any;}}
+ */
 function parseUrl(url) {
     if (!(url.includes("?") || url.includes("#"))) {
         return { path: url, queryString: "" };

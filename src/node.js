@@ -1,18 +1,30 @@
 class Node {
+    /**
+     * @param {String} segment
+     */
     constructor(segment = "") {
         this.segment = segment;
         if (segment.startsWith(":")) {
+            /**@type {String}*/
             this.name = segment.slice(1);
         }
-        /** @type {Map<string, Node>} static children */
+
+        /**@type {Map<string,Node>}*/
         this.children = new Map();
-        /** @type {Map<string, Node>} param children, key = ':name' */
+
+        /**@type {Map<string,Node>}*/
         this.params = new Map();
-        /** @type {Node | null} wildcard child */
+
+        /**@type {Node}*/
         this.wildcard = null;
+        /**@type {Map<string,Function[]>}*/
         this.handlers = new Map();
     }
 
+    /**
+     * @param {String} segment
+     * @returns {Node}
+     */
     add(segment) {
         if (segment === "*") {
             if (!this.wildcard) this.wildcard = new Node("*");
@@ -28,6 +40,10 @@ class Node {
         });
     }
 
+    /**
+     * @param {Node} node
+     * @param {Number} offset
+     */
     merge(node, offset) {
         for (const [method, entries] of node.handlers) {
             for (const entry of entries) {
@@ -48,6 +64,9 @@ class Node {
         }
     }
 
+    /**
+     * @returns {Number}
+     */
     getMaxSeq() {
         let max = -1;
         for (const [, entries] of this.handlers) {

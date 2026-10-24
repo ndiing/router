@@ -1,14 +1,21 @@
 /**
- * @typedef CORSOptions
- * @property {String|Array|Null} [origin="*"]
- * @property {Boolean} [credentials=false]
- * @property {String|Array} [headers]
- * @property {Number} [maxAge=0]
- * @property {String|Array} [methods]
+ * @typedef {Object} Options
+ * @property {string|array} origin
+ * @property {boolean} credentials
+ * @property {string|array} headers
+ * @property {Number} maxAge
+ * @property {string|array} methods
  */
 
 /**
- * @param {CORSOptions} options
+ * @callback Callback
+ * @param {import('../request')} req
+ * @param {import('../response')} res
+ */
+
+/**
+ * @param {Options} Options
+ * @returns {Callback}
  */
 function cors({ origin = "*", credentials = false, headers, maxAge = 0, methods } = {}) {
     if (Array.isArray(headers)) {

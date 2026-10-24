@@ -11,6 +11,11 @@ const SERVER_OPTIONS = {
 };
 
 class App extends Router {
+    /**
+     * @param {Request} req
+     * @param {Response} res
+     * @param {Promise} handlerPromise
+     */
     async withTimeout(req, res, handlerPromise) {
         let handleAbort;
         const timeoutPromise = new Promise((_, reject) => {
@@ -35,6 +40,10 @@ class App extends Router {
         }
     }
 
+    /**
+     * @param {Response} res
+     * @param {Error} err
+     */
     fallback(res, err) {
         if (!res.writableEnded) {
             if (!err) {
@@ -53,8 +62,8 @@ class App extends Router {
     }
 
     /**
-     * @param {import('http').IncomingMessage & import('./request').Request} req
-     * @param {import('http').ServerResponse & import('./response').Response} res
+     * @param {Request} req
+     * @param {Response} res
      */
     async handle(req, res) {
         const { params, paramsLength, handlers, errorHandlers } = this.find(req.method, req.path);
@@ -86,6 +95,10 @@ class App extends Router {
         this.fallback(res, err);
     }
 
+    /**
+     * @param  {import('net').ListenOptions} args
+     * @returns {import('http').Server}
+     */
     listen(...args) {
         const requestListener = (req, res) => this.handle(req, res);
         const server = http.createServer(SERVER_OPTIONS, requestListener);
