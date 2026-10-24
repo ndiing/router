@@ -420,3 +420,11 @@ test("PUT /users/me falls back to /users/:id", () => {
     res.handlers[0]();
     expect(calls).toEqual(["put id"]);
 });
+test("failed param branch does not leak params into wildcard match", () => {
+    const r = new Router();
+    r.get("/a/:x/b", () => {});
+    r.get("/*", () => {});
+    const res = r.find("GET", "/a/1/c");
+    expect(res.matched).toBe(true);
+    expect(res.params).toEqual({ wildcard: "a/1/c" });
+});

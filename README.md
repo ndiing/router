@@ -1,6 +1,6 @@
 # @ndiinginc/router
 
-Router HTTP kecil, cepat, dan **zero-dependency** untuk Node.js. Dibangun langsung di atas `node:http`, dengan routing berbasis tree, nested router, middleware async, error handler, timeout per request, serta middleware `json` dan `cors` bawaan.
+Router HTTP kecil, cepat, dan **zero-dependency** untuk Node.js. Dibangun langsung di atas `node:http`, dengan routing berbasis tree, nested router, middleware async, error handler, timeout per request, serta middleware `json`, `urlencoded`, dan `cors` bawaan.
 
 ## Fitur
 
@@ -13,7 +13,7 @@ Router HTTP kecil, cepat, dan **zero-dependency** untuk Node.js. Dibangun langsu
 - Timeout per request, dengan `req.controller` (`AbortController`) untuk pembatalan kooperatif
 - `req.path`, `req.query`, `req.params`, `req.body`
 - Helper `res.status()`, `res.send()`, dan `res.json()`
-- Middleware bawaan: `json()` (dengan limit dan proteksi prototype pollution) dan `cors()`
+- Middleware bawaan: `json()` (dengan limit dan proteksi prototype pollution), `urlencoded()`, dan `cors()`
 - Semua HTTP method, termasuk `QUERY`
 
 ## Instalasi
@@ -48,21 +48,26 @@ app.post("/users", (req, res) => {
 app.listen(3000);
 ```
 
-Yang diekspor adalah class `App`, dengan tiga properti tambahan:
+Yang diekspor adalah class `App`, dengan beberapa properti tambahan:
 
-| Export       | Keterangan                               |
-| ------------ | ---------------------------------------- |
-| `App`        | Router + HTTP server (`listen`)          |
+| Export | Keterangan |
+| --- | --- |
+| `App` | Router + HTTP server (`listen`) |
 | `App.Router` | Router tanpa server, untuk nested router |
-| `App.json`   | Middleware JSON body parser              |
-| `App.cors`   | Middleware CORS                          |
+| `App.json` | Middleware JSON body parser |
+| `App.urlencoded` | Middleware form body parser (`application/x-www-form-urlencoded`) |
+| `App.cors` | Middleware CORS |
 
 ## Routing
 
 Semua method mengembalikan `this`, jadi bisa di-chain.
 
 ```js
-app.get("/users", handler).post("/users", handler).put("/users/:id", handler).patch("/users/:id", handler).delete("/users/:id", handler);
+app.get("/users", handler)
+   .post("/users", handler)
+   .put("/users/:id", handler)
+   .patch("/users/:id", handler)
+   .delete("/users/:id", handler);
 ```
 
 Method yang tersedia: `get`, `post`, `put`, `patch`, `delete`, `head`, `options`, `trace`, `connect`, `query`, dan `use` (semua method).
@@ -232,12 +237,12 @@ app.get("/proxy", async (req, res) => {
 
 ## Request
 
-| Properti         | Keterangan                                                                                                  |
-| ---------------- | ----------------------------------------------------------------------------------------------------------- |
-| `req.path`       | Pathname tanpa query string                                                                                 |
-| `req.query`      | Object query string, di-parse secara lazy. Key yang berulang menjadi array, dan `+` di-decode menjadi spasi |
-| `req.params`     | Parameter dari route dinamis (sudah di-decode). Wildcard `*` ada di `req.params.wildcard`                   |
-| `req.body`       | Hasil parse body (butuh middleware `json()`)                                                                |
+| Properti | Keterangan |
+| --- | --- |
+| `req.path` | Pathname tanpa query string |
+| `req.query` | Object query string, di-parse secara lazy. Key yang berulang menjadi array, `+` di-decode menjadi spasi, dan key tanpa nilai (`?flag`) bernilai string kosong |
+| `req.params` | Parameter dari route dinamis (sudah di-decode). Wildcard `*` ada di `req.params.wildcard` |
+| `req.body` | Hasil parse body (butuh middleware `json()` atau `urlencoded()`) |
 | `req.controller` | `AbortController` untuk request ini. Di-abort saat timeout atau error handler (jika `requestTimeout` aktif) |
 
 ```js
@@ -253,11 +258,11 @@ app.get("/search", (req, res) => {
 
 ## Response
 
-| Method             | Keterangan                                                                 |
-| ------------------ | -------------------------------------------------------------------------- |
-| `res.status(code)` | Set status code, mengembalikan `res` sehingga bisa di-chain                |
-| `res.send(chunk)`  | Kirim response dan akhiri                                                  |
-| `res.json(value)`  | Set `Content-Type: application/json; charset=utf-8`, serialize, lalu kirim |
+| Method | Keterangan |
+| --- | --- |
+| `res.status(code)` | Set status code, mengembalikan `res` sehingga bisa di-chain |
+| `res.send(chunk)` | Kirim response dan akhiri |
+| `res.json(value)` | Set `Content-Type: application/json; charset=utf-8`, serialize, lalu kirim |
 
 ```js
 res.status(201).json({ created: true });
@@ -273,8 +278,8 @@ res.status(201).json({ created: true });
 app.use(App.json({ limit: 100 * 1024 })); // default 100 KB
 ```
 
-| Opsi    | Default  | Keterangan                      |
-| ------- | -------- | ------------------------------- |
+| Opsi | Default | Keterangan |
+| --- | --- | --- |
 | `limit` | `102400` | Ukuran body maksimum dalam byte |
 
 Perilaku:
@@ -284,6 +289,32 @@ Perilaku:
 - JSON tidak valid menghasilkan `400`, dengan error asli di `cause`
 - Body kosong menghasilkan `req.body = null`
 - Key `__proto__`, `constructor`, dan `prototype` dibuang untuk mencegah prototype pollution
+
+### `urlencoded([options])`
+
+```js
+app.use(App.urlencoded({ limit: 100 * 1024 })); // default 100 KB
+```
+
+| Opsi | Default | Keterangan |
+| --- | --- | --- |
+| `limit` | `102400` | Ukuran body maksimum dalam byte |
+
+Perilaku:
+
+- Hanya memproses method `POST`, `PUT`, `PATCH`, dan `QUERY` dengan `Content-Type: application/x-www-form-urlencoded`
+- Body melebihi `limit` menghasilkan `413` (dicek lewat `Content-Length` dan saat streaming)
+- Body kosong menghasilkan `req.body = null`
+- Hasilnya object tanpa prototype dengan aturan yang sama seperti `req.query`: key yang berulang menjadi array dan `+` menjadi spasi
+
+```js
+app.use(App.urlencoded());
+
+app.post("/login", (req, res) => {
+    // body: user=ndiing&tag=a&tag=b
+    res.json(req.body); // { user: "ndiing", tag: ["a", "b"] }
+});
+```
 
 ### `cors([options])`
 
@@ -299,13 +330,13 @@ app.use(
 );
 ```
 
-| Opsi          | Default | Keterangan                                                                                                    |
-| ------------- | ------- | ------------------------------------------------------------------------------------------------------------- |
-| `origin`      | `"*"`   | `"*"`, satu origin, atau array origin. `null` tidak mengirim header `Access-Control-Allow-Origin` sama sekali |
-| `credentials` | `false` | Mengirim `Access-Control-Allow-Credentials: true`                                                             |
-| `headers`     | -       | `"*"` atau array nama header (tidak membedakan huruf besar/kecil)                                             |
-| `methods`     | -       | `"*"` atau array nama method (tidak membedakan huruf besar/kecil)                                             |
-| `maxAge`      | `0`     | Lama cache preflight (detik). `0` berarti header tidak dikirim                                                |
+| Opsi | Default | Keterangan |
+| --- | --- | --- |
+| `origin` | `"*"` | `"*"`, satu origin, atau array origin. `null` tidak mengirim header `Access-Control-Allow-Origin` sama sekali |
+| `credentials` | `false` | Mengirim `Access-Control-Allow-Credentials: true` |
+| `headers` | - | `"*"` atau array nama header (tidak membedakan huruf besar/kecil) |
+| `methods` | - | `"*"` atau array nama method (tidak membedakan huruf besar/kecil) |
+| `maxAge` | `0` | Lama cache preflight (detik). `0` berarti header tidak dikirim |
 
 Perilaku:
 
@@ -325,9 +356,9 @@ Perilaku:
 const app = new App({ requestTimeout: 5000 });
 ```
 
-| Opsi             | Default | Keterangan                                                                    |
-| ---------------- | ------- | ----------------------------------------------------------------------------- |
-| `requestTimeout` | `0`     | Batas waktu handler dalam ms (khusus `App`). Lihat bagian [Timeout](#timeout) |
+| Opsi | Default | Keterangan |
+| --- | --- | --- |
+| `requestTimeout` | `0` | Batas waktu handler dalam ms (khusus `App`). Lihat bagian [Timeout](#timeout) |
 
 `Router` tidak memiliki opsi sendiri; `requestTimeout` hanya dipakai oleh `App`.
 
@@ -369,7 +400,10 @@ console.log(server.address().port);
 ```js
 const https = require("https");
 
-const server = https.createServer({ ...App.SERVER_OPTIONS, key, cert }, (req, res) => app.handle(req, res));
+const server = https.createServer(
+    { ...App.SERVER_OPTIONS, key, cert },
+    (req, res) => app.handle(req, res),
+);
 server.listen(443);
 ```
 
@@ -377,13 +411,20 @@ server.listen(443);
 
 Hello world dengan satu route `GET /`, diuji memakai `autocannon -c 100 -d 40 -p 10` di mesin lokal.
 
-|                       | Req/sec (avg) | Latency (avg) |
-| --------------------- | ------------- | ------------- |
-| Fastify               | 31.475        | 31,27 ms      |
-| **@ndiinginc/router** | 29.735        | 33,12 ms      |
-| Express               | 20.211        | 48,93 ms      |
+| | Req/sec (avg) | Latency (avg) |
+| --- | --- | --- |
+| Fastify | 31.475 | 31,27 ms |
+| **@ndiinginc/router** | 29.735 | 33,12 ms |
+| Express | 20.211 | 48,93 ms |
 
 Hasil bervariasi tergantung mesin, versi Node.js, dan jumlah route. Benchmark ini hanya menggambarkan overhead dasar, bukan performa aplikasi nyata.
+
+Skrip benchmark ada di `benchmark/`. Tiap framework dijalankan di proses terpisah, dan hasilnya adalah median dari beberapa run:
+
+```bash
+npm i -D autocannon express fastify
+node benchmark/run.js
+```
 
 ## Testing
 

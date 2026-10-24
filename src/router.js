@@ -194,20 +194,18 @@ class Router {
         }
         if (node.params.size) {
             for (const [, child] of node.params) {
-                const prev = params[child.name];
-                params[child.name] = decodeParam(segment);
-                const res = this.search(method, segments, child, path, params, state, index + 1);
+                const next = { ...params, [child.name]: decodeParam(segment) };
+                const res = this.search(method, segments, child, path, next, state, index + 1);
                 if (res.matched) return res;
-                if (prev === undefined) {
-                    const { [child.name]: _, ...rest } = params;
-                    params = rest;
-                } else params[child.name] = prev;
             }
         }
         if (node.wildcard && (node.wildcard.handlers.get(method) || node.wildcard.handlers.get("ALL"))) {
-            params["wildcard"] = segments.slice(index).map(decodeParam).join("/");
             path.push(node.wildcard);
-            return { path, params, matched: true };
+            return {
+                path,
+                params: { ...params, wildcard: segments.slice(index).map(decodeParam).join("/") },
+                matched: true,
+            };
         }
         if (path.length > state.path.length) {
             state.path = path.slice();
