@@ -189,32 +189,14 @@ class Router {
         }
         const segment = segments[index];
         if (node.children.has(segment)) {
-            const res = this.search(
-                //
-                method,
-                segments,
-                node.children.get(segment),
-                path,
-                params,
-                state,
-                index + 1,
-            );
+            const res = this.search(method, segments, node.children.get(segment), path, params, state, index + 1);
             if (res.matched) return res;
         }
         if (node.params.size) {
             for (const [, child] of node.params) {
                 const prev = params[child.name];
                 params[child.name] = decodeParam(segment);
-                const res = this.search(
-                    //
-                    method,
-                    segments,
-                    child,
-                    path,
-                    params,
-                    state,
-                    index + 1,
-                );
+                const res = this.search(method, segments, child, path, params, state, index + 1);
                 if (res.matched) return res;
                 if (prev === undefined) {
                     const { [child.name]: _, ...rest } = params;
@@ -223,8 +205,7 @@ class Router {
             }
         }
         if (node.wildcard && (node.wildcard.handlers.get(method) || node.wildcard.handlers.get("ALL"))) {
-            const rest = segments.slice(index).join("/");
-            params["wildcard"] = decodeParam(rest);
+            params["wildcard"] = segments.slice(index).map(decodeParam).join("/");
             path.push(node.wildcard);
             return { path, params, matched: true };
         }
@@ -265,12 +246,7 @@ class Router {
      * @returns {{matched: boolean;params: Object;paramsLength: number;handlers: any[];errorHandlers: any[];}}
      */
     find(method, path) {
-        const res = this.search(
-            //
-            method,
-            this.split(path),
-            this.root,
-        );
+        const res = this.search(method, this.split(path), this.root);
         const handlers = {};
         const errorHandlers = {};
         for (const r of res.path) {
