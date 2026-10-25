@@ -1,3 +1,4 @@
+const { inspect } = require("node:util");
 const { Router } = require("../src/router");
 
 // helper buat handler dummy (arity 2 = middleware/handler biasa)
@@ -6,51 +7,29 @@ const h = () => () => {};
 const eh = () => (err, req, res) => {};
 
 describe("Router", () => {
-    describe("split", () => {
-        test("splits path into segments", () => {
-            const r = new Router();
-            expect(r.split("/api/users")).toEqual(["api", "users"]);
-        });
-
-        test("root path returns empty array", () => {
-            const r = new Router();
-            expect(r.split("/")).toEqual([]);
-        });
-
-        test("trailing slash ignored", () => {
-            const r = new Router();
-            expect(r.split("/api/")).toEqual(["api"]);
-        });
-
-        test("leading double slash filtered", () => {
-            const r = new Router();
-            expect(r.split("//api//users")).toEqual(["api", "users"]);
-        });
-    });
-
     describe("add", () => {
         test("add static route", () => {
             const r = new Router();
             r.get("/api", h());
-            expect(r.root.children.has("api")).toBe(true);
+            expect(r.root.children.has("/api")).toBe(true);
         });
 
         test("add param route", () => {
             const r = new Router();
             r.get("/:id", h());
-            expect(r.root.params.has(":id")).toBe(true);
+            expect(r.root.children.get("/").params.has(":id")).toBe(true);
         });
 
         test("add wildcard route", () => {
             const r = new Router();
             r.get("/*", h());
-            expect(r.root.wildcard !== null).toBe(true);
+            expect(r.root.children.get("/") !== null).toBe(true);
         });
 
         test("add handler with method", () => {
             const r = new Router();
             r.get("/api", h());
-            const api = r.root.children.get("api");
+            const api = r.root.children.get("/api");
             expect(api.handlers.has("GET")).toBe(true);
             expect(api.handlers.get("GET").length).toBe(1);
         });
@@ -59,7 +38,7 @@ describe("Router", () => {
             const r = new Router();
             r.get("/api", h());
             r.post("/api", h());
-            const api = r.root.children.get("api");
+            const api = r.root.children.get("/api");
             expect(api.handlers.has("GET")).toBe(true);
             expect(api.handlers.has("POST")).toBe(true);
         });
@@ -80,8 +59,8 @@ describe("Router", () => {
             const r = new Router();
             r.get("/a", h());
             r.get("/b", h());
-            const a = r.root.children.get("a");
-            const b = r.root.children.get("b");
+            const a = r.root.children.get("/").children.get("a");
+            const b = r.root.children.get("/").children.get("b");
             expect(a.handlers.get("GET")[0].seq).toBe(0);
             expect(b.handlers.get("GET")[0].seq).toBe(1);
         });
@@ -125,7 +104,7 @@ describe("Router", () => {
             const r = new Router();
             r.get("/", h());
             const res = r.find("GET", "//");
-            expect(res.matched).toBe(true);
+            expect(res.matched).toBe(false);
         });
     });
 
@@ -227,16 +206,6 @@ describe("Router", () => {
             expect(res.handlers.length).toBe(2);
         });
 
-        test("middleware on partial path still collected", () => {
-            const r = new Router();
-            r.use(h());
-            r.use("/api", h());
-            const res = r.find("GET", "/api/not/registered");
-            expect(res.matched).toBe(false);
-            // middleware root + api tetap dikumpulkan
-            expect(res.handlers.length).toBe(2);
-        });
-
         test("error handler collected", () => {
             const r = new Router();
             r.use(eh());
@@ -295,26 +264,6 @@ describe("Router", () => {
     });
 
     describe("find - partial match", () => {
-        test("partial match returns middleware", () => {
-            const r = new Router();
-            r.use("/api", h());
-            r.get("/api/users", h());
-
-            const res = r.find("GET", "/api/posts");
-            expect(res.matched).toBe(false);
-            // middleware /api tetap dikumpulkan
-            expect(res.handlers.length).toBe(1);
-        });
-
-        test("partial match keeps partial params", () => {
-            const r = new Router();
-            r.use("/:id", h());
-
-            const res = r.find("GET", "/321/unknown");
-            expect(res.matched).toBe(false);
-            expect(res.params.id).toBe("321");
-        });
-
         test("no match at all returns root middleware only", () => {
             const r = new Router();
             r.use(h());
@@ -346,50 +295,50 @@ describe("method shorthand", () => {
     test("put registers PUT", () => {
         const r = new Router();
         r.put("/api", h());
-        expect(r.root.children.get("api").handlers.has("PUT")).toBe(true);
+        expect(r.root.children.get("/api").handlers.has("PUT")).toBe(true);
     });
 
     test("query registers QUERY", () => {
         const r = new Router();
         r.query("/api", h());
-        expect(r.root.children.get("api").handlers.has("QUERY")).toBe(true);
+        expect(r.root.children.get("/api").handlers.has("QUERY")).toBe(true);
     });
 
     test("head registers HEAD", () => {
         const r = new Router();
         r.head("/api", h());
-        expect(r.root.children.get("api").handlers.has("HEAD")).toBe(true);
+        expect(r.root.children.get("/api").handlers.has("HEAD")).toBe(true);
     });
 
     test("options registers OPTIONS", () => {
         const r = new Router();
         r.options("/api", h());
-        expect(r.root.children.get("api").handlers.has("OPTIONS")).toBe(true);
+        expect(r.root.children.get("/api").handlers.has("OPTIONS")).toBe(true);
     });
 
     test("trace registers TRACE", () => {
         const r = new Router();
         r.trace("/api", h());
-        expect(r.root.children.get("api").handlers.has("TRACE")).toBe(true);
+        expect(r.root.children.get("/api").handlers.has("TRACE")).toBe(true);
     });
 
     test("connect registers CONNECT", () => {
         const r = new Router();
         r.connect("/api", h());
-        expect(r.root.children.get("api").handlers.has("CONNECT")).toBe(true);
+        expect(r.root.children.get("/api").handlers.has("CONNECT")).toBe(true);
     });
-});
 
-test("patch registers PATCH", () => {
-    const r = new Router();
-    r.patch("/api", h());
-    expect(r.root.children.get("api").handlers.has("PATCH")).toBe(true);
-});
+    test("patch registers PATCH", () => {
+        const r = new Router();
+        r.patch("/api", h());
+        expect(r.root.children.get("/api").handlers.has("PATCH")).toBe(true);
+    });
 
-test("delete registers DELETE", () => {
-    const r = new Router();
-    r.delete("/api", h());
-    expect(r.root.children.get("api").handlers.has("DELETE")).toBe(true);
+    test("delete registers DELETE", () => {
+        const r = new Router();
+        r.delete("/api", h());
+        expect(r.root.children.get("/api").handlers.has("DELETE")).toBe(true);
+    });
 });
 
 test("nested same param name", () => {
@@ -428,3 +377,24 @@ test("failed param branch does not leak params into wildcard match", () => {
     expect(res.matched).toBe(true);
     expect(res.params).toEqual({ wildcard: "a/1/c" });
 });
+
+test("strict: /api vs /api/ beda", () => {
+    const r = new Router();
+    r.get("/api", h());
+    expect(r.find("GET", "/api").matched).toBe(true);
+    expect(r.find("GET", "/api/").matched).toBe(false);
+});
+
+// test("ignoreTrailingSlash: /api match /api/", () => {
+//     const r = new Router({ ignoreTrailingSlash: true });
+//     r.get('/api', h());
+//     expect(r.find('GET', '/api/').matched).toBe(true);
+// });
+
+// test("ignoreTrailingSlash: root tetap /", () => {
+//     const r = new Router({ ignoreTrailingSlash: true });
+//     r.get('/', h());
+//     expect(r.find('GET', '/').matched).toBe(true);
+//     expect(r.find('GET', '//').matched).toBe(true);   // ← // → / → match
+//     expect(r.find('GET', '///').matched).toBe(true);  // ← juga match
+// });

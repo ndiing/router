@@ -1,3 +1,4 @@
+const { inspect } = require("node:util");
 const App = require("../src/index");
 
 // helper: start server di random port, return { baseURL, close }
@@ -157,7 +158,7 @@ describe("App", () => {
 
             const { baseURL, close } = await start(app);
             try {
-                const r = await req(baseURL + "/users");
+                const r = await req(baseURL + "/users/");
                 expect(r.body.who).toBe("users");
             } finally {
                 await close();

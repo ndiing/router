@@ -41,10 +41,17 @@ class Node {
     }
 
     /**
+     * @param {String} segment
+     */
+    remove(segment) {
+        this.children.delete(segment);
+    }
+
+    /**
      * @param {Node} node
      * @param {Number} offset
      */
-    merge(node, offset) {
+    merge(node, offset = 0) {
         for (const [method, entries] of node.handlers) {
             for (const entry of entries) {
                 this.handlers.getOrInsert(method, []).push({

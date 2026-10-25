@@ -1,30 +1,49 @@
 # @ndiinginc/router
 
-Router HTTP kecil, cepat, dan **zero-dependency** untuk Node.js. Dibangun langsung di atas `node:http`, dengan routing berbasis tree, nested router, middleware async, error handler, timeout per request, serta middleware `json`, `urlencoded`, dan `cors` bawaan.
+A small, zero-dependency HTTP router for Node.js, built directly on `node:http`. Radix-trie routing, plain `(req, res)` handlers and no `next()`.
 
-## Fitur
+```js
+const App = require("@ndiinginc/router");
 
-- Zero dependency, murni `node:http`
-- Routing berbasis tree per segmen: static, lalu `:param`, lalu wildcard `*`, dengan backtracking
-- Parameter dinamis `:id` dan wildcard `*` yang menangkap sisa path
-- Nested router dengan `use(path, router)`
-- Middleware global dan per-path, mendukung `async`
-- Error handler dengan signature `(err, req, res)`
-- Timeout per request, dengan `req.controller` (`AbortController`) untuk pembatalan kooperatif
-- `req.path`, `req.query`, `req.params`, `req.body`
-- Helper `res.status()`, `res.send()`, dan `res.json()`
-- Middleware bawaan: `json()` (dengan limit dan proteksi prototype pollution), `urlencoded()`, dan `cors()`
-- Semua HTTP method, termasuk `QUERY`
+const app = new App();
+app.use(App.json());
 
-## Instalasi
+app.get("/users/:id", (req, res) => res.json({ id: req.params.id }));
+app.post("/users", (req, res) => res.status(201).json(req.body));
+
+app.listen(3000);
+```
+
+## Features
+
+- Zero dependencies
+- Radix-trie routing: static > `:param` > `*` wildcard, with backtracking
+- Familiar API: `app.get`, `app.use`, nested routers
+- Handlers and middleware are plain `(req, res)` functions. No `next()`, `async` is supported
+- Error handlers with the signature `(err, req, res)`
+- Per-request timeout (`504`) backed by an `AbortController`
+- Built-in `json()`, `urlencoded()` and `cors()` middleware
+- All HTTP methods, including `QUERY`
+
+## Design
+
+- **Radix trie.** Routes live in a compressed prefix tree, so a lookup follows the request path instead of walking a list of routes. Static segments are tried first, then `:param`, then `*`, and the router backtracks when a branch dead-ends.
+- **Registration order.** Every handler gets a sequence number when it is registered, and the handlers that apply to a request always run in that order, wherever they sit in the tree. Middleware, route handlers and mounted routers share one ordering.
+- **No `next()`.** A handler responds, throws, or simply returns, in which case the next one runs. The chain stops as soon as the response has ended.
+- **Errors are plain throws.** Throwing or rejecting skips to the error handlers `(err, req, res)`, then to a default JSON error response.
+- **Small surface.** `req` and `res` are Node's own classes with a few additions (`req.path`, `req.query`, `req.params`, `req.body`, `req.controller`, `res.status`, `res.send`, `res.json`). Everything else comes from middleware you add.
+
+It fits small HTTP services and gateways that want routing, body parsing and CORS without the weight of a full framework. If you need a large plugin ecosystem, schema validation or a lot of built-in helpers, this is not it.
+
+## Install
 
 ```bash
 npm install @ndiinginc/router
 ```
 
-Butuh Node.js 18.3 atau lebih baru.
+Requires Node.js 18.3 or newer (`res.appendHeader` is used by the CORS middleware).
 
-## Quick Start
+## Quick start
 
 ```js
 const App = require("@ndiinginc/router");
@@ -32,280 +51,212 @@ const App = require("@ndiinginc/router");
 const app = new App();
 
 app.use(App.json());
+app.use(App.cors());
 
-app.get("/", (req, res) => {
-    res.json({ hello: "world" });
-});
+app.get("/", (req, res) => res.json({ ok: true }));
+app.get("/users/:id", (req, res) => res.json({ id: req.params.id }));
+app.post("/users", (req, res) => res.status(201).json(req.body));
 
-app.get("/users/:id", (req, res) => {
-    res.json({ id: req.params.id });
-});
-
-app.post("/users", (req, res) => {
-    res.status(201).json({ received: req.body });
-});
-
-app.listen(3000);
+app.listen(3000, () => console.log("http://localhost:3000"));
 ```
 
-Yang diekspor adalah class `App`, dengan beberapa properti tambahan:
+`app.listen(...)` forwards its arguments to `server.listen(...)` and returns the `http.Server`, so the usual callback works.
 
-| Export | Keterangan |
-| --- | --- |
-| `App` | Router + HTTP server (`listen`) |
-| `App.Router` | Router tanpa server, untuk nested router |
-| `App.json` | Middleware JSON body parser |
-| `App.urlencoded` | Middleware form body parser (`application/x-www-form-urlencoded`) |
-| `App.cors` | Middleware CORS |
+## API
 
-## Routing
+### `new App(options?)`
 
-Semua method mengembalikan `this`, jadi bisa di-chain.
+| Option                | Type      | Default | Description                                                                                       |
+| --------------------- | --------- | ------- | ------------------------------------------------------------------------------------------------- |
+| `requestTimeout`      | `number`  | `0`     | Request timeout in ms. `0` disables it. Responds with `504` on timeout.                           |
+| `ignoreTrailingSlash` | `boolean` | `false` | When `true`, `/api` and `/api/` are the same route. By default the trailing slash is significant. |
 
 ```js
-app.get("/users", handler)
-   .post("/users", handler)
-   .put("/users/:id", handler)
-   .patch("/users/:id", handler)
-   .delete("/users/:id", handler);
+const app = new App({ requestTimeout: 5000, ignoreTrailingSlash: true });
 ```
 
-Method yang tersedia: `get`, `post`, `put`, `patch`, `delete`, `head`, `options`, `trace`, `connect`, `query`, dan `use` (semua method).
+`App` extends `Router`. Use `new App.Router()` for routers that are only mounted into another router.
 
-Satu route boleh punya beberapa handler:
+### Routing
 
 ```js
-app.get("/profile", authenticate, loadUser, (req, res) => {
-    res.json(req.user);
-});
+app.get(path, ...handlers)
+app.post(path, ...handlers)
+app.put(path, ...handlers)
+app.patch(path, ...handlers)
+app.delete(path, ...handlers)
+app.head(path, ...handlers)
+app.options(path, ...handlers)
+app.trace(path, ...handlers)
+app.connect(path, ...handlers)
+app.query(path, ...handlers)   // QUERY method (non-standard, useful for complex queries)
+app.use(path?, ...handlers)    // all methods
 ```
 
-### Parameter dinamis
+All of them return `app`, so calls can be chained. Route paths must start with `/`. Matching is case-sensitive, and `//` is not collapsed.
 
-Segmen yang diawali `:` adalah parameter. Nilainya otomatis di-decode dengan `decodeURIComponent`; jika formatnya tidak valid (misalnya `%`), nilai mentah dipakai apa adanya.
+**Path syntax:**
 
-```js
-app.get("/posts/:postId/comments/:commentId", (req, res) => {
-    const { postId, commentId } = req.params;
-    res.json({ postId, commentId });
-});
-```
+| Pattern  | Example      | Matches                                              |
+| -------- | ------------ | ---------------------------------------------------- |
+| Static   | `/api/users` | `/api/users`                                         |
+| Param    | `/users/:id` | `/users/123` gives `req.params.id = "123"`           |
+| Wildcard | `/files/*`   | `/files/a/b/c` gives `req.params.wildcard = "a/b/c"` |
 
-Satu segmen adalah satu parameter utuh; nama parameter tidak bisa digabung dengan teks lain dalam segmen yang sama (`:id.json` akan dianggap parameter bernama `id.json`).
+- A `:param` matches one whole segment (up to the next `/`) and must not be empty. The value is URL-decoded; malformed escapes such as `%` are kept as they are.
+- `*` captures the rest of the path. The value is **not** URL-decoded, and `/files/*` does not match `/files/` (nothing after the slash).
+- **Priority:** static > param > wildcard. If a branch fails further down, the router backtracks and tries the next one.
+- **Matching is method-aware.** If a static route has no handler for the request method, the router falls back to a param or wildcard route that has one. With `GET /users/me` and `PUT /users/:id`, a `PUT /users/me` is handled by `PUT /users/:id`.
 
-Beberapa parameter dengan nama berbeda boleh ada di level yang sama. Router mencoba semuanya sesuai urutan pendaftaran, dan memakai yang cocok sampai akhir path:
-
-```js
-app.get("/users/:id", handler);
-app.get("/users/:userId/posts", handler);
-// GET /users/5/posts -> req.params.userId === "5"
-```
-
-### Wildcard
-
-Segmen `*` menangkap **seluruh sisa path** (termasuk `/`) dan nilainya tersedia di `req.params.wildcard`.
+**Multiple params:**
 
 ```js
-app.get("/files/*", (req, res) => {
-    res.json({ file: req.params.wildcard });
-});
-
-// GET /files/images/logo.png -> { file: "images/logo.png" }
-```
-
-Wildcard butuh minimal satu segmen tersisa, jadi `/files/*` tidak cocok dengan `/files`.
-
-### Aturan matching
-
-- Di setiap level, router mencoba **static dulu, lalu parameter (sesuai urutan pendaftaran), lalu wildcard**. Jadi `/users/me` menang atas `/users/:id` bila keduanya terdaftar.
-- Jika sebuah cabang gagal di tengah jalan, router mundur (backtrack) dan mencoba cabang berikutnya.
-- Pemilihan cabang memperhatikan method. Jika route static tidak punya handler untuk method request, router mencoba cabang parameter atau wildcard. Contoh: dengan `GET /users/me` dan `PUT /users/:id`, request `PUT /users/me` ditangani oleh `PUT /users/:id`.
-- Trailing slash dan slash ganda diabaikan: `/users`, `/users/`, dan `//users` dianggap sama.
-
-## Middleware
-
-Middleware didaftarkan dengan `use()`. Semua handler (middleware dan route) dijalankan **berurutan sesuai urutan pendaftaran**.
-
-```js
-// Global
-app.use((req, res) => {
-    console.log(req.method, req.path);
-});
-
-// Scoped: jalan untuk /admin dan semua sub-path-nya
-app.use("/admin", async (req, res) => {
-    if (req.headers.authorization !== "secret") {
-        res.status(401).json({ error: "Unauthorized" });
-    }
+app.get("/users/:userId/posts/:postId", (req, res) => {
+    res.json(req.params); // { userId: "...", postId: "..." }
 });
 ```
 
-Chain berhenti otomatis begitu response selesai dikirim (`res.writableEnded`), jadi handler berikutnya tidak dipanggil.
+Params with different names may share a level, for example `/users/:id` and `/users/:userId/posts`.
 
-> Jika tidak ada route yang cocok sepenuhnya, middleware pada bagian path yang cocok paling dalam tetap dijalankan sebelum respons 404. Contohnya, middleware `/admin` tetap jalan untuk `/admin/tidak-ada`, begitu juga middleware global.
-
-## Nested Router
-
-Pecah aplikasi menjadi beberapa router, lalu pasang dengan `use(path, router)`. Nesting bisa berlapis.
+**Nested routers:**
 
 ```js
-const { Router } = App;
-
-const users = new Router();
-users.get("/", (req, res) => res.json({ list: [] }));
+const users = new App.Router();
 users.get("/:id", (req, res) => res.json({ id: req.params.id }));
 
-const admin = new Router();
-admin.use("/users", users);
-
-const app = new App();
-app.use("/admin", admin);
-
-// GET /admin/users      -> { list: [] }
-// GET /admin/users/42   -> { id: "42" }
+app.use("/users", users);
+// GET /users/42  ->  users "/:id"
 ```
 
-> Isi sub-router disalin saat `use()` dipanggil. Daftarkan semua route ke sub-router **sebelum** di-mount; route yang ditambahkan setelahnya tidak ikut. Sub-router yang sama boleh di-mount di beberapa path.
+The contents of a router are copied when it is mounted. Register every route on the router **before** calling `app.use(path, router)`; routes added afterwards are not picked up. The same router can be mounted at several paths.
 
-## Error Handling
+---
 
-Handler dengan **tiga argumen** `(err, req, res)` dikenali sebagai error handler. Dipanggil saat handler atau middleware melempar error (sync maupun async).
+### Middleware
 
-> Deteksi error handler memakai `handler.length === 3`. Jangan memakai default parameter atau rest parameter di signature handler, karena mengubah `length`.
+Middleware is a **2-arg** function `(req, res)`. There is **no `next()`**: handlers run in order, and the chain stops as soon as the response has ended.
 
-### Menentukan status code
+```js
+app.use((req, res) => {
+    req.startTime = Date.now();
+    // no next(): the chain continues automatically
+});
 
-Status code diambil dari `res.statusCode`. Set sebelum melempar error:
+app.get("/", (req, res) => {
+    res.json({ elapsed: Date.now() - req.startTime });
+});
+```
+
+**Order matters.** Handlers run in registration order, regardless of where they sit in the tree.
+
+```js
+app.use(auth); // 1st
+app.use("/api", logger); // 2nd
+app.get("/api/car", h); // 3rd
+// order: auth -> logger -> h
+```
+
+### Errors
+
+Throw (or reject) to hand control to the error handlers. An **error handler** is a 3-arg function `(err, req, res)`:
 
 ```js
 app.get("/admin", (req, res) => {
     res.status(403);
     throw new Error("Forbidden");
 });
-```
 
-Jika `res.statusCode` masih di bawah 400 saat error ditangani, hasilnya `500`. Properti `statusCode` pada objek error tidak dipakai.
-
-### Error handler sendiri
-
-Di error handler, `res.statusCode` masih bernilai awal (`200`) bila error dilempar tanpa mengatur status, jadi atur sendiri:
-
-```js
 app.use((err, req, res) => {
     const status = res.statusCode >= 400 ? res.statusCode : 500;
-    res.status(status).json({ error: { message: err.message } });
+    res.status(status).json({ error: err.message });
 });
 ```
 
-### Respons default
-
-Jika tidak ada handler yang mengirim response, router mengirim JSON otomatis:
+If no error handler responds, a default JSON response is sent:
 
 ```json
 { "error": { "message": "Not Found" } }
 ```
 
-- Tidak ada route cocok: `404 Not Found`
-- `res.statusCode` sudah `>= 400`: dipakai apa adanya
-- `res.statusCode` masih `< 400`: diganti `500`
-- Jika error handler sendiri melempar error, error baru dibuat dengan `cause` menunjuk error asli
-- Field `stack` hanya disertakan saat `NODE_ENV=development`
+- The status comes from `res.statusCode`. If it is still below 400 when an error is handled, it becomes `500`. A `statusCode` property on the error object is **not** used.
+- A request that matches no route gets `404`.
+- `stack` is only included when `NODE_ENV=development`.
+- If an error handler throws as well, the default response is sent for the new error (the original is kept in `cause`).
 
-## Timeout
+Handlers are recognised by arity (`handler.length === 3`), so do not use default or rest parameters in handler signatures.
 
-Aktifkan lewat opsi `requestTimeout` (milidetik) pada `App`. Jika seluruh chain handler melebihi waktu tersebut, `res.statusCode` diset `504` dan error `Gateway Timeout` dilempar ke error handler.
+---
 
-```js
-const app = new App({ requestTimeout: 5000 });
-```
+### Request
 
-- Tanpa opsi `requestTimeout` (atau bernilai `0`), tidak ada batas waktu
-- Handler yang sudah berjalan tidak dihentikan paksa. Setelah response dikirim, handler berikutnya di chain tidak dipanggil, dan error yang dilempar handler setelah timeout hanya dicatat lewat `console.error`
+| Property         | Type              | Description                                             |
+| ---------------- | ----------------- | ------------------------------------------------------- |
+| `req.method`     | `string`          | HTTP method                                             |
+| `req.url`        | `string`          | Raw URL (from Node)                                     |
+| `req.path`       | `string`          | Path only (query and hash stripped)                     |
+| `req.query`      | `object`          | Parsed query string (null prototype)                    |
+| `req.params`     | `object`          | Route params (null prototype)                           |
+| `req.body`       | `any`             | Parsed body (from the `json` / `urlencoded` middleware) |
+| `req.headers`    | `object`          | Request headers                                         |
+| `req.controller` | `AbortController` | Abort signal for timeouts and cancellation              |
 
-### `req.controller`
+`req.query` is parsed lazily with `URLSearchParams`: repeated keys become arrays, `+` becomes a space, and a key without a value (`?flag`) is an empty string.
 
-`req.controller` adalah `AbortController` milik request (dibuat saat pertama kali diakses). Saat `requestTimeout` aktif, `req.controller.signal` di-abort ketika timeout terjadi atau ketika salah satu handler melempar error; reason-nya adalah error terkait. Teruskan signal ke operasi yang mendukungnya agar pekerjaan ikut dibatalkan:
-
-```js
-app.get("/proxy", async (req, res) => {
-    const upstream = await fetch("https://example.com/api", {
-        signal: req.controller.signal,
-    });
-    res.json(await upstream.json());
-});
-```
-
-## Request
-
-| Properti | Keterangan |
-| --- | --- |
-| `req.path` | Pathname tanpa query string |
-| `req.query` | Object query string, di-parse secara lazy. Key yang berulang menjadi array, `+` di-decode menjadi spasi, dan key tanpa nilai (`?flag`) bernilai string kosong |
-| `req.params` | Parameter dari route dinamis (sudah di-decode). Wildcard `*` ada di `req.params.wildcard` |
-| `req.body` | Hasil parse body (butuh middleware `json()` atau `urlencoded()`) |
-| `req.controller` | `AbortController` untuk request ini. Di-abort saat timeout atau error handler (jika `requestTimeout` aktif) |
+`req.query` and `req.params` have a **null prototype**, which protects against prototype pollution:
 
 ```js
-// GET /search?tag=a&tag=b&page=2
-app.get("/search", (req, res) => {
-    res.json(req.query); // { tag: ["a", "b"], page: "2" }
-});
+// GET /search?__proto__=x
+req.query
+    .__proto__ // "x" (a plain own property)
+    ({}).__proto__; // unchanged
 ```
 
-`req.query` dan `req.params` memakai object tanpa prototype, jadi gunakan `Object.hasOwn(req.query, "key")` atau `"key" in req.query`, bukan `req.query.hasOwnProperty(...)`.
+Because of that, use `Object.hasOwn(req.query, "key")` or `"key" in req.query` instead of `req.query.hasOwnProperty(...)`.
 
-`Request` adalah turunan `http.IncomingMessage`, jadi `req.headers`, `req.method`, dan lainnya tetap tersedia.
+### Response
 
-## Response
-
-| Method | Keterangan |
-| --- | --- |
-| `res.status(code)` | Set status code, mengembalikan `res` sehingga bisa di-chain |
-| `res.send(chunk)` | Kirim response dan akhiri |
-| `res.json(value)` | Set `Content-Type: application/json; charset=utf-8`, serialize, lalu kirim |
+| Method                          | Description                                                    |
+| ------------------------------- | -------------------------------------------------------------- |
+| `res.status(code)`              | Set the status code, chainable                                 |
+| `res.send(chunk)`               | Send a raw string or buffer                                    |
+| `res.json(value)`               | Send JSON with `Content-Type: application/json; charset=utf-8` |
+| `res.setHeader(name, value)`    | Set a header (from Node)                                       |
+| `res.appendHeader(name, value)` | Append a header (from Node 18.3)                               |
+| `res.end()`                     | End the response (from Node)                                   |
 
 ```js
 res.status(201).json({ created: true });
+res.send("hello");
 ```
 
-`res.send()` dan `res.json()` tidak melakukan apa-apa jika response sudah selesai dikirim. `Response` adalah turunan `http.ServerResponse`, jadi `res.statusCode`, `res.setHeader()`, dan lainnya tetap tersedia.
+`res.send()` and `res.json()` do nothing if the response has already ended.
 
-## Middleware Bawaan
+---
 
-### `json([options])`
+### Built-in middleware
+
+#### `App.json(options?)`
+
+Parses JSON bodies. Only runs on `POST`, `PUT`, `PATCH` and `QUERY` requests with a JSON `Content-Type`.
+
+| Option  | Type     | Default           | Description            |
+| ------- | -------- | ----------------- | ---------------------- |
+| `limit` | `number` | `102400` (100 KB) | Max body size in bytes |
 
 ```js
-app.use(App.json({ limit: 100 * 1024 })); // default 100 KB
+app.use(App.json({ limit: 1024 * 1024 })); // 1 MB
 ```
 
-| Opsi | Default | Keterangan |
-| --- | --- | --- |
-| `limit` | `102400` | Ukuran body maksimum dalam byte |
+- **Prototype pollution guard:** `__proto__`, `constructor` and `prototype` keys are removed.
+- **Size limit:** `Content-Length` is checked up front and the size is checked again while streaming. Too large gives `413`.
+- **Empty body:** `req.body = null`.
+- **Invalid JSON:** `400`, with the parse error in `cause`.
 
-Perilaku:
+#### `App.urlencoded(options?)`
 
-- Hanya memproses method `POST`, `PUT`, `PATCH`, dan `QUERY` dengan `Content-Type: application/json`
-- Body melebihi `limit` menghasilkan `413` (dicek lewat `Content-Length` dan saat streaming)
-- JSON tidak valid menghasilkan `400`, dengan error asli di `cause`
-- Body kosong menghasilkan `req.body = null`
-- Key `__proto__`, `constructor`, dan `prototype` dibuang untuk mencegah prototype pollution
+Parses `application/x-www-form-urlencoded` bodies. Same methods, `limit` option, `413` behaviour and empty-body handling as `App.json`.
 
-### `urlencoded([options])`
-
-```js
-app.use(App.urlencoded({ limit: 100 * 1024 })); // default 100 KB
-```
-
-| Opsi | Default | Keterangan |
-| --- | --- | --- |
-| `limit` | `102400` | Ukuran body maksimum dalam byte |
-
-Perilaku:
-
-- Hanya memproses method `POST`, `PUT`, `PATCH`, dan `QUERY` dengan `Content-Type: application/x-www-form-urlencoded`
-- Body melebihi `limit` menghasilkan `413` (dicek lewat `Content-Length` dan saat streaming)
-- Body kosong menghasilkan `req.body = null`
-- Hasilnya object tanpa prototype dengan aturan yang sama seperti `req.query`: key yang berulang menjadi array dan `+` menjadi spasi
+The result follows the same rules as `req.query`: a null-prototype object, repeated keys become arrays, `+` becomes a space.
 
 ```js
 app.use(App.urlencoded());
@@ -316,110 +267,147 @@ app.post("/login", (req, res) => {
 });
 ```
 
-### `cors([options])`
+#### `App.cors(options?)`
+
+CORS middleware with preflight support.
+
+| Option        | Type                         | Default | Description                                                          |
+| ------------- | ---------------------------- | ------- | -------------------------------------------------------------------- |
+| `origin`      | `string \| string[] \| null` | `"*"`   | Allowed origin(s). `null` never sends `Access-Control-Allow-Origin`. |
+| `credentials` | `boolean`                    | `false` | Allow credentials (cookies, auth headers)                            |
+| `headers`     | `string \| string[]`         | none    | Allowed request headers (preflight) and exposed response headers     |
+| `methods`     | `string \| string[]`         | none    | Allowed methods                                                      |
+| `maxAge`      | `number`                     | `0`     | Preflight cache time in seconds. `0` omits the header.               |
 
 ```js
 app.use(
     App.cors({
-        origin: ["https://example.com", "https://app.example.com"],
+        origin: ["https://app.example.com", "https://admin.example.com"],
         credentials: true,
+        headers: ["content-type", "authorization"],
         methods: ["GET", "POST", "PUT", "DELETE"],
-        headers: ["Content-Type", "Authorization"],
-        maxAge: 600,
+        maxAge: 3600,
     }),
 );
 ```
 
-| Opsi | Default | Keterangan |
-| --- | --- | --- |
-| `origin` | `"*"` | `"*"`, satu origin, atau array origin. `null` tidak mengirim header `Access-Control-Allow-Origin` sama sekali |
-| `credentials` | `false` | Mengirim `Access-Control-Allow-Credentials: true` |
-| `headers` | - | `"*"` atau array nama header (tidak membedakan huruf besar/kecil) |
-| `methods` | - | `"*"` atau array nama method (tidak membedakan huruf besar/kecil) |
-| `maxAge` | `0` | Lama cache preflight (detik). `0` berarti header tidak dikirim |
+- A **preflight** is an `OPTIONS` request with an `Access-Control-Request-Method` header. It is answered with `204` and the chain stops. Other `OPTIONS` requests continue to the next handler.
+- Origins are compared **exactly** (case-sensitive) with the request's `Origin` header. A match is echoed back.
+- With an array, `Access-Control-Allow-Headers` is only sent if **every** requested header is allowed, and `Access-Control-Allow-Methods` only if the requested method is allowed.
+- Without `headers` / `methods`, the values requested in the preflight are echoed back.
+- `headers` (as an array or `"*"`) is also sent as `Access-Control-Expose-Headers` on non-preflight requests.
 
-Perilaku:
+**Security notes:**
 
-- **Preflight** adalah request `OPTIONS` dengan header `Access-Control-Request-Method`. Preflight dijawab langsung dengan `204` dan chain berhenti. `OPTIONS` biasa diteruskan ke handler berikutnya
-- Origin dicocokkan **persis sama** (case-sensitive) dengan header `Origin` dari request. Jika cocok, origin tersebut dipantulkan dan header `Vary: Origin` ditambahkan
-- `Access-Control-Allow-Headers`: jika `headers` berupa array, header hanya dikirim bila **semua** header yang diminta ada di daftar
-- `Access-Control-Allow-Methods`: jika `methods` berupa array, header hanya dikirim bila method yang diminta ada di daftar
-- Jika `headers` atau `methods` tidak diisi, nilai yang diminta di preflight dipantulkan apa adanya
-- `"*"` untuk `headers` dan `methods` hanya dikirim sebagai `*` bila `credentials: false`. Dengan `credentials: true`, nilainya diperlakukan seperti tidak diisi (dipantulkan)
-- Pada request non-preflight, `headers` (jika array atau `"*"`) dikirim sebagai `Access-Control-Expose-Headers`
+- `origin: "*"` together with `credentials: true` echoes whichever origin sent the request. That is what the CORS spec requires (a literal `*` is invalid with credentials), but it allows **every** site to make credentialed requests. Use it for development only and list explicit origins in production.
+- `headers: "*"` or `methods: "*"` together with `credentials: true` does not send `*`; the requested values are echoed instead.
+- `Vary: Origin` is added only when the origin is echoed (not for a plain `*`).
 
-> `origin: "*"` bersama `credentials: true` memantulkan **semua** origin dengan credentials. Pakai hanya untuk development; di production sebutkan origin secara eksplisit.
+---
 
-## Opsi
+### Timeout
 
 ```js
 const app = new App({ requestTimeout: 5000 });
+
+app.get("/slow", async (req, res) => {
+    await new Promise((resolve, reject) => {
+        const t = setTimeout(resolve, 10000);
+        req.controller.signal.addEventListener(
+            "abort",
+            () => {
+                clearTimeout(t);
+                reject(req.controller.signal.reason);
+            },
+            { once: true },
+        );
+    });
+    res.json({ done: true });
+});
+// GET /slow  ->  504 Gateway Timeout after 5s
 ```
 
-| Opsi | Default | Keterangan |
-| --- | --- | --- |
-| `requestTimeout` | `0` | Batas waktu handler dalam ms (khusus `App`). Lihat bagian [Timeout](#timeout) |
+When the timeout fires, the status is set to `504` and the request fails with a `Gateway Timeout` error, which goes through your error handlers like any other error.
 
-`Router` tidak memiliki opsi sendiri; `requestTimeout` hanya dipakai oleh `App`.
+Handlers are **not** forcibly stopped. A handler keeps running unless it listens to `req.controller.signal` (or passes it to something that does, such as `fetch(url, { signal })`). Once the response has ended, the rest of the chain is skipped.
 
-## API
+`req.controller` is also aborted if a handler throws, with the error as the reason.
 
-### `new App([options])` / `new Router([options])`
+---
 
-Membuat instance baru. `App` adalah `Router` ditambah `listen()` dan dukungan `requestTimeout`.
+### Using your own server
 
-### `router.use([path], ...handlers | router)`
-
-Mendaftarkan middleware, error handler, atau nested router untuk semua method.
-
-### `router.<method>([path], ...handlers)`
-
-Mendaftarkan handler untuk method tertentu. `path` opsional; jika dihilangkan, handler dipasang di root.
-
-### `router.find(method, path)`
-
-Mencari route tanpa menjalankannya. Berguna untuk testing.
+`App.SERVER_OPTIONS` holds the `IncomingMessage` / `ServerResponse` classes this router needs. Pass it to your own server and call `app.handle(req, res)`:
 
 ```js
-const { matched, params, paramsLength, handlers, errorHandlers } = app.find("GET", "/users/1");
-```
+const https = require("node:https");
 
-### `app.listen(...args)`
-
-Membuat `http.Server` dengan `Request` dan `Response` milik router, lalu memanggil `server.listen(...args)`. Mengembalikan instance `http.Server`.
-
-```js
-const server = app.listen(0); // port acak
-console.log(server.address().port);
-```
-
-### Server sendiri
-
-`App.SERVER_OPTIONS` berisi opsi `IncomingMessage` dan `ServerResponse` yang dipakai `listen()`. Jika ingin membuat server sendiri (misalnya HTTPS), sertakan opsi itu dan panggil `app.handle(req, res)`:
-
-```js
-const https = require("https");
-
-const server = https.createServer(
-    { ...App.SERVER_OPTIONS, key, cert },
-    (req, res) => app.handle(req, res),
-);
+const server = https.createServer({ ...App.SERVER_OPTIONS, key, cert }, (req, res) => app.handle(req, res));
 server.listen(443);
 ```
 
+## Porting from Express
+
+```js
+// Express
+const express = require("express");
+const app = express();
+app.use(express.json());
+app.get("/", (req, res) => res.json({ ok: true }));
+app.use((err, req, res, next) => res.status(500).json({}));
+
+// This router
+const App = require("@ndiinginc/router");
+const app = new App();
+app.use(App.json());
+app.get("/", (req, res) => res.json({ ok: true }));
+app.use((err, req, res) => res.status(500).json({}));
+```
+
+**Key differences:**
+
+- Middleware is **2-arg** (no `next`). Error handlers are **3-arg** (no `next`).
+- `express.json()` becomes `App.json()`, `express.urlencoded()` becomes `App.urlencoded()`, `cors()` becomes `App.cors()`.
+- Trailing slashes are significant unless you set `ignoreTrailingSlash`.
+- Errors take their status from `res.statusCode`, not from `err.statusCode`.
+
+**Using Express-style middleware.** Middleware that calls `next()` can be wrapped in a small adapter:
+
+```js
+const wrap = (middleware) => (req, res) =>
+    new Promise((resolve, reject) => {
+        res.once("close", resolve); // the middleware answered by itself
+        middleware(req, res, (err) => (err ? reject(err) : resolve()));
+    });
+
+app.use(wrap(require("helmet")()));
+```
+
+This only covers the `next()` contract. Middleware that relies on Express-only extensions (`req.app`, `res.locals`, `res.redirect()` and similar) will still not work.
+
+## Limitations
+
+- **No `next()`.** Middleware must respond or throw (or be wrapped, see above).
+- **No route removal.** Routes are registered once at startup.
+- **No convenience helpers** such as `res.redirect()`, `res.cookie()`, `res.sendFile()`, `req.ip` or `req.get()`. Use the Node equivalents: `res.status(302).setHeader("Location", url).end()`, `res.setHeader("Set-Cookie", ...)`, `req.socket.remoteAddress`, `req.headers`.
+- **No static file serving, compression or cookie parsing.** Use a reverse proxy (nginx, Caddy) or add your own middleware.
+
+These are deliberate omissions: the core stays small and features come from middleware.
+
 ## Benchmark
 
-Hello world dengan satu route `GET /`, diuji memakai `autocannon -c 100 -d 40 -p 10` di mesin lokal.
+Environment: Windows, one machine (the load generator and the server share the CPU), `autocannon -c 100 -p 10 -d 40`, a single route `GET /` that returns `{ "hello": "world" }`.
 
-| | Req/sec (avg) | Latency (avg) |
-| --- | --- | --- |
-| Fastify | 31.475 | 31,27 ms |
-| **@ndiinginc/router** | 29.735 | 33,12 ms |
-| Express | 20.211 | 48,93 ms |
+| Framework         | Req/s (avg) | Latency p50 | Latency p99 |
+| ----------------- | ----------- | ----------- | ----------- |
+| Fastify           | 55,802      | 14 ms       | 95 ms       |
+| node:http         | 50,628      | 16 ms       | 105 ms      |
+| @ndiinginc/router | 48,150      | 17 ms       | 121 ms      |
+| Express           | 28,652      | 30 ms       | 195 ms      |
 
-Hasil bervariasi tergantung mesin, versi Node.js, dan jumlah route. Benchmark ini hanya menggambarkan overhead dasar, bukan performa aplikasi nyata.
+A single-route hello world measures per-request overhead, not routing at scale, and the numbers move with hardware, Node.js version and load.
 
-Skrip benchmark ada di `benchmark/`. Tiap framework dijalankan di proses terpisah, dan hasilnya adalah median dari beberapa run:
+To reproduce (each framework runs in its own process, results are the median of several runs, and a run is rejected if a response is not the expected one):
 
 ```bash
 npm i -D autocannon express fastify
@@ -432,6 +420,14 @@ node benchmark/run.js
 npm test
 ```
 
-## Lisensi
+**205 tests, 100% line coverage, 96% branch coverage.**
+
+## License
 
 MIT
+
+## Credits
+
+Built from scratch as a learning project: the radix trie, middleware chain, sub-routers, timeout handling, CORS and body parsers are all custom.
+
+Inspired by Express (API), Fastify (performance mindset) and `find-my-way` (radix-trie routing).

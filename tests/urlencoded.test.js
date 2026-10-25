@@ -19,14 +19,18 @@ function createRes() {
         statusCode: 200,
         headers: {},
         writableEnded: false,
-        setHeader(k, v) { this.headers[k] = v; },
-        end() { this.writableEnded = true; },
+        setHeader(k, v) {
+            this.headers[k] = v;
+        },
+        end() {
+            this.writableEnded = true;
+        },
     };
     return res;
 }
 
-function toNativeObject(obj){
-    return JSON.parse(JSON.stringify(obj))
+function toNativeObject(obj) {
+    return JSON.parse(JSON.stringify(obj));
 }
 
 describe("urlencoded middleware", () => {
