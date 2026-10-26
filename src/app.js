@@ -2,12 +2,9 @@ const http = require("http");
 const { Router } = require("./router");
 const { Request } = require("./request");
 const { Response } = require("./response");
-
-/**@type {import('http').ServerOptions}*/
-const SERVER_OPTIONS = {
-    IncomingMessage: Request,
-    ServerResponse: Response,
-};
+const { json } = require("./middleware/json");
+const { cors } = require("./middleware/cors");
+const { urlencoded } = require("./middleware/urlencoded");
 
 class App extends Router {
     /**
@@ -28,7 +25,6 @@ class App extends Router {
         const promise = handlerPromise().catch((error) => {
             if (!req.controller.signal.aborted) {
                 req.controller.abort(error);
-            } else {
             }
         });
         try {
@@ -40,10 +36,10 @@ class App extends Router {
     }
 
     /**
-     * @param {Response} res
      * @param {Error} err
+     * @param {Response} res
      */
-    fallback(res, err) {
+    fallback(err, res) {
         if (!res.writableEnded) {
             if (!err) {
                 res.statusCode = 404;
@@ -65,12 +61,12 @@ class App extends Router {
      * @param {Response} res
      */
     async handle(req, res) {
-        const { params, paramsLength, handlers, errorHandlers } = this.find(req.method, req.path);
-        req.params = paramsLength ? Object.assign(Object.create(null), params) : Object.create(null);
+        const { params, handlers, errorHandlers } = this.find(req.method, req.path);
+        req.params = this.decodeParams(params);
         let err;
         try {
             const handlerPromise = async () => {
-                for (const handler of handlers) {
+                for (const handler of Object.values(handlers)) {
                     if (res.writableEnded) break;
                     await handler(req, res);
                 }
@@ -83,7 +79,7 @@ class App extends Router {
         } catch (error) {
             err = error;
             try {
-                for (const handler of errorHandlers) {
+                for (const handler of Object.values(errorHandlers)) {
                     if (res.writableEnded) break;
                     await handler(err, req, res);
                 }
@@ -91,7 +87,7 @@ class App extends Router {
                 err = new Error(error.message, { cause: err });
             }
         }
-        this.fallback(res, err);
+        this.fallback(err, res);
     }
 
     /**
@@ -99,13 +95,21 @@ class App extends Router {
      * @returns {import('http').Server}
      */
     listen(...args) {
-        const requestListener = (req, res) => this.handle(req, res);
-        const server = http.createServer(SERVER_OPTIONS, requestListener);
+        const server = http.createServer(
+            {
+                IncomingMessage: Request,
+                ServerResponse: Response,
+            },
+            (req, res) => this.handle(req, res),
+        );
         server.listen(...args);
         return server;
     }
 }
 
-App.SERVER_OPTIONS = SERVER_OPTIONS;
+App.Router = Router;
+App.json = json;
+App.cors = cors;
+App.urlencoded = urlencoded;
 
 exports.App = App;

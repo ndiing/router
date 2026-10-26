@@ -8,13 +8,10 @@ class Node {
             /**@type {String}*/
             this.name = segment.slice(1);
         }
-
         /**@type {Map<string,Node>}*/
         this.children = new Map();
-
         /**@type {Map<string,Node>}*/
         this.params = new Map();
-
         /**@type {Node}*/
         this.wildcard = null;
         /**@type {Map<string,Function[]>}*/
@@ -31,13 +28,9 @@ class Node {
             return this.wildcard;
         }
         if (segment.startsWith(":")) {
-            return this.params.getOrInsertComputed(segment, (segment) => {
-                return new Node(segment);
-            });
+            return this.params.getOrInsertComputed(segment, (segment) => new Node(segment));
         }
-        return this.children.getOrInsertComputed(segment, (segment) => {
-            return new Node(segment);
-        });
+        return this.children.getOrInsertComputed(segment, (segment) => new Node(segment));
     }
 
     /**

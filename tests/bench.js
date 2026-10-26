@@ -1,40 +1,35 @@
-
-const { Router } = require("../src/index");
-
-const router = new Router();
-router.get("/", (req, res) => res.json({}));
-
-const res = router.search("GET", "/");
+const App = require("../src/index");
 
 function bench(title, callback) {
-    for (let i = 0; i < 10_000; i++) callback();
-
+    console.log(title);
+    for (let index = 0; index < 1_000; index++) {
+        callback();
+    }
     const start = performance.now();
-
-    for (let i = 0; i < 1_000_000; i++) callback();
-
-    console.log(
-        title,
-        ((performance.now() - start) / 1000).toFixed(3) + "s"
-    );
+    for (let index = 0; index < 1_000_000; index++) {
+        callback();
+    }
+    const end = performance.now();
+    const duration = (end - start) / 1000;
+    console.log(duration.toFixed(3) + "s");
 }
 
-// bench("search", () => {
-//     router.search("GET", "/");
-// });
+const blogs = new App();
+blogs.get("/", (req, res) => res.json());
+blogs.get("/:id", (req, res) => res.json());
 
-// bench("find", () => {
-//     router.find("GET", "/");
-// });
+const app = new App();
+app.use('/blogs',blogs)
+app.get("/", (req, res) => res.json());
+app.get("/:id", (req, res) => res.json());
 
-// bench("object values", () => {
-//     const handlers = {};
-//     handlers[0] = () => {};
-//     Object.values(handlers);
-// });
-
-// bench("array allocation", () => {
-//     const handlers = [];
-//     handlers.push(() => {});
-// });
-
+bench("search", () => {
+    // app.search('GET','/')
+    // app.search("GET", "/321");
+    app.search("GET", "/blogs/321");
+});
+bench("find", () => {
+    // app.find('GET','/')
+    // app.search("GET", "/321");
+    app.search("GET", "/blogs/321");
+});

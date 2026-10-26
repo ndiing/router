@@ -21,6 +21,7 @@ function cors({ origin = "*", credentials = false, headers, maxAge = 0, methods 
     if (Array.isArray(headers)) {
         headers = headers.map((h) => h.toLowerCase());
     }
+
     if (Array.isArray(methods)) {
         methods = methods.map((m) => m.toUpperCase());
     }
