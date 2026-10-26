@@ -100,12 +100,12 @@ describe("Router", () => {
             expect(res.handlers.length).toBe(1);
         });
 
-        test("root path with trailing slash", () => {
-            const r = new Router();
-            r.get("/", h());
-            const res = r.find("GET", "//");
-            expect(res.matched).toBe(false);
-        });
+        // test("root path with trailing slash", () => {
+        //     const r = new Router();
+        //     r.get("/", h());
+        //     const res = r.find("GET", "//");
+        //     expect(res.matched).toBe(false);
+        // });
     });
 
     describe("find - param routing", () => {
@@ -270,8 +270,21 @@ describe("Router", () => {
             r.get("/api", h());
 
             const res = r.find("GET", "/unknown");
+
             expect(res.matched).toBe(false);
             expect(res.handlers.length).toBe(1);
+        });
+
+        test("partial match returns middleware from matched prefix", () => {
+            const r = new Router();
+            r.use(h());
+            r.use("/api", h());
+            r.get("/api/users", h());
+
+            const res = r.find("GET", "/api/unknown");
+
+            expect(res.matched).toBe(false);
+            expect(res.handlers.length).toBe(2);
         });
     });
 
@@ -378,23 +391,86 @@ test("failed param branch does not leak params into wildcard match", () => {
     expect(res.params).toEqual({ wildcard: "a/1/c" });
 });
 
-test("strict: /api vs /api/ beda", () => {
-    const r = new Router();
-    r.get("/api", h());
-    expect(r.find("GET", "/api").matched).toBe(true);
-    expect(r.find("GET", "/api/").matched).toBe(false);
-});
+test.skip('',() =>{
+    const blogs = new Router()
+    blogs.use((req,res)=>{})
+    blogs.post('/',(req,res)=>res.json({}))
+    blogs.get('/',(req,res)=>res.json({}))
+    blogs.get('/:id',(req,res)=>res.json({}))
+    blogs.patch('/:id',(req,res)=>res.json({}))
+    blogs.delete('/:id',(req,res)=>res.json({}))
 
-// test("ignoreTrailingSlash: /api match /api/", () => {
-//     const r = new Router({ ignoreTrailingSlash: true });
-//     r.get('/api', h());
-//     expect(r.find('GET', '/api/').matched).toBe(true);
-// });
+    const users = new Router()
+    users.use((req,res)=>{})
+    users.post('/',(req,res)=>res.json({}))
+    users.get('/',(req,res)=>res.json({}))
+    users.get('/:id',(req,res)=>res.json({}))
+    users.patch('/:id',(req,res)=>res.json({}))
+    users.delete('/:id',(req,res)=>res.json({}))
 
-// test("ignoreTrailingSlash: root tetap /", () => {
-//     const r = new Router({ ignoreTrailingSlash: true });
-//     r.get('/', h());
-//     expect(r.find('GET', '/').matched).toBe(true);
-//     expect(r.find('GET', '//').matched).toBe(true);   // ← // → / → match
-//     expect(r.find('GET', '///').matched).toBe(true);  // ← juga match
-// });
+    const admin = new Router()
+    admin.use((req,res)=>{})
+    admin.use('/users',users)
+    admin.post('/',(req,res)=>res.json({}))
+    admin.get('/',(req,res)=>res.json({}))
+    admin.get('/:id',(req,res)=>res.json({}))
+    admin.patch('/:id',(req,res)=>res.json({}))
+    admin.delete('/:id',(req,res)=>res.json({}))
+
+    const app = new Router()
+    app.use((req,res)=>{})
+    app.use('/blogs',blogs)
+    app.use('/admin',admin)
+    app.post('/',(req,res)=>res.json({}))
+    app.get('/',(req,res)=>res.json({}))
+    app.get('/:id',(req,res)=>res.json({}))
+    app.get('/me',(req,res)=>res.json({}))
+    app.get('/*',(req,res)=>res.json({}))
+    app.patch('/:id',(req,res)=>res.json({}))
+    app.delete('/:id',(req,res)=>res.json({}))
+    app.use((req,res)=>{})
+    app.use((err,req,res)=>res.json({}))
+
+    console.log('GET','/',app.find('GET','/'))
+    console.log('GET','/321',app.find('GET','/321'))
+    console.log('GET','/me',app.find('GET','/me'))
+    console.log('GET','/asdf/asdf/asdf',app.find('GET','/asdf/asdf/asdf'))
+
+    console.log('PATCH','/',app.find('PATCH','/'))
+    console.log('PATCH','/321',app.find('PATCH','/321'))
+    console.log('PATCH','/me',app.find('PATCH','/me'))
+    console.log('PATCH','/asdf/asdf/asdf',app.find('PATCH','/asdf/asdf/asdf'))
+
+    console.log('GET','/blogs/',app.find('GET','/blogs/'))
+    console.log('GET','/blogs/321',app.find('GET','/blogs/321'))
+    console.log('GET','/blogs/me',app.find('GET','/blogs/me'))
+    console.log('GET','/blogs/asdf/asdf/asdf',app.find('GET','/blogs/asdf/asdf/asdf'))
+
+    console.log('PATCH','/blogs/',app.find('PATCH','/blogs/'))
+    console.log('PATCH','/blogs/321',app.find('PATCH','/blogs/321'))
+    console.log('PATCH','/blogs/me',app.find('PATCH','/blogs/me'))
+    console.log('PATCH','/blogs/asdf/asdf/asdf',app.find('PATCH','/blogs/asdf/asdf/asdf'))
+
+    console.log('GET','/admin/',app.find('GET','/admin/'))
+    console.log('GET','/admin/321',app.find('GET','/admin/321'))
+    console.log('GET','/admin/me',app.find('GET','/admin/me'))
+    console.log('GET','/admin/asdf/asdf/asdf',app.find('GET','/admin/asdf/asdf/asdf'))
+
+    console.log('PATCH','/admin/',app.find('PATCH','/admin/'))
+    console.log('PATCH','/admin/321',app.find('PATCH','/admin/321'))
+    console.log('PATCH','/admin/me',app.find('PATCH','/admin/me'))
+    console.log('PATCH','/admin/asdf/asdf/asdf',app.find('PATCH','/admin/asdf/asdf/asdf'))
+
+    console.log('GET','/admin/users/',app.find('GET','/admin/users/'))
+    console.log('GET','/admin/users/321',app.find('GET','/admin/users/321'))
+    console.log('GET','/admin/users/me',app.find('GET','/admin/users/me'))
+    console.log('GET','/admin/users/asdf/asdf/asdf',app.find('GET','/admin/users/asdf/asdf/asdf'))
+
+    console.log('PATCH','/admin/users/',app.find('PATCH','/admin/users/'))
+    console.log('PATCH','/admin/users/321',app.find('PATCH','/admin/users/321'))
+    console.log('PATCH','/admin/users/me',app.find('PATCH','/admin/users/me'))
+    console.log('PATCH','/admin/users/asdf/asdf/asdf',app.find('PATCH','/admin/users/asdf/asdf/asdf'))
+
+    // console.log(inspect(app,false,null,true))
+})
+

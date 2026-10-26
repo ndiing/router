@@ -219,14 +219,15 @@ class Router {
      * @param {Object} state
      * @returns {{path:Array,params:Object,matched:Boolean}}
      */
-    search(method, path, node, nodes = [], params = {}, state = { nodes: [], params: {} }) {
+    search(method, path, node = this.root, nodes = [], params = {}, state = { nodes: [], params: {} }) {
         nodes.push(node);
         if (0 === path.length) {
             if (node.handlers.has(method) || node.handlers.has("ALL")) {
                 return { nodes, params, matched: true };
             }
             if (nodes.length > state.nodes.length) {
-                state = { nodes: nodes.slice(), params: { ...params } };
+                state.nodes=nodes.slice()
+                params={...params}
             }
             nodes.pop();
             return { nodes: state.nodes, params: state.params, matched: false };
@@ -256,7 +257,8 @@ class Router {
             };
         }
         if (nodes.length > state.nodes.length) {
-            state = { nodes: nodes.slice(), params: { ...params } };
+            state.nodes=nodes.slice()
+            params={...params}
         }
         nodes.pop();
         return { nodes: state.nodes, params: state.params, matched: false };
@@ -291,11 +293,11 @@ class Router {
      * @returns {{matched: boolean;params: Object;paramsLength: number;handlers: any[];errorHandlers: any[];}}
      */
     find(method, path) {
-        let res = this.search(method, path, this.root);
+        let res = this.search(method, path);
 
         if (!res.matched && path.length > 1) {
             const alt = path.endsWith("/") ? path.slice(0, -1) : path + "/";
-            res = this.search(method, alt, this.root);
+            res = this.search(method, alt);
         }
         const handlers = {};
         const errorHandlers = {};
@@ -313,5 +315,6 @@ class Router {
             errorHandlers: Object.values(errorHandlers),
         };
     }
+
 }
 exports.Router = Router;
