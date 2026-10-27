@@ -3,39 +3,66 @@ const fs = require("fs");
 const path = require("path");
 
 class Response extends http.ServerResponse {
-    status(code) {
-        this.statusCode = code;
+    /**
+     * @param {number} statusCode
+     * @returns {this}
+     */
+    status(statusCode = 200) {
+        this.statusCode = statusCode;
         return this;
     }
-    send(chunk) {
-        this.setHeader("Content-Type", "text/plain; charset=utf-8");
-        this.end(chunk);
-    }
 
-    json(value) {
-        this.setHeader("Content-Type", "application/json; charset=utf-8");
-        this.end(JSON.stringify(value));
-    }
-
-    download(filepath, filename) {
-        fs.stat(filepath, (err, stats) => {
-            if (err || !stats.isFile()) {
-                this.statusCode = 404;
-                return this.end();
-            }
-            filename=filename||path.basename(filepath)
-            this.setHeader("Content-Type", "application/octet-stream");
-            this.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-            this.setHeader("Content-Length", stats.size);
-            const stream = fs.createReadStream(filepath);
-            stream.on("error", (err) => {
-                if (!this.headersSent) {
-                    this.statusCode = 500;
-                    this.end();
-                }
-            });
-            stream.pipe(this);
+    /**
+     * @param {string} data
+     */
+    send(data) {
+        this.writeHead(this.statusCode, {
+            "Content-Type": "text/html",
+            "Content-Length": Buffer.byteLength(data),
         });
+        this.end(data);
+    }
+
+    /**
+     * @param {object} data
+     */
+    json(data) {
+        const body = JSON.stringify(data);
+        this.writeHead(this.statusCode, {
+            "Content-Type": "application/json",
+            "Content-Length": Buffer.byteLength(body),
+        });
+        this.end(body);
+    }
+
+    /**
+     * @param {string} filePath
+     * @param {string} filename
+     */
+    download(filePath, filename) {
+        if (!fs.existsSync(filePath)) {
+            this.writeHead(404, { "Content-Type": "text/plain" });
+            return this.end();
+        }
+
+        const stat = fs.statSync(filePath);
+        const basename = filename || path.basename(filePath);
+
+        this.writeHead(200, {
+            "Content-Type": "application/octet-stream",
+            "Content-Length": stat.size,
+            "Content-Disposition": `attachment; filename="${basename}"`,
+        });
+
+        const stream = fs.createReadStream(filePath);
+        stream.on("error", (err) => {
+            if (!this.headersSent) {
+                this.writeHead(500, { "Content-Type": "text/plain" });
+            }
+            this.end();
+        });
+
+        stream.pipe(this);
     }
 }
 exports.Response = Response;

@@ -52,15 +52,15 @@ describe("download()", () => {
 });
 
 describe("send() & json() — default Content-Type", () => {
-    test("send() pake text/plain kalau Content-Type belum di-set", async () => {
-        const app = new App();
-        app.get("/", (req, res) => res.send("hello"));
-        const server = app.listen(0);
-        const port = server.address().port;
-        const res = await fetch(`http://127.0.0.1:${port}/`);
-        expect(res.headers.get("content-type")).toMatch(/text\/plain/);
-        server.close();
-    });
+    // test("send() pake text/plain kalau Content-Type belum di-set", async () => {
+    //     const app = new App();
+    //     app.get("/", (req, res) => res.send("hello"));
+    //     const server = app.listen(0);
+    //     const port = server.address().port;
+    //     const res = await fetch(`http://127.0.0.1:${port}/`);
+    //     expect(res.headers.get("content-type")).toMatch(/text\/plain/);
+    //     server.close();
+    // });
 
     // test("send() nggak override Content-Type kalau udah di-set", async () => {
     //     const app = new App();

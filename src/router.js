@@ -244,10 +244,10 @@ class Router {
         }
         if (node.params.size) {
             for (const [, child] of node.params) {
-                const index = path.indexOf("/");
-                const value = index === -1 ? path : path.slice(0, index);
+                const slashIdx = path.indexOf("/");
+                const value = slashIdx === -1 ? path : path.slice(0, slashIdx);
                 if (value.length) {
-                    const rest = index === -1 ? "" : path.slice(index);
+                    const rest = slashIdx === -1 ? "" : path.slice(slashIdx);
                     const next = { ...params, [child.name]: value };
                     const result = this.search(method, rest, child, nodes, next, state);
                     if (result.matched) return result;
