@@ -41,19 +41,19 @@ class Router {
      * @returns
      */
     walk(path, node) {
-        for (const [segment, child] of node.children) {
-            const lcp = this.lcp(segment, path);
+        for (const [prefix, child] of node.children) {
+            const lcp = this.lcp(prefix, path);
             if (lcp === 0) continue;
-            if (lcp === segment.length) {
+            if (lcp === prefix.length) {
                 if (lcp === path.length) return child;
                 return this.walk(path.slice(lcp), child);
             }
-            const newNode = new Node(segment.slice(0, lcp));
-            newNode.add(segment.slice(lcp)).merge(child);
+            const newNode = new Node(prefix.slice(0, lcp));
+            newNode.add(prefix.slice(lcp)).merge(child);
             const rest = path.slice(lcp);
             if (rest.length) newNode.add(rest);
-            node.add(newNode.segment).merge(newNode);
-            node.remove(segment);
+            node.add(newNode.prefix).merge(newNode);
+            node.remove(prefix);
         }
         return node.add(path);
     }
@@ -75,8 +75,8 @@ class Router {
                 if (path[i] === ":") {
                     let j = i + 1;
                     while (j < path.length && path[j] !== "/") j++;
-                    let segment = path.slice(i, j);
-                    node = node.add(segment);
+                    let prefix = path.slice(i, j);
+                    node = node.add(prefix);
                     i = j;
                 } else if (path[i] === "*") {
                     let j = i + 1;
@@ -229,25 +229,29 @@ class Router {
             }
             if (nodes.length > state.nodes.length) {
                 state.nodes = nodes.slice();
-                params = { ...params };
+                state.params = { ...params };
             }
             nodes.pop();
             return { nodes: state.nodes, params: state.params, matched: false };
         }
-        for (const [segment, child] of node.children) {
-            if (path.startsWith(segment)) {
-                const res = this.search(method, path.slice(segment.length), child, nodes, params, state);
-                if (res.matched) return res;
+        if (node.children.size) {
+            for (const [prefix, child] of node.children) {
+                if (path.startsWith(prefix)) {
+                    const res = this.search(method, path.slice(prefix.length), child, nodes, params, state);
+                    if (res.matched) return res;
+                }
             }
         }
-        for (const [, child] of node.params) {
-            const slashIdx = path.indexOf("/");
-            const value = slashIdx === -1 ? path : path.slice(0, slashIdx);
-            const rest = slashIdx === -1 ? "" : path.slice(slashIdx);
-            if (value.length > 0) {
-                const next = { ...params, [child.name]: value };
-                const result = this.search(method, rest, child, nodes, next, state);
-                if (result.matched) return result;
+        if (node.params.size) {
+            for (const [, child] of node.params) {
+                const index = path.indexOf("/");
+                const value = index === -1 ? path : path.slice(0, index);
+                if (value.length) {
+                    const rest = index === -1 ? "" : path.slice(index);
+                    const next = { ...params, [child.name]: value };
+                    const result = this.search(method, rest, child, nodes, next, state);
+                    if (result.matched) return result;
+                }
             }
         }
         if (node.wildcard && (node.wildcard.handlers.get(method) || node.wildcard.handlers.get("ALL"))) {
@@ -256,7 +260,7 @@ class Router {
         }
         if (nodes.length > state.nodes.length) {
             state.nodes = nodes.slice();
-            params = { ...params };
+            state.params = { ...params };
         }
         nodes.pop();
         return { nodes: state.nodes, params: state.params, matched: false };
@@ -269,8 +273,8 @@ class Router {
      */
     collectHandler(node, method, handlers) {
         if (node.handlers.has(method)) {
-            for (const { seq, handler } of node.handlers.get(method)) {
-                handlers[seq] = handler;
+            for (const entry of node.handlers.get(method)) {
+                handlers[entry.seq] = entry.handler;
             }
         }
     }
@@ -287,8 +291,11 @@ class Router {
 
     decodeParams(obj) {
         const params = Object.create(null);
-        for (const key of Object.keys(obj)) {
-            params[key] = decodeParam(obj[key]);
+        const keys = Object.keys(obj);
+        if (keys.length) {
+            for (const key of keys) {
+                params[key] = decodeParam(obj[key]);
+            }
         }
         return params;
     }
@@ -306,13 +313,17 @@ class Router {
         }
         const handlers = {};
         const errorHandlers = {};
+        if (res.matched) {
+            this.collectHandler(res.nodes.at(-1), method, handlers);
+        }
         for (const node of res.nodes) {
             this.collectMiddleware(node, handlers, errorHandlers);
         }
-        if (res.matched) {
-            this.collectHandler(res.nodes[res.nodes.length - 1], method, handlers);
-        }
-        return { params: res.params, handlers, errorHandlers };
+        return {
+            params: this.decodeParams(res.params),
+            handlers: Object.values(handlers),
+            errorHandlers: Object.values(errorHandlers),
+        };
     }
 }
 exports.Router = Router;

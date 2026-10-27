@@ -1,12 +1,12 @@
 class Node {
     /**
-     * @param {String} segment
+     * @param {String} prefix
      */
-    constructor(segment = "") {
-        this.segment = segment;
-        if (segment.startsWith(":")) {
+    constructor(prefix = "") {
+        this.prefix = prefix;
+        if (prefix.startsWith(":")) {
             /**@type {String}*/
-            this.name = segment.slice(1);
+            this.name = prefix.slice(1);
         }
         /**@type {Map<string,Node>}*/
         this.children = new Map();
@@ -19,25 +19,25 @@ class Node {
     }
 
     /**
-     * @param {String} segment
+     * @param {String} prefix
      * @returns {Node}
      */
-    add(segment) {
-        if (segment === "*") {
+    add(prefix) {
+        if (prefix === "*") {
             if (!this.wildcard) this.wildcard = new Node("*");
             return this.wildcard;
         }
-        if (segment.startsWith(":")) {
-            return this.params.getOrInsertComputed(segment, (segment) => new Node(segment));
+        if (prefix.startsWith(":")) {
+            return this.params.getOrInsertComputed(prefix, (prefix) => new Node(prefix));
         }
-        return this.children.getOrInsertComputed(segment, (segment) => new Node(segment));
+        return this.children.getOrInsertComputed(prefix, (prefix) => new Node(prefix));
     }
 
     /**
-     * @param {String} segment
+     * @param {String} prefix
      */
-    remove(segment) {
-        this.children.delete(segment);
+    remove(prefix) {
+        this.children.delete(prefix);
     }
 
     /**
@@ -56,11 +56,11 @@ class Node {
         if (node.wildcard) {
             this.add("*").merge(node.wildcard, offset);
         }
-        for (const [segment, child] of node.params) {
-            this.add(segment).merge(child, offset);
+        for (const [prefix, child] of node.params) {
+            this.add(prefix).merge(child, offset);
         }
-        for (const [segment, child] of node.children) {
-            this.add(segment).merge(child, offset);
+        for (const [prefix, child] of node.children) {
+            this.add(prefix).merge(child, offset);
         }
     }
 

@@ -61,12 +61,12 @@ class App extends Router {
      * @param {Response} res
      */
     async handle(req, res) {
-        const { params, handlers, errorHandlers } = this.find(req.method, req.path);
-        req.params = this.decodeParams(params);
+        const result = this.find(req.method, req.path);
+        req.params = result.params;
         let err;
         try {
             const handlerPromise = async () => {
-                for (const handler of Object.values(handlers)) {
+                for (const handler of result.handlers) {
                     if (res.writableEnded) break;
                     await handler(req, res);
                 }
@@ -79,7 +79,7 @@ class App extends Router {
         } catch (error) {
             err = error;
             try {
-                for (const handler of Object.values(errorHandlers)) {
+                for (const handler of result.errorHandlers) {
                     if (res.writableEnded) break;
                     await handler(err, req, res);
                 }
