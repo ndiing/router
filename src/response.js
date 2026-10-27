@@ -16,10 +16,8 @@ class Response extends http.ServerResponse {
      * @param {string} data
      */
     send(data) {
-        this.writeHead(this.statusCode, {
-            "Content-Type": "text/html",
-            "Content-Length": Buffer.byteLength(data),
-        });
+        this.setHeader("Content-Type", "text/html");
+        this.setHeader("Content-Length", Buffer.byteLength(data));
         this.end(data);
     }
 
@@ -28,10 +26,8 @@ class Response extends http.ServerResponse {
      */
     json(data) {
         const body = JSON.stringify(data);
-        this.writeHead(this.statusCode, {
-            "Content-Type": "application/json",
-            "Content-Length": Buffer.byteLength(body),
-        });
+        this.setHeader("Content-Type", "application/json");
+        this.setHeader("Content-Length", Buffer.byteLength(body));
         this.end(body);
     }
 
@@ -41,23 +37,21 @@ class Response extends http.ServerResponse {
      */
     download(filePath, filename) {
         if (!fs.existsSync(filePath)) {
-            this.writeHead(404, { "Content-Type": "text/plain" });
+            this.status(404);
             return this.end();
         }
 
         const stat = fs.statSync(filePath);
         const basename = filename || path.basename(filePath);
 
-        this.writeHead(200, {
-            "Content-Type": "application/octet-stream",
-            "Content-Length": stat.size,
-            "Content-Disposition": `attachment; filename="${basename}"`,
-        });
+        this.setHeader("Content-Type", "application/octet-stream");
+        this.setHeader("Content-Length", stat.size);
+        this.setHeader("Content-Disposition", `attachment; filename="${basename}"`);
 
         const stream = fs.createReadStream(filePath);
         stream.on("error", (err) => {
             if (!this.headersSent) {
-                this.writeHead(500, { "Content-Type": "text/plain" });
+                this.status(500);
             }
             this.end();
         });
