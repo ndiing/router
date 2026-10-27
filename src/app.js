@@ -40,7 +40,7 @@ class App extends Router {
      * @param {Response} res
      */
     fallback(err, res) {
-        if (!res.writableEnded) {
+        if (!res.done) {
             if (!err) {
                 res.statusCode = 404;
                 err = new Error(http.STATUS_CODES[res.statusCode]);
@@ -67,7 +67,7 @@ class App extends Router {
         try {
             const handlerPromise = async () => {
                 for (const handler of result.handlers) {
-                    if (res.writableEnded) break;
+                    if (res.done) break;
                     await handler(req, res);
                 }
             };
@@ -80,7 +80,7 @@ class App extends Router {
             err = error;
             try {
                 for (const handler of result.errorHandlers) {
-                    if (res.writableEnded) break;
+                    if (res.done) break;
                     await handler(err, req, res);
                 }
             } catch (error) {

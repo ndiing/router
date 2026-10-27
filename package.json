@@ -1,6 +1,6 @@
 {
   "name": "@ndiinginc/router",
-  "version": "4.16.3",
+  "version": "4.16.4",
   "description": "",
   "main": "./src/index.js",
   "scripts": {
@@ -24,8 +24,5 @@
     "@types/jest": "^30.0.0",
     "@types/node": "^26.6.5",
     "autocannon": "^2.0.1"
-  },
-  "dependencies": {
-    "@ndiinginc/router": "^4.16.2"
   }
 }

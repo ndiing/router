@@ -19,6 +19,7 @@ class Response extends http.ServerResponse {
         this.setHeader("Content-Type", "text/html");
         this.setHeader("Content-Length", Buffer.byteLength(data));
         this.end(data);
+        this.done = true;
     }
 
     /**
@@ -29,6 +30,7 @@ class Response extends http.ServerResponse {
         this.setHeader("Content-Type", "application/json");
         this.setHeader("Content-Length", Buffer.byteLength(body));
         this.end(body);
+        this.done = true;
     }
 
     /**
@@ -52,6 +54,7 @@ class Response extends http.ServerResponse {
         });
 
         stream.pipe(this);
+        this.done = true;
     }
 }
 exports.Response = Response;
