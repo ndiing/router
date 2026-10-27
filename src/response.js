@@ -36,11 +36,6 @@ class Response extends http.ServerResponse {
      * @param {string} filename
      */
     download(filePath, filename) {
-        if (!fs.existsSync(filePath)) {
-            this.status(404);
-            return this.end();
-        }
-
         const stat = fs.statSync(filePath);
         const basename = filename || path.basename(filePath);
 
