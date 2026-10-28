@@ -41,21 +41,38 @@ class Router {
      * @returns
      */
     walk(path, node) {
-        for (const [prefix, child] of node.children) {
-            const lcp = this.lcp(prefix, path);
-            if (lcp === 0) continue;
-            if (lcp === prefix.length) {
-                if (lcp === path.length) return child;
-                return this.walk(path.slice(lcp), child);
+        let i = 0;
+        while (i < path.length) {
+            const child = node.children.get(path[i]);
+            if (!child) {
+                const leaf = node.add(path.slice(i));
+                return leaf;
             }
-            const newNode = new Node(prefix.slice(0, lcp));
-            newNode.add(prefix.slice(lcp)).merge(child);
-            const rest = path.slice(lcp);
-            if (rest.length) newNode.add(rest);
-            node.add(newNode.prefix).merge(newNode);
-            node.remove(prefix);
+
+            const lcp = this.lcp(child.prefix, path.slice(i));
+
+            // child.prefix habis cocok -> turun
+            if (lcp === child.prefix.length) {
+                i += lcp;
+                node = child;
+                continue;
+            }
+
+            // split di common prefix
+            const split = new Node(child.prefix.slice(0, lcp));
+            child.prefix = child.prefix.slice(lcp);
+            split.children.set(child.prefix[0], child);
+            node.children.set(split.prefix[0], split);
+
+            const rest = path.slice(i + lcp);
+            if (rest.length) {
+                const leaf = new Node(rest);
+                split.children.set(rest[0], leaf);
+                return leaf;
+            }
+            return split;
         }
-        return node.add(path);
+        return node;
     }
 
     /**
@@ -75,14 +92,11 @@ class Router {
                 if (path[i] === ":") {
                     let j = i + 1;
                     while (j < path.length && path[j] !== "/") j++;
-                    let prefix = path.slice(i, j);
-                    node = node.add(prefix);
-                    i = j;
-                } else if (path[i] === "*") {
-                    let j = i + 1;
-                    while (j < path.length && path[j] !== "/") j++;
                     node = node.add(path.slice(i, j));
                     i = j;
+                } else if (path[i] === "*") {
+                    node = node.add("*");
+                    i++;
                 } else {
                     let j = i + 1;
                     while (j < path.length && path[j] !== "/" && path[j] !== ":" && path[j] !== "*") j++;
@@ -96,8 +110,8 @@ class Router {
                 node.merge(handler.root, this.seq);
                 this.seq += handler.root.getMaxSeq() + 1;
             } else {
-                const newMethod = handler.length === 3 ? "CATCH" : method;
-                node.handlers.getOrInsert(newMethod, []).push({ handler, seq: this.seq++ });
+                const m = handler.length === 3 ? "CATCH" : method;
+                node.handlers.getOrInsert(m, []).push({ handler, seq: this.seq++ });
             }
         }
     }
@@ -221,46 +235,56 @@ class Router {
      * @param {Object} state
      * @returns {{path:Array,params:Object,matched:Boolean}}
      */
-    search(method, path, node = this.root, nodes = [], params = {}, state = { nodes: [], params: {} }) {
+    search(method, path, node = this.root, nodes = [], params = {}, state = { nodes: [], params: {}, len: -1 }) {
         nodes.push(node);
-        if (0 === path.length) {
+
+        if (path.length === 0) {
             if (node.handlers.has(method) || node.handlers.has("ALL")) {
                 return { nodes, params, matched: true };
             }
-            if (nodes.length > state.nodes.length) {
+            if (nodes.length > state.len) {
                 state.nodes = nodes.slice();
                 state.params = { ...params };
+                state.len = nodes.length;
             }
             nodes.pop();
             return { nodes: state.nodes, params: state.params, matched: false };
         }
-        if (node.children.size) {
-            for (const [prefix, child] of node.children) {
-                if (path.startsWith(prefix)) {
-                    const res = this.search(method, path.slice(prefix.length), child, nodes, params, state);
+
+        // 1. literal (single char)
+        const child = node.children.get(path[0]); // O(1)
+        if (child) {
+            const lcp = this.lcp(child.prefix, path);
+            if (lcp === child.prefix.length) {
+                const res = this.search(method, path.slice(lcp), child, nodes, params, state);
+                if (res.matched) return res;
+            }
+        }
+
+        // 2. param (coba semua)
+        if (node.params.size) {
+            const slash = path.indexOf("/");
+            const value = slash === -1 ? path : path.slice(0, slash);
+            if (value.length) {
+                const rest = slash === -1 ? "" : path.slice(slash);
+                for (const child of node.params.values()) {
+                    const next = { ...params, [child.name]: value };
+                    const res = this.search(method, rest, child, nodes, next, state);
                     if (res.matched) return res;
                 }
             }
         }
-        if (node.params.size) {
-            for (const [, child] of node.params) {
-                const slashIdx = path.indexOf("/");
-                const value = slashIdx === -1 ? path : path.slice(0, slashIdx);
-                if (value.length) {
-                    const rest = slashIdx === -1 ? "" : path.slice(slashIdx);
-                    const next = { ...params, [child.name]: value };
-                    const result = this.search(method, rest, child, nodes, next, state);
-                    if (result.matched) return result;
-                }
-            }
-        }
-        if (node.wildcard && (node.wildcard.handlers.get(method) || node.wildcard.handlers.get("ALL"))) {
+
+        // 3. wildcard
+        if (node.wildcard && (node.wildcard.handlers.has(method) || node.wildcard.handlers.has("ALL"))) {
             nodes.push(node.wildcard);
             return { nodes, params: { ...params, wildcard: path }, matched: true };
         }
-        if (nodes.length > state.nodes.length) {
+
+        if (nodes.length > state.len) {
             state.nodes = nodes.slice();
             state.params = { ...params };
+            state.len = nodes.length;
         }
         nodes.pop();
         return { nodes: state.nodes, params: state.params, matched: false };
@@ -289,13 +313,15 @@ class Router {
         this.collectHandler(node, "CATCH", errorHandlers);
     }
 
+    /**
+     *
+     * @param {*} obj
+     * @returns
+     */
     decodeParams(obj) {
         const params = Object.create(null);
-        const keys = Object.keys(obj);
-        if (keys.length) {
-            for (const key of keys) {
-                params[key] = decodeParam(obj[key]);
-            }
+        for (const key in obj) {
+            params[key] = decodeParam(obj[key]);
         }
         return params;
     }

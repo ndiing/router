@@ -103,6 +103,7 @@ function cors({ origin = "*", credentials = false, headers, maxAge = 0, methods 
             res.statusCode = 204;
             res.setHeader("Content-Length", "0");
             res.end();
+            res.done = true;
         } else {
             setAllowOrigin(req, res);
             setExposeHeaders(res);

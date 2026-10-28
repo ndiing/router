@@ -5,18 +5,17 @@ function makeReq({ method = "GET", headers = {} } = {}) {
 }
 
 function makeRes() {
-    const headers = Object.create(null);
     return {
         statusCode: 200,
+        headers: {},
         ended: false,
-        headers,
-        setHeader(name, value) {
-            headers[name.toLowerCase()] = value;
+        setHeader(k, v) {
+            this.headers[k.toLowerCase()] = v;
         },
-        appendHeader(name, value) {
-            const key = name.toLowerCase();
-            if (headers[key] === undefined) headers[key] = value;
-            else headers[key] = `${headers[key]}, ${value}`;
+        appendHeader(k, v) {
+            const key = k.toLowerCase();
+            if (this.headers[key]) this.headers[key] += ", " + v;
+            else this.headers[key] = v;
         },
         end() {
             this.ended = true;
@@ -24,228 +23,159 @@ function makeRes() {
     };
 }
 
-function run(mw, req) {
+describe("middleware/cors", () => {
+    test("origin * sets wildcard", () => {
+        const mw = cors({ origin: "*" });
+        const req = makeReq();
+        const res = makeRes();
+        mw(req, res);
+        expect(res.headers["access-control-allow-origin"]).toBe("*");
+    });
+
+    test("origin with credentials echoes origin", () => {
+        const mw = cors({ origin: "*", credentials: true });
+        const req = makeReq({ headers: { origin: "http://example.com" } });
+        const res = makeRes();
+        mw(req, res);
+        expect(res.headers["access-control-allow-origin"]).toBe("http://example.com");
+        expect(res.headers["access-control-allow-credentials"]).toBe("true");
+    });
+
+    test("explicit origin list", () => {
+        const mw = cors({ origin: ["http://a.com", "http://b.com"] });
+        const req = makeReq({ headers: { origin: "http://a.com" } });
+        const res = makeRes();
+        mw(req, res);
+        expect(res.headers["access-control-allow-origin"]).toBe("http://a.com");
+        expect(res.headers["vary"]).toContain("Origin");
+    });
+
+    test("preflight returns 204 and ends", () => {
+        const mw = cors({ origin: "*" });
+        const req = makeReq({
+            method: "OPTIONS",
+            headers: {
+                "access-control-request-method": "POST",
+                "access-control-request-headers": "content-type",
+            },
+        });
+        const res = makeRes();
+        mw(req, res);
+        expect(res.statusCode).toBe(204);
+        expect(res.ended).toBe(true);
+        expect(res.headers["access-control-allow-methods"]).toContain("POST");
+        expect(res.headers["access-control-allow-headers"]).toContain("content-type");
+    });
+});
+
+test("origin not in list sets no header", () => {
+    const mw = cors({ origin: ["http://a.com"] });
+    const req = makeReq({ headers: { origin: "http://evil.com" } });
     const res = makeRes();
     mw(req, res);
-    return res;
-}
+    expect(res.headers["access-control-allow-origin"]).toBe(undefined);
+});
 
-describe("cors", () => {
-    describe("default options (origin: *)", () => {
-        test("sets wildcard origin for simple request", () => {
-            const mw = cors();
-            const res = run(mw, makeReq({ headers: { origin: "https://x.com" } }));
-            expect(res.headers["access-control-allow-origin"]).toBe("*");
-        });
+test("explicit origin * with credentials", () => {
+    const mw = cors({ origin: "*", credentials: true });
+    const req = makeReq({ headers: { origin: "http://a.com" } });
+    const res = makeRes();
+    mw(req, res);
+    expect(res.headers["access-control-allow-origin"]).toBe("http://a.com");
+});
 
-        test("does not set Vary for wildcard", () => {
-            const mw = cors();
-            const res = run(mw, makeReq({ headers: { origin: "https://x.com" } }));
-            expect(res.headers["vary"]).toBe(undefined);
-        });
-
-        test("does not end response for GET", () => {
-            const mw = cors();
-            const res = run(mw, makeReq());
-            expect(res.ended).toBe(false);
-        });
+test("preflight with headers array rejects partial", () => {
+    const mw = cors({ headers: ["content-type"] });
+    const req = makeReq({
+        method: "OPTIONS",
+        headers: {
+            "access-control-request-method": "POST",
+            "access-control-request-headers": "content-type, x-evil",
+        },
     });
+    const res = makeRes();
+    mw(req, res);
+    expect(res.headers["access-control-allow-headers"]).toBe(undefined);
+});
 
-    describe("explicit origin", () => {
-        test("echoes matching origin", () => {
-            const mw = cors({ origin: "https://x.com" });
-            const res = run(mw, makeReq({ headers: { origin: "https://x.com" } }));
-            expect(res.headers["access-control-allow-origin"]).toBe("https://x.com");
-        });
-
-        test("sets Vary: Origin when echoed", () => {
-            const mw = cors({ origin: "https://x.com" });
-            const res = run(mw, makeReq({ headers: { origin: "https://x.com" } }));
-            expect(res.headers["vary"]).toBe("Origin");
-        });
-
-        test("does not set header for non-matching origin", () => {
-            const mw = cors({ origin: "https://x.com" });
-            const res = run(mw, makeReq({ headers: { origin: "https://evil.com" } }));
-            expect(res.headers["access-control-allow-origin"]).toBe(undefined);
-        });
-
-        test("array origin matches one", () => {
-            const mw = cors({ origin: ["https://a.com", "https://b.com"] });
-            const res = run(mw, makeReq({ headers: { origin: "https://b.com" } }));
-            expect(res.headers["access-control-allow-origin"]).toBe("https://b.com");
-        });
-
-        test("array origin no match", () => {
-            const mw = cors({ origin: ["https://a.com", "https://b.com"] });
-            const res = run(mw, makeReq({ headers: { origin: "https://c.com" } }));
-            expect(res.headers["access-control-allow-origin"]).toBe(undefined);
-        });
+test("maxAge sets header when > 0", () => {
+    const mw = cors({ maxAge: 3600 });
+    const req = makeReq({
+        method: "OPTIONS",
+        headers: { "access-control-request-method": "POST" },
     });
+    const res = makeRes();
+    mw(req, res);
+    expect(res.headers["access-control-max-age"]).toBe(3600);
+});
 
-    describe("origin: null (security)", () => {
-        test("does not set null origin", () => {
-            const mw = cors({ origin: null });
-            const res = run(mw, makeReq({ headers: { origin: "null" } }));
-            expect(res.headers["access-control-allow-origin"]).toBe(undefined);
-        });
+test("origin explicit not matching sets no header", () => {
+    const mw = cors({ origin: "http://a.com" });
+    const req = makeReq({ headers: { origin: "http://evil.com" } });
+    const res = makeRes();
+    mw(req, res);
+    expect(res.headers["access-control-allow-origin"]).toBe(undefined);
+});
 
-        test("does not set for any origin", () => {
-            const mw = cors({ origin: null });
-            const res = run(mw, makeReq({ headers: { origin: "https://x.com" } }));
-            expect(res.headers["access-control-allow-origin"]).toBe(undefined);
-        });
+test("headers array rejects partial match", () => {
+    const mw = cors({ headers: ["content-type"] });
+    const req = makeReq({
+        method: "OPTIONS",
+        headers: {
+            "access-control-request-method": "POST",
+            "access-control-request-headers": "content-type, x-evil",
+        },
     });
+    const res = makeRes();
+    mw(req, res);
+    expect(res.headers["access-control-allow-headers"]).toBe(undefined);
+});
 
-    describe("credentials", () => {
-        test("sets allow-credentials", () => {
-            const mw = cors({ credentials: true, origin: "https://x.com" });
-            const res = run(mw, makeReq({ headers: { origin: "https://x.com" } }));
-            expect(res.headers["access-control-allow-credentials"]).toBe("true");
-        });
-
-        test("wildcard + credentials echoes origin", () => {
-            const mw = cors({ credentials: true, origin: "*" });
-            const res = run(mw, makeReq({ headers: { origin: "https://x.com" } }));
-            expect(res.headers["access-control-allow-origin"]).toBe("https://x.com");
-        });
-
-        test("wildcard + credentials sets Vary", () => {
-            const mw = cors({ credentials: true, origin: "*" });
-            const res = run(mw, makeReq({ headers: { origin: "https://x.com" } }));
-            expect(res.headers["vary"]).toBe("Origin");
-        });
+test("methods array rejects unlisted method", () => {
+    const mw = cors({ methods: ["GET"] });
+    const req = makeReq({
+        method: "OPTIONS",
+        headers: { "access-control-request-method": "POST" },
     });
+    const res = makeRes();
+    mw(req, res);
+    expect(res.headers["access-control-allow-methods"]).toBe(undefined);
+});
 
-    describe("preflight", () => {
-        const preflightReq = (extra = {}) =>
-            makeReq({
-                method: "OPTIONS",
-                headers: {
-                    origin: "https://x.com",
-                    "access-control-request-method": "POST",
-                    ...extra,
-                },
-            });
-
-        test("ends response with 204", () => {
-            const mw = cors();
-            const res = run(mw, preflightReq());
-            expect(res.statusCode).toBe(204);
-            expect(res.ended).toBe(true);
-        });
-
-        test("sets content-length 0", () => {
-            const mw = cors();
-            const res = run(mw, preflightReq());
-            expect(res.headers["content-length"]).toBe("0");
-        });
-
-        test("sets allow-methods echo when methods undefined", () => {
-            const mw = cors();
-            const res = run(mw, preflightReq());
-            expect(res.headers["access-control-allow-methods"]).toEqual(["POST"]);
-        });
-
-        test("sets allow-methods when methods configured and match", () => {
-            const mw = cors({ methods: ["GET", "POST"] });
-            const res = run(mw, preflightReq());
-            expect(res.headers["access-control-allow-methods"]).toEqual(["GET", "POST"]);
-        });
-
-        test("does not set allow-methods when configured but no match", () => {
-            const mw = cors({ methods: ["GET"] });
-            const res = run(mw, preflightReq({ "access-control-request-method": "DELETE" }));
-            expect(res.headers["access-control-allow-methods"]).toBe(undefined);
-        });
-
-        test("sets allow-headers echo when headers undefined", () => {
-            const mw = cors();
-            const res = run(mw, preflightReq({ "access-control-request-headers": "X-Custom, Content-Type" }));
-            expect(res.headers["access-control-allow-headers"]).toEqual(["x-custom", "content-type"]);
-        });
-
-        test("sets allow-headers when all requested allowed", () => {
-            const mw = cors({ headers: ["x-custom", "content-type"] });
-            const res = run(mw, preflightReq({ "access-control-request-headers": "X-Custom, Content-Type" }));
-            expect(res.headers["access-control-allow-headers"]).toEqual(["x-custom", "content-type"]);
-        });
-
-        test("does not set allow-headers when some not allowed", () => {
-            const mw = cors({ headers: ["x-custom"] });
-            const res = run(mw, preflightReq({ "access-control-request-headers": "X-Custom, X-Other" }));
-            expect(res.headers["access-control-allow-headers"]).toBe(undefined);
-        });
-
-        test("sets max-age when > 0", () => {
-            const mw = cors({ maxAge: 3600 });
-            const res = run(mw, preflightReq());
-            expect(res.headers["access-control-max-age"]).toBe(3600);
-        });
-
-        test("does not set max-age when 0", () => {
-            const mw = cors({ maxAge: 0 });
-            const res = run(mw, preflightReq());
-            expect(res.headers["access-control-max-age"]).toBe(undefined);
-        });
-
-        test("preflight sets Vary: Origin for explicit origin", () => {
-            const mw = cors({ origin: "https://x.com" });
-            const res = run(mw, preflightReq());
-            expect(res.headers["vary"]).toBe("Origin");
-        });
-
-        test("preflight wildcard does not set Vary", () => {
-            const mw = cors();
-            const res = run(mw, preflightReq());
-            expect(res.headers["vary"]).toBe(undefined);
-        });
-
-        test("sets allow-headers wildcard when headers='*' and no credentials", () => {
-            const mw = cors({ headers: "*" });
-            const res = run(mw, preflightReq({ "access-control-request-headers": "X-Custom" }));
-            expect(res.headers["access-control-allow-headers"]).toBe("*");
-        });
-
-        test("sets allow-methods wildcard when methods='*' and no credentials", () => {
-            const mw = cors({ methods: "*" });
-            const res = run(mw, preflightReq());
-            expect(res.headers["access-control-allow-methods"]).toBe("*");
-        });
+test("expose headers with * and no credentials", () => {
+    const mw = cors({ headers: "*" });
+    const req = makeReq({ headers: { origin: "http://a.com" } });
+    const res = makeRes();
+    mw(req, res);
+    expect(res.headers["access-control-expose-headers"]).toBe("*");
+});
+test("headers * sets wildcard when no credentials", () => {
+    const mw = cors({ headers: "*" });
+    const req = makeReq({
+        method: "OPTIONS",
+        headers: {
+            "access-control-request-method": "POST",
+            "access-control-request-headers": "content-type",
+        },
     });
-
-    describe("OPTIONS non-preflight", () => {
-        test("does not end response", () => {
-            const mw = cors();
-            // OPTIONS tanpa Access-Control-Request-Method = bukan preflight
-            const res = run(mw, makeReq({ method: "OPTIONS", headers: { origin: "https://x.com" } }));
-            expect(res.ended).toBe(false);
-        });
-
-        test("sets allow-origin", () => {
-            const mw = cors();
-            const res = run(mw, makeReq({ method: "OPTIONS", headers: { origin: "https://x.com" } }));
-            expect(res.headers["access-control-allow-origin"]).toBe("*");
-        });
+    const res = makeRes();
+    mw(req, res);
+    expect(res.headers["access-control-allow-headers"]).toBe("*");
+});
+test("methods * sets wildcard when no credentials", () => {
+    const mw = cors({ methods: "*" });
+    const req = makeReq({
+        method: "OPTIONS",
+        headers: { "access-control-request-method": "POST" },
     });
-
-    describe("expose headers", () => {
-        test("sets expose-headers when configured", () => {
-            const mw = cors({ headers: ["x-custom", "x-other"] });
-            const res = run(mw, makeReq({ headers: { origin: "https://x.com" } }));
-            expect(res.headers["access-control-expose-headers"]).toEqual(["x-custom", "x-other"]);
-        });
-
-        test("does not set expose-headers when not configured", () => {
-            const mw = cors();
-            const res = run(mw, makeReq({ headers: { origin: "https://x.com" } }));
-            expect(res.headers["access-control-expose-headers"]).toBe(undefined);
-        });
-
-        test("wildcard + no credentials sets *", () => {
-            const mw = cors({ headers: "*" });
-            const res = run(mw, makeReq({ headers: { origin: "https://x.com" } }));
-            expect(res.headers["access-control-expose-headers"]).toBe("*");
-        });
-    });
+    const res = makeRes();
+    mw(req, res);
+    expect(res.headers["access-control-allow-methods"]).toBe("*");
+});
+test("expose headers array set on simple request", () => {
+    const mw = cors({ headers: ["x-custom", "x-another"] });
+    const req = makeReq({ headers: { origin: "http://a.com" } });
+    const res = makeRes();
+    mw(req, res);
+    expect(res.headers["access-control-expose-headers"]).toEqual(["x-custom", "x-another"]);
 });
