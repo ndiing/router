@@ -206,9 +206,10 @@ Handlers are recognised by arity (`handler.length === 3`), so do not use default
 
 ```js
 // GET /search?__proto__=x
-req.query
-    .__proto__ // "x" (a plain own property)
-    ({}).__proto__; // unchanged
+req.query.__proto__(
+    // "x" (a plain own property)
+    {},
+).__proto__; // unchanged
 ```
 
 Because of that, use `Object.hasOwn(req.query, "key")` or `"key" in req.query` instead of `req.query.hasOwnProperty(...)`.
@@ -386,12 +387,12 @@ These are deliberate omissions: the core stays small and features come from midd
 
 Benchmark: 40s, 100 connections, pipelining 10, Node.js v22.
 
-| Framework | Req/Sec (avg) | Latency (avg) | Relative |
-|---|---|---|---|
-| **http (native)** | 61,107 | 15.87 ms | 1.00x |
-| **fastify** | 58,554 | 16.58 ms | 0.96x |
-| **this router** | **50,387** | **19.35 ms** | **0.82x** |
-| **express** | 28,163 | 35.03 ms | 0.46x |
+| Framework         | Req/Sec (avg) | Latency (avg) | Relative  |
+| ----------------- | ------------- | ------------- | --------- |
+| **http (native)** | 61,107        | 15.87 ms      | 1.00x     |
+| **fastify**       | 58,554        | 16.58 ms      | 0.96x     |
+| **this router**   | **50,387**    | **19.35 ms**  | **0.82x** |
+| **express**       | 28,163        | 35.03 ms      | 0.46x     |
 
 **This router is 1.79x faster than Express**, 0.82x of native HTTP, 0.86x of Fastify.
 
