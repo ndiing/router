@@ -1,5 +1,5 @@
 const http = require("http");
-const { parseQueryString } = require("../util");
+const { parseQueryString } = require("../request");
 
 /**
  * @typedef {Object} Options
@@ -12,6 +12,7 @@ const { parseQueryString } = require("../util");
  */
 function urlencoded({ limit = 1.024e5 } = {}) {
     return async (req, res) => {
+        if (req.body !== undefined) return;
         if (!["POST", "PUT", "PATCH", "QUERY"].includes(req.method)) {
             return;
         }

@@ -1,32 +1,41 @@
-const { decodeParam } = require("./util");
 const { Node } = require("./node");
 
 /**
- * @callback Callback
- * @param {import('./request').Request} req
- * @param {import('./response').Response} res
+ *
+ * @param {String} raw
+ * @returns {String}
  */
+function decodeParam(raw) {
+    try {
+        return decodeURIComponent(raw);
+    } catch (error) {
+        return raw;
+    }
+}
+
+exports.decodeParam = decodeParam;
 
 /**
- * @typedef {Object} Options
+ * @typedef Options
  * @property {Number} [requestTimeout=0]
  */
-
 class Router {
     /**
+     *
      * @param {Options} options
      */
     constructor(options = {}) {
         this.requestTimeout = options.requestTimeout ?? 0;
+
         this.root = new Node();
         this.seq = 0;
     }
 
     /**
      *
-     * @param {*} a
-     * @param {*} b
-     * @returns
+     * @param {String} a
+     * @param {String} b
+     * @returns {Number}
      */
     lcp(a, b) {
         let i = 0;
@@ -36,29 +45,25 @@ class Router {
 
     /**
      *
-     * @param {*} path
-     * @param {*} node
-     * @returns
+     * @param {String} path
+     * @param {Node} node
+     * @returns {Node}
      */
     walk(path, node) {
         let i = 0;
         while (i < path.length) {
             const child = node.children.get(path[i]);
             if (!child) {
-                const leaf = node.add(path.slice(i));
-                return leaf;
+                return node.add(path.slice(i));
             }
 
             const lcp = this.lcp(child.prefix, path.slice(i));
-
-            // child.prefix habis cocok -> turun
             if (lcp === child.prefix.length) {
                 i += lcp;
                 node = child;
                 continue;
             }
 
-            // split di common prefix
             const split = new Node(child.prefix.slice(0, lcp));
             child.prefix = child.prefix.slice(lcp);
             split.children.set(child.prefix[0], child);
@@ -70,14 +75,16 @@ class Router {
                 split.children.set(rest[0], leaf);
                 return leaf;
             }
+
             return split;
         }
         return node;
     }
 
     /**
+     *
      * @param {String} method
-     * @param {String|Callback} path
+     * @param {String|Callback|Router} path
      * @param  {Callback[]} handlers
      */
     add(method, path, ...handlers) {
@@ -85,7 +92,9 @@ class Router {
             handlers = [path, ...handlers];
             path = null;
         }
+
         let node = this.root;
+
         if (path) {
             let i = 0;
             while (i < path.length) {
@@ -105,6 +114,7 @@ class Router {
                 }
             }
         }
+
         for (const handler of handlers) {
             if (handler.root) {
                 node.merge(handler.root, this.seq);
@@ -116,10 +126,12 @@ class Router {
         }
     }
 
+    /* HTTP request methods */
     /**
-     * @param {String|Callback} path
-     * @param  {Callback[]} handlers
-     * @returns {this}
+     *
+     * @param {String} [path]
+     * @param  {Callback[]|Router} handlers
+     * @returns {Router}
      */
     use(path, ...handlers) {
         this.add("ALL", path, ...handlers);
@@ -127,9 +139,10 @@ class Router {
     }
 
     /**
-     * @param {String|Callback} path
-     * @param  {Callback[]} handlers
-     * @returns {this}
+     *
+     * @param {String} [path]
+     * @param  {Callback[]|Router} handlers
+     * @returns {Router}
      */
     get(path, ...handlers) {
         this.add("GET", path, ...handlers);
@@ -137,9 +150,10 @@ class Router {
     }
 
     /**
-     * @param {String|Callback} path
-     * @param  {Callback[]} handlers
-     * @returns {this}
+     *
+     * @param {String} [path]
+     * @param  {Callback[]|Router} handlers
+     * @returns {Router}
      */
     query(path, ...handlers) {
         this.add("QUERY", path, ...handlers);
@@ -147,9 +161,10 @@ class Router {
     }
 
     /**
-     * @param {String|Callback} path
-     * @param  {Callback[]} handlers
-     * @returns {this}
+     *
+     * @param {String} [path]
+     * @param  {Callback[]|Router} handlers
+     * @returns {Router}
      */
     head(path, ...handlers) {
         this.add("HEAD", path, ...handlers);
@@ -157,9 +172,10 @@ class Router {
     }
 
     /**
-     * @param {String|Callback} path
-     * @param  {Callback[]} handlers
-     * @returns {this}
+     *
+     * @param {String} [path]
+     * @param  {Callback[]|Router} handlers
+     * @returns {Router}
      */
     options(path, ...handlers) {
         this.add("OPTIONS", path, ...handlers);
@@ -167,9 +183,10 @@ class Router {
     }
 
     /**
-     * @param {String|Callback} path
-     * @param  {Callback[]} handlers
-     * @returns {this}
+     *
+     * @param {String} [path]
+     * @param  {Callback[]|Router} handlers
+     * @returns {Router}
      */
     trace(path, ...handlers) {
         this.add("TRACE", path, ...handlers);
@@ -177,9 +194,10 @@ class Router {
     }
 
     /**
-     * @param {String|Callback} path
-     * @param  {Callback[]} handlers
-     * @returns {this}
+     *
+     * @param {String} [path]
+     * @param  {Callback[]|Router} handlers
+     * @returns {Router}
      */
     put(path, ...handlers) {
         this.add("PUT", path, ...handlers);
@@ -187,9 +205,10 @@ class Router {
     }
 
     /**
-     * @param {String|Callback} path
-     * @param  {Callback[]} handlers
-     * @returns {this}
+     *
+     * @param {String} [path]
+     * @param  {Callback[]|Router} handlers
+     * @returns {Router}
      */
     delete(path, ...handlers) {
         this.add("DELETE", path, ...handlers);
@@ -197,9 +216,10 @@ class Router {
     }
 
     /**
-     * @param {String|Callback} path
-     * @param  {Callback[]} handlers
-     * @returns {this}
+     *
+     * @param {String} [path]
+     * @param  {Callback[]|Router} handlers
+     * @returns {Router}
      */
     post(path, ...handlers) {
         this.add("POST", path, ...handlers);
@@ -207,9 +227,10 @@ class Router {
     }
 
     /**
-     * @param {String|Callback} path
-     * @param  {Callback[]} handlers
-     * @returns {this}
+     *
+     * @param {String} [path]
+     * @param  {Callback[]|Router} handlers
+     * @returns {Router}
      */
     patch(path, ...handlers) {
         this.add("PATCH", path, ...handlers);
@@ -217,9 +238,10 @@ class Router {
     }
 
     /**
-     * @param {String|Callback} path
-     * @param  {Callback[]} handlers
-     * @returns {this}
+     *
+     * @param {String} [path]
+     * @param  {Callback[]|Router} handlers
+     * @returns {Router}
      */
     connect(path, ...handlers) {
         this.add("CONNECT", path, ...handlers);
@@ -227,32 +249,34 @@ class Router {
     }
 
     /**
+     *
      * @param {String} method
-     * @param {String[]} segments
+     * @param {String} path
      * @param {Node} node
-     * @param {Array} path
+     * @param {Array} nodes
      * @param {Object} params
-     * @param {Object} state
-     * @returns {{path:Array,params:Object,matched:Boolean}}
+     * @param {{nodes: [];params: {};}} state
+     * @returns {{nodes: [];params: {};matched: boolean;}}
      */
-    search(method, path, node = this.root, nodes = [], params = {}, state = { nodes: [], params: {}, len: -1 }) {
+    search(method, path, node = this.root, nodes = [], params = {}, state = { nodes: [], params: {} }) {
         nodes.push(node);
 
         if (path.length === 0) {
             if (node.handlers.has(method) || node.handlers.has("ALL")) {
                 return { nodes, params, matched: true };
             }
-            if (nodes.length > state.len) {
+
+            if (nodes.length > state.nodes.length) {
                 state.nodes = nodes.slice();
                 state.params = { ...params };
-                state.len = nodes.length;
             }
+
             nodes.pop();
+
             return { nodes: state.nodes, params: state.params, matched: false };
         }
 
-        // 1. literal (single char)
-        const child = node.children.get(path[0]); // O(1)
+        const child = node.children.get(path[0]);
         if (child) {
             const lcp = this.lcp(child.prefix, path);
             if (lcp === child.prefix.length) {
@@ -261,75 +285,53 @@ class Router {
             }
         }
 
-        // 2. param (coba semua)
         if (node.params.size) {
-            const slash = path.indexOf("/");
-            const value = slash === -1 ? path : path.slice(0, slash);
+            const slashIndex = path.indexOf("/");
+            const value = slashIndex === -1 ? path : path.slice(0, slashIndex);
             if (value.length) {
-                const rest = slash === -1 ? "" : path.slice(slash);
+                const rest = slashIndex === -1 ? "" : path.slice(slashIndex);
                 for (const child of node.params.values()) {
-                    const next = { ...params, [child.name]: value };
+                    const next = { ...params, [child.name]: decodeParam(value) };
                     const res = this.search(method, rest, child, nodes, next, state);
                     if (res.matched) return res;
                 }
             }
         }
 
-        // 3. wildcard
         if (node.wildcard && (node.wildcard.handlers.has(method) || node.wildcard.handlers.has("ALL"))) {
             nodes.push(node.wildcard);
-            return { nodes, params: { ...params, wildcard: path }, matched: true };
+            return { nodes, params: { ...params, wildcard: decodeParam(path) }, matched: true };
         }
 
-        if (nodes.length > state.len) {
+        if (nodes.length > state.nodes.length) {
             state.nodes = nodes.slice();
             state.params = { ...params };
-            state.len = nodes.length;
         }
+
         nodes.pop();
+
         return { nodes: state.nodes, params: state.params, matched: false };
     }
 
     /**
+     *
      * @param {Node} node
      * @param {String} method
-     * @param {Object} handlers
+     * @param {Object} target
      */
-    collectHandler(node, method, handlers) {
+    collect(node, method, target) {
         if (node.handlers.has(method)) {
             for (const entry of node.handlers.get(method)) {
-                handlers[entry.seq] = entry.handler;
+                target[entry.seq] = entry.handler;
             }
         }
     }
 
     /**
-     * @param {Node} node
-     * @param {Object} handlers
-     * @param {Object} errorHandlers
-     */
-    collectMiddleware(node, handlers, errorHandlers) {
-        this.collectHandler(node, "ALL", handlers);
-        this.collectHandler(node, "CATCH", errorHandlers);
-    }
-
-    /**
      *
-     * @param {*} obj
-     * @returns
-     */
-    decodeParams(obj) {
-        const params = Object.create(null);
-        for (const key in obj) {
-            params[key] = decodeParam(obj[key]);
-        }
-        return params;
-    }
-
-    /**
      * @param {String} method
      * @param {String} path
-     * @returns {{params: Object;handlers: any[];errorHandlers: any[];}}
+     * @returns {{params: {};handlers: {};errorHandlers: {};}}
      */
     find(method, path) {
         let res = this.search(method, path);
@@ -337,19 +339,21 @@ class Router {
             const alt = path.endsWith("/") ? path.slice(0, -1) : path + "/";
             res = this.search(method, alt);
         }
+
         const handlers = {};
         const errorHandlers = {};
+
         if (res.matched) {
-            this.collectHandler(res.nodes.at(-1), method, handlers);
+            this.collect(res.nodes.at(-1), method, handlers);
         }
+
         for (const node of res.nodes) {
-            this.collectMiddleware(node, handlers, errorHandlers);
+            this.collect(node, "ALL", handlers);
+            this.collect(node, "CATCH", errorHandlers);
         }
-        return {
-            params: this.decodeParams(res.params),
-            handlers: Object.values(handlers),
-            errorHandlers: Object.values(errorHandlers),
-        };
+
+        return { params: res.params, handlers: handlers, errorHandlers: errorHandlers };
     }
 }
+
 exports.Router = Router;

@@ -23,6 +23,7 @@ function json({ limit = 1.024e5 } = {}) {
     };
 
     return async (req, res) => {
+        if (req.body !== undefined) return;
         if (!["POST", "PUT", "PATCH", "QUERY"].includes(req.method)) {
             return;
         }

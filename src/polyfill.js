@@ -6,7 +6,6 @@ if (!Map.prototype.getOrInsert) {
         return this.get(key);
     };
 }
-
 if (!Map.prototype.getOrInsertComputed) {
     Map.prototype.getOrInsertComputed = function (key, callback) {
         if (typeof callback !== "function") {

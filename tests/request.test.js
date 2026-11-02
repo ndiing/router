@@ -1,47 +1,40 @@
-const { Request } = require("../src/request");
+const { parseUrl, parseQueryString, Request } = require("../src/request");
 
-function makeReq(url) {
-    // IncomingMessage constructor butuh socket, tapi kita bisa bypass
-    const req = Object.create(Request.prototype);
-    req.url = url;
-    req.headers = {};
-    return req;
-}
-
-describe("Request", () => {
-    test("path getter parses URL", () => {
-        const req = makeReq("/a/b?x=1");
-        expect(req.path).toBe("/a/b");
+describe("parseQueryString", () => {
+    test("kosong", () => {
+        expect(parseQueryString("")).toEqual({});
     });
-
-    test("query getter parses query string", () => {
-        const req = makeReq("/a/b?x=1&y=2");
-        req.path;
-        expect(req.query).toEqual({ x: "1", y: "2" });
+    test("single", () => {
+        expect(parseQueryString("a=1&b=2")).toEqual({ a: "1", b: "2" });
     });
-
-    test("query handles repeated key", () => {
-        const req = makeReq("/a?tag=a&tag=b");
-        req.path;
-        expect(req.query).toEqual({ tag: ["a", "b"] });
-    });
-
-    test("controller is AbortController", () => {
-        const req = makeReq("/");
-        expect(req.controller instanceof AbortController).toBe(true);
-    });
-
-    test("path cached", () => {
-        const req = makeReq("/a?x=1");
-        const p1 = req.path;
-        const p2 = req.path;
-        expect(p1).toBe(p2);
+    test("duplikat -> array", () => {
+        expect(parseQueryString("a=1&a=2&a=3")).toEqual({ a: ["1", "2", "3"] });
     });
 });
 
-test("query before path still works", () => {
-    const req = makeReq("/a?x=1");
-    req.path;
-    expect(req.query).toEqual({ x: "1" });
-    expect(req.path).toBe("/a");
+describe("parseUrl", () => {
+    test("path only", () => {
+        expect(parseUrl("/a/b")).toEqual({ path: "/a/b", queryString: "", hash: "" });
+    });
+    test("query", () => {
+        expect(parseUrl("/a?x=1")).toEqual({ path: "/a", queryString: "x=1", hash: "" });
+    });
+    test("hash", () => {
+        expect(parseUrl("/a#h")).toEqual({ path: "/a", queryString: "", hash: "h" });
+    });
+    test("query + hash", () => {
+        expect(parseUrl("/a?x=1#h")).toEqual({ path: "/a", queryString: "x=1", hash: "h" });
+    });
+});
+
+describe("Request getters", () => {
+    test("path, query, controller di-cache", () => {
+        const req = Object.create(Request.prototype);
+        req.url = "/a?x=1&x=2";
+        expect(req.path).toBe("/a");
+        expect(req.query).toEqual({ x: ["1", "2"] });
+        const c1 = req.controller;
+        const c2 = req.controller;
+        expect(c1).toBe(c2);
+    });
 });

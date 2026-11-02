@@ -1,111 +1,73 @@
+const App = require("../src");
 const { Response } = require("../src/response");
 
-function makeRes() {
+function mockResponse() {
+    // bikin instance tanpa beneran http server
     const res = Object.create(Response.prototype);
     res.statusCode = 200;
     res.headers = {};
-    res.headersSent = false;
-    res.setHeader = function (k, v) {
-        this.headers[k.toLowerCase()] = v;
+    res.body = "";
+    // stub method parent
+    res.setHeader = (k, v) => {
+        res.headers[k] = v;
     };
-    res.end = function () {
-        this.ended = true;
+    res.end = (chunk) => {
+        if (chunk) res.body += chunk;
     };
+    res.write = (chunk) => {
+        res.body += chunk;
+    };
+    res.writeHead = () => {};
+    res.flushHeaders = () => {};
     return res;
 }
 
 describe("Response", () => {
-    test("status sets statusCode", () => {
-        const res = makeRes();
-        res.status(201);
+    test("done getter/setter", () => {
+        const res = mockResponse();
+        expect(res.done).toBe(undefined);
+        res.done = true;
+        expect(res.done).toBe(true);
+    });
+    test("status chainable", () => {
+        const res = mockResponse();
+        expect(res.status(201)).toBe(res);
         expect(res.statusCode).toBe(201);
     });
-
-    test("status returns this for chaining", () => {
-        const res = makeRes();
-        const r = res.status(201);
-        expect(r).toBe(res);
-    });
-
-    test("send sets content-type html", () => {
-        const res = makeRes();
-        res.send("<h1>hi</h1>");
-        expect(res.headers["content-type"]).toBe("text/html");
-        expect(res.done).toBe(true);
-    });
-
-    test("json sets content-type json", () => {
-        const res = makeRes();
+    test("json set content-type & end", () => {
+        const res = mockResponse();
         res.json({ a: 1 });
-        expect(res.headers["content-type"]).toBe("application/json");
-        expect(res.done).toBe(true);
+        expect(res.headers["Content-Type"]).toBe("application/json");
+        expect(res.body).toBe('{"a":1}');
+    });
+    test("send end chunk", () => {
+        const res = mockResponse();
+        res.send("hi");
+        expect(res.body).toBe("hi");
     });
 });
 
-const fs = require("fs");
-const path = require("path");
-const os = require("os");
-
-describe("Response.download", () => {
-    test("download sets headers and pipes file", (done) => {
-        const tmp = path.join(os.tmpdir(), "test-download.txt");
-        fs.writeFileSync(tmp, "hello");
-
-        const { Response } = require("../src/response");
-        const res = Object.create(Response.prototype);
-        res.headers = {};
-        res.setHeader = function (k, v) {
-            this.headers[k.toLowerCase()] = v;
-        };
-        res.end = function () {
-            this.ended = true;
-        };
-        res.on = function () {}; // pipe butuh event emitter
-
-        // pipe butuh Writable, jadi butuh mock yang lebih kompleks
-        // simplest: skip pipe, test header saja
-
-        fs.unlinkSync(tmp);
-        done();
+test("writeHead & flushHeaders via integrasi", async () => {
+    const app = new App();
+    app.get("/wh", (req, res) => {
+        res.writeHead(200, { "Content-Type": "text/plain" });
+        res.end("ok");
     });
-});
-
-const { Writable } = require("stream");
-// const fs = require("fs");
-// const path = require("path");
-// const os = require("os");
-
-test.skip("download sets headers", async (done) => {
-    const tmp = path.join(os.tmpdir(), "test-dl.txt");
-    fs.writeFileSync(tmp, "hello");
-
-    const chunks = [];
-    const writable = new Writable({
-        write(chunk, enc, cb) {
-            chunks.push(chunk);
-            cb();
-        },
+    app.get("/fh", (req, res) => {
+        res.flushHeaders();
+        res.end("ok");
     });
-    writable.setHeader = function (k, v) {
-        this.headers ??= {};
-        this.headers[k.toLowerCase()] = v;
-    };
-    writable.headers = {};
-    writable.status = function (s) {
-        this.statusCode = s;
-        return this;
-    };
-    writable.end = Writable.prototype.end;
-    writable.on = Writable.prototype.on;
+    const server = app.listen(0);
+    await new Promise((r) => server.once("listening", r));
+    const { port } = server.address();
 
-    // copy download ke writable
-    const { Response } = require("../src/response");
-    Response.prototype.download.call(writable, tmp);
+    const r1 = await fetch(`http://localhost:${port}/wh`);
+    expect(r1.status).toBe(200);
+    expect(await r1.text()).toBe("ok");
 
-    writable.on("finish", () => {
-        expect(writable.headers["content-type"]).toBe("application/octet-stream");
-        expect(Buffer.concat(chunks).toString()).toBe("hello");
-        fs.unlinkSync(tmp);
-        done();
-    });
+    const r2 = await fetch(`http://localhost:${port}/fh`);
+    expect(r2.status).toBe(200);
+    expect(await r2.text()).toBe("ok");
+
+    await new Promise((r) => server.close(r));
 });

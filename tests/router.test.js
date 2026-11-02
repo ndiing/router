@@ -1,257 +1,450 @@
 require("../src/polyfill");
-const { Router } = require("../src/router");
+const { Router, decodeParam } = require("../src/router");
+const { Node } = require("../src/node");
 
-describe("Router", () => {
-    let app;
+/* =========================================================
+ * 1. decodeParam
+ * =======================================================*/
+describe("decodeParam", () => {
+    test("decode normal", () => {
+        expect(decodeParam("%3Fx%3Dtest")).toBe("?x=test");
+        expect(decodeParam("JavaScript_%D1%88%D0%B5%D0%BB%D0%BB%D1%8B")).toBe("JavaScript_шеллы");
+    });
+    test("catch invalid URI (fallback raw)", () => {
+        expect(decodeParam("%E0%A4%A")).toBe("%E0%A4%A");
+    });
+    test("plus & space", () => {
+        expect(decodeParam("search+query%20%28correct%29")).toBe("search+query (correct)");
+    });
+});
 
-    beforeEach(() => {
-        app = new Router();
+/* =========================================================
+ * 2. Node (unit)
+ * =======================================================*/
+describe("Node", () => {
+    test("prefix & name untuk param", () => {
+        const n = new Node(":id");
+        expect(n.prefix).toBe(":id");
+        expect(n.name).toBe("id");
+    });
+    test("add param", () => {
+        const root = new Node();
+        const child = root.add(":id");
+        expect(child.name).toBe("id");
+        expect(root.params.get(":id")).toBe(child);
+    });
+    test("add wildcard (idempotent)", () => {
+        const root = new Node();
+        const a = root.add("*");
+        const b = root.add("*");
+        expect(a).toBe(b);
+        expect(root.wildcard).toBe(a);
+    });
+    test("add static pakai char pertama sebagai key", () => {
+        const root = new Node();
+        const child = root.add("hello");
+        expect(root.children.get("h")).toBe(child);
+    });
+    test("getMaxSeq default -1", () => {
+        const root = new Node();
+        expect(root.getMaxSeq()).toBe(-1);
+    });
+    test("getMaxSeq ambil max dari handlers", () => {
+        const root = new Node();
+        root.handlers.set("GET", [{ handler: () => {}, seq: 3 }]);
+        root.handlers.set("POST", [{ handler: () => {}, seq: 7 }]);
+        expect(root.getMaxSeq()).toBe(7);
+    });
+    test("getMaxSeq traverse wildcard/params/children", () => {
+        const root = new Node();
+        root.add("*").handlers.set("GET", [{ handler: () => {}, seq: 2 }]);
+        root.add(":id").handlers.set("GET", [{ handler: () => {}, seq: 5 }]);
+        root.add("abc").handlers.set("GET", [{ handler: () => {}, seq: 9 }]);
+        expect(root.getMaxSeq()).toBe(9);
+    });
+});
+
+/* =========================================================
+ * 3. Router methods (smoke)
+ * =======================================================*/
+describe("router methods", () => {
+    const router = new Router();
+    router.get("/", () => {});
+    router.query("/", () => {});
+    router.head("/", () => {});
+    router.options("/", () => {});
+    router.trace("/", () => {});
+    router.put("/", () => {});
+    router.delete("/", () => {});
+    router.post("/", () => {});
+    router.patch("/", () => {});
+    router.connect("/", () => {});
+
+    for (const method of ["GET", "QUERY", "HEAD", "OPTIONS", "TRACE", "PUT", "DELETE", "POST", "PATCH", "CONNECT"]) {
+        test(method.toLowerCase(), () => {
+            const r = router.find(method, "/");
+            expect(Object.keys(r.handlers).length).toBe(1);
+        });
+    }
+});
+
+/* =========================================================
+ * 4. Static / params / wildcard (single router)
+ * =======================================================*/
+describe("router static/params/wildcard", () => {
+    const router = new Router();
+    router.get("/posts", () => {});
+    router.get("/posts/:id", () => {});
+    router.get("/posts/:postId/comments", () => {});
+    router.get("/posts/me", () => {});
+    router.get("/posts/*", () => {});
+    router.use((err, req, res) => {});
+
+    test("static", () => {
+        const r = router.find("GET", "/posts");
+        expect(Object.keys(r.handlers).length).toBe(1);
+    });
+    test("params", () => {
+        const r = router.find("GET", "/posts/321");
+        expect(Object.keys(r.handlers).length).toBe(1);
+        expect(r.params.id).toBe("321");
+    });
+    test("another params", () => {
+        const r = router.find("GET", "/posts/321/comments");
+        expect(Object.keys(r.handlers).length).toBe(1);
+        expect(r.params.postId).toBe("321");
+    });
+    test("another static (id undefined)", () => {
+        const r = router.find("GET", "/posts/me");
+        expect(Object.keys(r.handlers).length).toBe(1);
+        expect(r.params.id === undefined).toBe(true);
+    });
+    test("wildcard", () => {
+        const r = router.find("GET", "/posts/asdf/asdf/asdf");
+        expect(Object.keys(r.handlers).length).toBe(1);
+        expect(r.params.wildcard).toBe("asdf/asdf/asdf");
+    });
+    test("error handler collected di root", () => {
+        const r = router.find("GET", "/posts");
+        expect(Object.keys(r.errorHandlers).length).toBe(1);
+    });
+});
+
+/* =========================================================
+ * 5. Radix split
+ * =======================================================*/
+describe("radix router split", () => {
+    test("split new (/abc lalu /abcd)", () => {
+        const router = new Router();
+        router.get("/abc", () => {});
+        router.get("/abcd", () => {});
+        expect(Object.keys(router.find("GET", "/abc").handlers).length).toBe(1);
+        expect(Object.keys(router.find("GET", "/abcd").handlers).length).toBe(1);
+    });
+    test("split existing (/abcd lalu /ad)", () => {
+        const router = new Router();
+        router.get("/abcd", () => {});
+        router.get("/ad", () => {});
+        expect(Object.keys(router.find("GET", "/ad").handlers).length).toBe(1);
+        expect(Object.keys(router.find("GET", "/abcd").handlers).length).toBe(1);
+    });
+});
+
+/* =========================================================
+ * 6. find fallback trailing slash
+ * =======================================================*/
+describe("find fallback", () => {
+    test("match /posts/ ke /posts", () => {
+        const posts = new Router();
+        posts.get("/", () => {});
+        const router = new Router();
+        router.use("/posts", posts);
+        router.get("/", () => {});
+        expect(Object.keys(router.find("GET", "/posts/").handlers).length).toBe(1);
+    });
+    test("match /posts ke /posts/", () => {
+        const posts = new Router();
+        posts.get("/", () => {});
+        const router = new Router();
+        router.use("/posts", posts);
+        router.get("/", () => {});
+        expect(Object.keys(router.find("GET", "/posts").handlers).length).toBe(1);
+    });
+});
+
+/* =========================================================
+ * 7. Nested router — TERISOLASI (app hanya punya use)
+ *    biar kalau gagal, pasti bug di merge/strip, bukan route app
+ * =======================================================*/
+describe("nested router (isolated)", () => {
+    const posts = new Router();
+    posts.get("/", () => {});
+    posts.get("/:id", () => {});
+    posts.get("/:postId/comments", () => {});
+    posts.get("/me", () => {});
+    posts.get("/*", () => {});
+
+    const app = new Router();
+    app.use("/posts", posts);
+
+    test("nested static", () => {
+        const r = app.find("GET", "/posts");
+        expect(Object.keys(r.handlers).length).toBe(1);
+    });
+    test("nested params", () => {
+        const r = app.find("GET", "/posts/321");
+        expect(Object.keys(r.handlers).length).toBe(1);
+        expect(r.params.id).toBe("321");
+    });
+    test("nested another params", () => {
+        const r = app.find("GET", "/posts/321/comments");
+        expect(Object.keys(r.handlers).length).toBe(1);
+        expect(r.params.postId).toBe("321");
+    });
+    test("nested another static", () => {
+        const r = app.find("GET", "/posts/me");
+        expect(Object.keys(r.handlers).length).toBe(1);
+        expect(r.params.id === undefined).toBe(true);
+    });
+    test("nested wildcard (prefix harus di-strip)", () => {
+        const r = app.find("GET", "/posts/asdf/asdf/asdf");
+        expect(Object.keys(r.handlers).length).toBe(1);
+        expect(r.params.wildcard).toBe("asdf/asdf/asdf");
+    });
+});
+
+/* =========================================================
+ * 8. App own routes (tanpa nested) — pastikan tidak rusak
+ * =======================================================*/
+describe("app own routes", () => {
+    const app = new Router();
+    app.get("/", () => {});
+    app.get("/:id", () => {});
+    app.get("/:postId/comments", () => {});
+    app.get("/me", () => {});
+    app.get("/*", () => {});
+
+    test("root", () => {
+        const r = app.find("GET", "/");
+        expect(Object.keys(r.handlers).length).toBe(1);
+    });
+    test("params 1 segmen", () => {
+        const r = app.find("GET", "/321");
+        expect(r.params.id).toBe("321");
+    });
+    test("params 2 segmen", () => {
+        const r = app.find("GET", "/321/comments");
+        expect(r.params.postId).toBe("321");
+    });
+    test("static menang dari param", () => {
+        const r = app.find("GET", "/me");
+        expect(r.params.id === undefined).toBe(true);
+    });
+    test("wildcard ambil sisa path", () => {
+        const r = app.find("GET", "/a/b/c");
+        expect(r.params.wildcard).toBe("a/b/c");
+    });
+});
+
+/* =========================================================
+ * 9. Coverage extras
+ * =======================================================*/
+describe("coverage extras", () => {
+    test("use(handler) tanpa path -> error handler di root", () => {
+        const r = new Router();
+        r.use((err, req, res) => {});
+        const res = r.find("GET", "/anything");
+        expect(Object.keys(res.errorHandlers).length).toBe(1);
+    });
+    test("use(path, handler) -> handler ALL", () => {
+        const r = new Router();
+        r.use("/a", (req, res) => {});
+        const res = r.find("GET", "/a");
+        expect(Object.keys(res.handlers).length).toBe(1);
+    });
+    test("use multiple handler di path sama", () => {
+        const r = new Router();
+        r.use(
+            "/a",
+            (req, res) => {},
+            (req, res) => {},
+        );
+        const res = r.find("GET", "/a");
+        expect(Object.keys(res.handlers).length).toBe(2);
+    });
+    test("nested params merge (child saja)", () => {
+        const child = new Router();
+        child.get("/:id", () => {});
+        const parent = new Router();
+        parent.use("/p", child);
+        const r = parent.find("GET", "/p/123");
+        expect(r.params.id).toBe("123");
+    });
+    test("tidak match sama sekali -> matched false, params default", () => {
+        const r = new Router();
+        r.get("/x", () => {});
+        const res = r.find("GET", "/y");
+        expect(Object.keys(res.handlers).length).toBe(0);
+        expect(res.params).toEqual({});
+    });
+    test("decode param di URL", () => {
+        const r = new Router();
+        r.get("/p/:name", () => {});
+        const res = r.find("GET", "/p/hello%20world");
+        expect(res.params.name).toBe("hello world");
+    });
+    test("seq order antar handler", () => {
+        const r = new Router();
+        r.use("/x", (req, res) => {});
+        r.get("/x", (req, res) => {});
+        const res = r.find("GET", "/x");
+        const keys = Object.keys(res.handlers).map(Number);
+        expect(keys).toEqual([...keys].sort((a, b) => a - b));
+        expect(keys.length).toBe(2);
+    });
+    test("requestTimeout default 0", () => {
+        expect(new Router().requestTimeout).toBe(0);
+        expect(new Router({ requestTimeout: 500 }).requestTimeout).toBe(500);
+    });
+});
+
+test("search params value kosong (path mulai /)", () => {
+    const r = new Router();
+    r.get("/:id", () => {});
+    // setelah root.children["/"], path sisa = "" -> params loop dilewati
+    // coba path yang bikin value = "" di node params
+    const res = r.find("GET", "/");
+    // asal tidak crash & tidak match ke :id
+    expect(res.params.id).toBe(undefined);
+});
+
+test("search partial match -> state nyimpen best", () => {
+    const r = new Router();
+    r.get("/a/b", () => {});
+    // /a match partial (node "/a" ada), tapi nggak sampai handler
+    const res = r.find("GET", "/a/c");
+    expect(Object.keys(res.handlers).length).toBe(0);
+});
+
+test("wildcard via use (ALL) bukan method", () => {
+    const r = new Router();
+    r.use("/*", (req, res) => {});
+    const res = r.find("GET", "/anything");
+    expect(res.params.wildcard).toBe("anything");
+});
+
+test("path tanpa trailing slash -> fallback tambah /", () => {
+    const posts = new Router();
+    posts.get("/", () => {});
+    const r = new Router();
+    r.use("/posts", posts);
+    expect(Object.keys(r.find("GET", "/posts").handlers).length).toBe(1);
+});
+
+test("path dengan trailing slash -> fallback buang /", () => {
+    const posts = new Router();
+    posts.get("/", () => {});
+    const r = new Router();
+    r.use("/posts", posts);
+    expect(Object.keys(r.find("GET", "/posts/").handlers).length).toBe(1);
+});
+
+describe("nested router (extended)", () => {
+    test("nested method berbeda", () => {
+        const api = new Router();
+        api.get("/users", () => {});
+        api.post("/users", () => {});
+        api.delete("/users/:id", () => {});
+
+        const app = new Router();
+        app.use("/api", api);
+
+        expect(Object.keys(app.find("GET", "/api/users").handlers).length).toBe(1);
+        expect(Object.keys(app.find("POST", "/api/users").handlers).length).toBe(1);
+        expect(Object.keys(app.find("DELETE", "/api/users/123").handlers).length).toBe(1);
+        expect(app.find("DELETE", "/api/users/123").params.id).toBe("123");
     });
 
-    describe("basic routing", () => {
-        test("GET / matches root", () => {
-            let called = false;
-            app.get("/", () => {
-                called = true;
-            });
-            const r = app.find("GET", "/");
-            expect(r.handlers.length).toBe(1);
-            expect(r.params).toEqual({});
+    test("nested use(mw) jalan", () => {
+        const calls = [];
+        const api = new Router();
+        api.use((req, res) => {
+            calls.push("api-mw");
+        });
+        api.get("/users", () => {
+            calls.push("api-handler");
         });
 
-        test("GET /me matches literal", () => {
-            app.get("/me", () => {});
-            const r = app.find("GET", "/me");
-            expect(r.handlers.length).toBe(1);
-        });
+        const app = new Router();
+        app.use("/api", api);
 
-        test("GET /nonexistent returns no handlers", () => {
-            app.get("/me", () => {});
-            const r = app.find("GET", "/nonexistent");
-            expect(r.handlers.length).toBe(0);
-        });
+        const res = app.find("GET", "/api/users");
+        expect(Object.keys(res.handlers).length).toBe(2); // mw + handler
     });
 
-    describe("params", () => {
-        test("GET /:id captures id", () => {
-            app.get("/:id", () => {});
-            const r = app.find("GET", "/123");
-            expect(r.params).toEqual({ id: "123" });
-        });
+    test("nested multi-level", () => {
+        const v1 = new Router();
+        v1.get("/users", () => {});
 
-        test("GET /:id with query does not affect path", () => {
-            app.get("/:id", () => {});
-            const r = app.find("GET", "/123");
-            expect(r.params.id).toBe("123");
-        });
+        const api = new Router();
+        api.use("/v1", v1);
 
-        test("GET /:postId/details captures postId", () => {
-            app.get("/:postId/details", () => {});
-            const r = app.find("GET", "/123/details");
-            expect(r.params).toEqual({ postId: "123" });
-        });
+        const app = new Router();
+        app.use("/api", api);
 
-        test("literal /me wins over /:id", () => {
-            let which = null;
-            app.get("/:id", () => {
-                which = "param";
-            });
-            app.get("/me", () => {
-                which = "literal";
-            });
-            app.find("GET", "/me");
-            // cek handler pertama yang dipanggil = literal
-            const r = app.find("GET", "/me");
-            expect(r.handlers.length).toBe(1);
-        });
-
-        test("URL-decoded param", () => {
-            app.get("/:id", () => {});
-            const r = app.find("GET", "/hello%20world");
-            expect(r.params.id).toBe("hello world");
-        });
-
-        test("invalid URL-encoded param returns raw", () => {
-            app.get("/:id", () => {});
-            const r = app.find("GET", "/%E0%A4%A");
-            expect(r.params.id).toBe("%E0%A4%A");
-        });
+        expect(Object.keys(app.find("GET", "/api/v1/users").handlers).length).toBe(1);
     });
 
-    describe("wildcard", () => {
-        test("GET /* captures wildcard", () => {
-            app.get("/*", () => {});
-            const r = app.find("GET", "/a/b/c");
-            expect(r.params).toEqual({ wildcard: "a/b/c" });
+    test("nested error handler", () => {
+        const api = new Router();
+        api.get("/users", () => {
+            throw new Error("boom");
         });
+        api.use((err, req, res) => {});
 
-        test("literal wins over wildcard", () => {
-            app.get("/*", () => {});
-            app.get("/me", () => {});
-            const r = app.find("GET", "/me");
-            expect(r.params).toEqual({});
-        });
+        const app = new Router();
+        app.use("/api", api);
+
+        const res = app.find("GET", "/api/users");
+        expect(Object.keys(res.errorHandlers).length).toBe(1);
     });
 
-    describe("middleware", () => {
-        test("use without path applies to all", () => {
-            app.use((req, res) => {});
-            app.get("/", () => {});
-            const r = app.find("GET", "/");
-            expect(r.handlers.length).toBe(2);
-        });
+    test("nested use di path sama", () => {
+        const api = new Router();
+        api.use("/x", () => {});
+        api.use("/x", () => {});
+        api.get("/x", () => {});
 
-        test("nested middleware at prefix applies", () => {
-            const sub = new Router();
-            sub.use((req, res) => {});
-            sub.get("/", () => {});
-            app.use("/api", sub);
-            const r = app.find("GET", "/api/"); // ← pakai trailing slash
-            expect(r.handlers.length).toBe(2);
-        });
+        const app = new Router();
+        app.use("/api", api);
 
-        test("middleware seq ordering preserved", () => {
-            const order = [];
-            app.use((req, res) => order.push("global1"));
-            app.get("/", (req, res) => order.push("route"));
-            app.use((req, res) => order.push("global2"));
-            const r = app.find("GET", "/");
-            // handler harus urut seq: global1, route, global2
-            expect(r.handlers.length).toBe(3);
-        });
+        const res = app.find("GET", "/api/x");
+        expect(Object.keys(res.handlers).length).toBe(3); // 2 mw + handler
     });
 
-    describe("error handler", () => {
-        test("3-arg handler registered as CATCH", () => {
-            app.use((err, req, res) => {});
-            const r = app.find("GET", "/");
-            expect(r.errorHandlers.length).toBe(1);
-            expect(r.handlers.length).toBe(0);
-        });
+    test("nested router route sendiri (app) tetap jalan", () => {
+        const api = new Router();
+        api.get("/users", () => {});
+
+        const app = new Router();
+        app.use("/api", api);
+        app.get("/api/health", () => {}); // ← app punya route sendiri di bawah /api
+
+        expect(Object.keys(app.find("GET", "/api/users").handlers).length).toBe(1);
+        expect(Object.keys(app.find("GET", "/api/health").handlers).length).toBe(1);
     });
+});
 
-    describe("nested router", () => {
-        test("nested router routes work", () => {
-            const users = new Router();
-            users.get("/", () => {});
-            users.get("/:id", () => {});
-            app.use("/users", users);
+test("nested + app route yang share prefix", () => {
+    const api = new Router();
+    api.get("/users", () => {});
 
-            const r1 = app.find("GET", "/users");
-            expect(r1.handlers.length).toBe(1);
+    const app = new Router();
+    app.use("/api", api);
+    app.get("/api", () => {}); // ← app route di /api
+    app.get("/api/v2/health", () => {}); // ← app route lebih dalam
 
-            const r2 = app.find("GET", "/users/123");
-            expect(r2.params).toEqual({ id: "123" });
-        });
-
-        test("double-nested router", () => {
-            const users = new Router();
-            users.get("/:id", () => {});
-            const admin = new Router();
-            admin.use("/users", users);
-            app.use("/admin", admin);
-
-            const r = app.find("GET", "/admin/users/42");
-            expect(r.params).toEqual({ id: "42" });
-        });
-    });
-
-    describe("methods", () => {
-        test("GET and POST separate", () => {
-            app.get("/", () => {});
-            const r1 = app.find("GET", "/");
-            const r2 = app.find("POST", "/");
-            expect(r1.handlers.length).toBe(1);
-            expect(r2.handlers.length).toBe(0);
-        });
-
-        test("ALL matches any method", () => {
-            app.use("/", (req, res) => {});
-            const r1 = app.find("GET", "/");
-            const r2 = app.find("POST", "/");
-            expect(r1.handlers.length).toBe(1);
-            expect(r2.handlers.length).toBe(1);
-        });
-    });
-
-    describe("trailing slash", () => {
-        test("GET /me/ falls back to /me", () => {
-            app.get("/me", () => {});
-            const r = app.find("GET", "/me/");
-            expect(r.handlers.length).toBe(1);
-        });
-
-        test("GET /me falls back to /me/", () => {
-            app.get("/me/", () => {});
-            const r = app.find("GET", "/me");
-            expect(r.handlers.length).toBe(1);
-        });
-    });
-
-    describe("all HTTP methods", () => {
-        const methods = [
-            ["get", "GET"],
-            ["post", "POST"],
-            ["put", "PUT"],
-            ["patch", "PATCH"],
-            ["delete", "DELETE"],
-            ["head", "HEAD"],
-            ["options", "OPTIONS"],
-            ["trace", "TRACE"],
-            ["connect", "CONNECT"],
-            ["query", "QUERY"],
-        ];
-
-        for (const [fn, method] of methods) {
-            test(`${fn}() registers ${method} route`, () => {
-                app[fn]("/", () => {});
-                const r = app.find(method, "/");
-                expect(r.handlers.length).toBe(1);
-            });
-        }
-    });
-
-    describe("radix split", () => {
-        test("split when two routes share prefix", () => {
-            app.get("/api/cat", () => {});
-            app.get("/api/car", () => {});
-            app.get("/api/cart", () => {});
-            expect(app.find("GET", "/api/cat").handlers.length).toBe(1);
-            expect(app.find("GET", "/api/car").handlers.length).toBe(1);
-            expect(app.find("GET", "/api/cart").handlers.length).toBe(1);
-            expect(app.find("GET", "/api/ca").handlers.length).toBe(0);
-        });
-
-        test("split with param after literal", () => {
-            app.get("/api/:id", () => {});
-            app.get("/api/cat", () => {});
-            expect(app.find("GET", "/api/cat").handlers.length).toBe(1);
-            expect(app.find("GET", "/api/123").params.id).toBe("123");
-        });
-    });
-
-    test("split with remaining path after common prefix", () => {
-        app.get("/api/cat", () => {});
-        app.get("/api/caterpillar", () => {});
-        expect(app.find("GET", "/api/cat").handlers.length).toBe(1);
-        expect(app.find("GET", "/api/caterpillar").handlers.length).toBe(1);
-        expect(app.find("GET", "/api/ca").handlers.length).toBe(0);
-    });
-
-    test("trailing slash fallback fails gracefully", () => {
-        app.get("/me", () => {});
-        const r = app.find("GET", "/nonexistent/");
-        expect(r.handlers.length).toBe(0);
-    });
-    test("split when new path ends exactly at common prefix", () => {
-        app.get("/api/cat", () => {});
-        app.get("/api", () => {});
-        expect(app.find("GET", "/api").handlers.length).toBe(1);
-        expect(app.find("GET", "/api/cat").handlers.length).toBe(1);
-    });
-    test("param with empty value does not match", () => {
-        app.get("/:id", () => {});
-        const r = app.find("GET", "//");
-        expect(r.handlers.length).toBe(0);
-    });
+    expect(Object.keys(app.find("GET", "/api/users").handlers).length).toBe(1);
+    expect(Object.keys(app.find("GET", "/api").handlers).length).toBe(1);
+    expect(Object.keys(app.find("GET", "/api/v2/health").handlers).length).toBe(1);
 });

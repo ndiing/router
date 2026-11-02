@@ -66,9 +66,9 @@ app.listen(3000, () => console.log("http://localhost:3000"));
 
 ### `new App(options?)`
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `requestTimeout` | `number` | `0` | Request timeout in ms. `0` disables it. Responds with `504` on timeout. |
+| Option           | Type     | Default | Description                                                             |
+| ---------------- | -------- | ------- | ----------------------------------------------------------------------- |
+| `requestTimeout` | `number` | `0`     | Request timeout in ms. `0` disables it. Responds with `504` on timeout. |
 
 ```js
 const app = new App({ requestTimeout: 5000 });
@@ -96,11 +96,11 @@ All of them return `app`, so calls can be chained. Route paths must start with `
 
 **Path syntax:**
 
-| Pattern | Example | Matches |
-| --- | --- | --- |
-| Static | `/api/users` | `/api/users` |
-| Param | `/users/:id` | `/users/123` gives `req.params.id = "123"` |
-| Wildcard | `/files/*` | `/files/a/b/c` gives `req.params.wildcard = "a/b/c"` |
+| Pattern  | Example      | Matches                                              |
+| -------- | ------------ | ---------------------------------------------------- |
+| Static   | `/api/users` | `/api/users`                                         |
+| Param    | `/users/:id` | `/users/123` gives `req.params.id = "123"`           |
+| Wildcard | `/files/*`   | `/files/a/b/c` gives `req.params.wildcard = "a/b/c"` |
 
 - A `:param` matches one whole segment (up to the next `/`) and must not be empty. The value is URL-decoded; malformed escapes such as `%` are kept as they are.
 - `*` captures the rest of the path. The value is URL-decoded as a whole, and `/files/*` does not match `/files/` (nothing after the slash).
@@ -112,7 +112,7 @@ All of them return `app`, so calls can be chained. Route paths must start with `
 
 ```js
 app.get("/users/:userId/posts/:postId", (req, res) => {
-    res.json(req.params);   // { userId: "...", postId: "..." }
+    res.json(req.params); // { userId: "...", postId: "..." }
 });
 ```
 
@@ -150,9 +150,9 @@ app.get("/", (req, res) => {
 **Order matters.** Handlers run in registration order, regardless of where they sit in the tree.
 
 ```js
-app.use(auth);              // 1st
-app.use("/api", logger);    // 2nd
-app.get("/api/car", h);     // 3rd
+app.use(auth); // 1st
+app.use("/api", logger); // 2nd
+app.get("/api/car", h); // 3rd
 // order: auth -> logger -> h
 ```
 
@@ -189,16 +189,16 @@ Handlers are recognised by arity (`handler.length === 3`), so do not use default
 
 ### Request
 
-| Property | Type | Description |
-| --- | --- | --- |
-| `req.method` | `string` | HTTP method |
-| `req.url` | `string` | Raw URL (from Node) |
-| `req.path` | `string` | Path only (query and hash stripped) |
-| `req.query` | `object` | Parsed query string (null prototype) |
-| `req.params` | `object` | Route params (null prototype) |
-| `req.body` | `any` | Parsed body (from the `json` / `urlencoded` middleware) |
-| `req.headers` | `object` | Request headers |
-| `req.controller` | `AbortController` | Abort signal for timeouts and cancellation |
+| Property         | Type              | Description                                             |
+| ---------------- | ----------------- | ------------------------------------------------------- |
+| `req.method`     | `string`          | HTTP method                                             |
+| `req.url`        | `string`          | Raw URL (from Node)                                     |
+| `req.path`       | `string`          | Path only (query and hash stripped)                     |
+| `req.query`      | `object`          | Parsed query string (null prototype)                    |
+| `req.params`     | `object`          | Route params (null prototype)                           |
+| `req.body`       | `any`             | Parsed body (from the `json` / `urlencoded` middleware) |
+| `req.headers`    | `object`          | Request headers                                         |
+| `req.controller` | `AbortController` | Abort signal for timeouts and cancellation              |
 
 `req.query` is parsed lazily with `URLSearchParams`: repeated keys become arrays, `+` becomes a space, and a key without a value (`?flag`) is an empty string.
 
@@ -206,22 +206,23 @@ Handlers are recognised by arity (`handler.length === 3`), so do not use default
 
 ```js
 // GET /search?__proto__=x
-req.query.__proto__          // "x" (a plain own property)
-({}).__proto__               // unchanged
+req.query
+    .__proto__ // "x" (a plain own property)
+    ({}).__proto__; // unchanged
 ```
 
 Because of that, use `Object.hasOwn(req.query, "key")` or `"key" in req.query` instead of `req.query.hasOwnProperty(...)`.
 
 ### Response
 
-| Method | Description |
-| --- | --- |
-| `res.status(code)` | Set the status code, chainable |
-| `res.send(string)` | Send a string with `Content-Type: text/html` |
-| `res.json(value)` | Send JSON with `Content-Type: application/json` |
+| Method                          | Description                                                             |
+| ------------------------------- | ----------------------------------------------------------------------- |
+| `res.status(code)`              | Set the status code, chainable                                          |
+| `res.send(string)`              | Send a string with `Content-Type: text/html`                            |
+| `res.json(value)`               | Send JSON with `Content-Type: application/json`                         |
 | `res.download(path, filename?)` | Stream a file as an attachment (`filename` defaults to the file's name) |
-| `res.setHeader(name, value)` | Set a header (from Node) |
-| `res.appendHeader(name, value)` | Append a header (from Node 18.3) |
+| `res.setHeader(name, value)`    | Set a header (from Node)                                                |
+| `res.appendHeader(name, value)` | Append a header (from Node 18.3)                                        |
 
 ```js
 res.status(201).json({ created: true });
@@ -238,12 +239,12 @@ Send the response once per request: `res.send()`, `res.json()` and `res.download
 
 Parses JSON bodies. Only runs on `POST`, `PUT`, `PATCH` and `QUERY` requests with a JSON `Content-Type`.
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
+| Option  | Type     | Default           | Description            |
+| ------- | -------- | ----------------- | ---------------------- |
 | `limit` | `number` | `102400` (100 KB) | Max body size in bytes |
 
 ```js
-app.use(App.json({ limit: 1024 * 1024 }));   // 1 MB
+app.use(App.json({ limit: 1024 * 1024 })); // 1 MB
 ```
 
 - **Prototype pollution guard:** `__proto__`, `constructor` and `prototype` keys are removed.
@@ -262,7 +263,7 @@ app.use(App.urlencoded());
 
 app.post("/login", (req, res) => {
     // body: user=ndiing&tag=a&tag=b
-    res.json(req.body);   // { user: "ndiing", tag: ["a", "b"] }
+    res.json(req.body); // { user: "ndiing", tag: ["a", "b"] }
 });
 ```
 
@@ -270,22 +271,24 @@ app.post("/login", (req, res) => {
 
 CORS middleware with preflight support.
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `origin` | `string \| string[] \| null` | `"*"` | Allowed origin(s). `null` never sends `Access-Control-Allow-Origin`. |
-| `credentials` | `boolean` | `false` | Allow credentials (cookies, auth headers) |
-| `headers` | `string \| string[]` | none | Allowed request headers (preflight) and exposed response headers |
-| `methods` | `string \| string[]` | none | Allowed methods |
-| `maxAge` | `number` | `0` | Preflight cache time in seconds. `0` omits the header. |
+| Option        | Type                         | Default | Description                                                          |
+| ------------- | ---------------------------- | ------- | -------------------------------------------------------------------- |
+| `origin`      | `string \| string[] \| null` | `"*"`   | Allowed origin(s). `null` never sends `Access-Control-Allow-Origin`. |
+| `credentials` | `boolean`                    | `false` | Allow credentials (cookies, auth headers)                            |
+| `headers`     | `string \| string[]`         | none    | Allowed request headers (preflight) and exposed response headers     |
+| `methods`     | `string \| string[]`         | none    | Allowed methods                                                      |
+| `maxAge`      | `number`                     | `0`     | Preflight cache time in seconds. `0` omits the header.               |
 
 ```js
-app.use(App.cors({
-    origin: ["https://app.example.com", "https://admin.example.com"],
-    credentials: true,
-    headers: ["content-type", "authorization"],
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    maxAge: 3600,
-}));
+app.use(
+    App.cors({
+        origin: ["https://app.example.com", "https://admin.example.com"],
+        credentials: true,
+        headers: ["content-type", "authorization"],
+        methods: ["GET", "POST", "PUT", "DELETE"],
+        maxAge: 3600,
+    }),
+);
 ```
 
 - A **preflight** is an `OPTIONS` request with an `Access-Control-Request-Method` header. It is answered with `204` and the chain stops. Other `OPTIONS` requests continue to the next handler.
@@ -310,10 +313,14 @@ const app = new App({ requestTimeout: 5000 });
 app.get("/slow", async (req, res) => {
     await new Promise((resolve, reject) => {
         const t = setTimeout(resolve, 10000);
-        req.controller.signal.addEventListener("abort", () => {
-            clearTimeout(t);
-            reject(req.controller.signal.reason);
-        }, { once: true });
+        req.controller.signal.addEventListener(
+            "abort",
+            () => {
+                clearTimeout(t);
+                reject(req.controller.signal.reason);
+            },
+            { once: true },
+        );
     });
     res.json({ done: true });
 });
@@ -377,14 +384,16 @@ These are deliberate omissions: the core stays small and features come from midd
 
 ## Benchmark
 
-Environment: Windows, one machine (the load generator and the server share the CPU), `autocannon -c 100 -p 10 -d 40`, a single route `GET /` that returns `{ "hello": "world" }`.
+Benchmark: 40s, 100 connections, pipelining 10, Node.js v22.
 
-| Framework | Req/s (avg) | Latency p50 | Latency p99 |
-| --- | --- | --- | --- |
-| Fastify | 55,802 | 14 ms | 95 ms |
-| node:http | 50,628 | 16 ms | 105 ms |
-| @ndiinginc/router | 48,150 | 17 ms | 121 ms |
-| Express | 28,652 | 30 ms | 195 ms |
+| Framework | Req/Sec (avg) | Latency (avg) | Relative |
+|---|---|---|---|
+| **http (native)** | 61,107 | 15.87 ms | 1.00x |
+| **fastify** | 58,554 | 16.58 ms | 0.96x |
+| **this router** | **50,387** | **19.35 ms** | **0.82x** |
+| **express** | 28,163 | 35.03 ms | 0.46x |
+
+**This router is 1.79x faster than Express**, 0.82x of native HTTP, 0.86x of Fastify.
 
 A single-route hello world measures per-request overhead, not routing at scale, and the numbers move with hardware, Node.js version and load.
 

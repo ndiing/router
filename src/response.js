@@ -1,60 +1,26 @@
-const http = require("http");
-const fs = require("fs");
-const path = require("path");
+const { ServerResponse } = require("node:http");
 
-class Response extends http.ServerResponse {
-    /**
-     * @param {number} statusCode
-     * @returns {this}
-     */
-    status(statusCode = 200) {
-        this.statusCode = statusCode;
+class Response extends ServerResponse {
+    done = false;
+
+    end(...args) {
+        this.done = true;
+        return super.end(...args);
+    }
+
+    status(code) {
+        this.statusCode = code;
         return this;
     }
 
-    /**
-     * @param {string} data
-     */
-    send(data) {
-        this.setHeader("Content-Type", "text/html");
-        this.setHeader("Content-Length", Buffer.byteLength(data));
-        this.end(data);
-        this.done = true;
+    send(chunk) {
+        return this.end(chunk);
     }
 
-    /**
-     * @param {object} data
-     */
-    json(data) {
-        const body = JSON.stringify(data);
+    json(value) {
         this.setHeader("Content-Type", "application/json");
-        this.setHeader("Content-Length", Buffer.byteLength(body));
-        this.end(body);
-        this.done = true;
-    }
-
-    /**
-     * @param {string} filePath
-     * @param {string} filename
-     */
-    download(filePath, filename) {
-        const stat = fs.statSync(filePath);
-        const basename = filename || path.basename(filePath);
-
-        this.setHeader("Content-Type", "application/octet-stream");
-        this.setHeader("Content-Length", stat.size);
-        this.setHeader("Content-Disposition", `attachment; filename="${basename}"`);
-
-        const stream = fs.createReadStream(filePath);
-        stream.on("error", (err) => {
-            if (!this.headersSent) {
-                this.status(500);
-            }
-            this.end();
-        });
-
-        stream.pipe(this);
-        this.done = true;
+        return this.end(JSON.stringify(value));
     }
 }
+
 exports.Response = Response;
