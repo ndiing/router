@@ -71,7 +71,7 @@ class Response extends ServerResponse {
 
     /**
      *
-     * @param {String|Object} name
+     * @param {String|import('./util').CookieOptions} name
      * @param {String} value
      * @returns {this}
      */

@@ -6,8 +6,8 @@ const http = require("http");
 
 /**
  * @callback Callback
- * @param {import('../request')} req
- * @param {import('../response')} res
+ * @param {import('../request').Request} req
+ * @param {import('../response').Response} res
  */
 
 /**

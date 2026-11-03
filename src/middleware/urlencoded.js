@@ -7,6 +7,12 @@ const { parseQueryString } = require("../util");
  */
 
 /**
+ * @callback Callback
+ * @param {import('../request').Request} req
+ * @param {import('../response').Response} res
+ */
+
+/**
  * @param {Options} Options
  * @returns {Callback}
  */

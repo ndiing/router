@@ -6,7 +6,6 @@ class Request extends IncomingMessage {
     _queryString;
     _query;
     _controller;
-
     _cookies;
 
     /**
