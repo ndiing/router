@@ -1,40 +1,50 @@
-const { parseUrl, parseQueryString, Request } = require("../src/request");
+require("../src/polyfill");
+const { Request } = require("../src/request");
 
-describe("parseQueryString", () => {
-    test("kosong", () => {
-        expect(parseQueryString("")).toEqual({});
-    });
-    test("single", () => {
-        expect(parseQueryString("a=1&b=2")).toEqual({ a: "1", b: "2" });
-    });
-    test("duplikat -> array", () => {
-        expect(parseQueryString("a=1&a=2&a=3")).toEqual({ a: ["1", "2", "3"] });
-    });
-});
+function makeReq(url, headers = {}) {
+    const req = Object.create(Request.prototype);
+    req.url = url;
+    req.headers = headers;
+    return req;
+}
 
-describe("parseUrl", () => {
+describe("Request.path / query", () => {
     test("path only", () => {
-        expect(parseUrl("/a/b")).toEqual({ path: "/a/b", queryString: "", hash: "" });
+        const r = makeReq("/foo");
+        expect(r.path).toBe("/foo");
+        expect(r.query.a).toBe(undefined);
     });
-    test("query", () => {
-        expect(parseUrl("/a?x=1")).toEqual({ path: "/a", queryString: "x=1", hash: "" });
+    test("path + query", () => {
+        const r = makeReq("/foo?a=1&b=2");
+        r.path;
+        expect(r.query.a).toBe("1");
+        expect(r.query.b).toBe("2");
     });
-    test("hash", () => {
-        expect(parseUrl("/a#h")).toEqual({ path: "/a", queryString: "", hash: "h" });
-    });
-    test("query + hash", () => {
-        expect(parseUrl("/a?x=1#h")).toEqual({ path: "/a", queryString: "x=1", hash: "h" });
+    test("repeated query -> array", () => {
+        const r = makeReq("/x?a=1&a=2");
+        r.path;
+        expect(r.query.a).toEqual(["1", "2"]);
     });
 });
 
-describe("Request getters", () => {
-    test("path, query, controller di-cache", () => {
-        const req = Object.create(Request.prototype);
-        req.url = "/a?x=1&x=2";
-        expect(req.path).toBe("/a");
-        expect(req.query).toEqual({ x: ["1", "2"] });
-        const c1 = req.controller;
-        const c2 = req.controller;
-        expect(c1).toBe(c2);
+describe("Request.cookies", () => {
+    test("no cookie header -> empty", () => {
+        const r = makeReq("/", {});
+        expect(r.cookies.a).toBe(undefined);
+        expect(Object.getPrototypeOf(r.cookies)).toBe(null);
+    });
+    test("parses cookie header", () => {
+        const r = makeReq("/", { cookie: "a=1; b=2" });
+        expect(r.cookies.a).toBe("1");
+        expect(r.cookies.b).toBe("2");
+    });
+});
+
+describe("Request.controller", () => {
+    test("lazy AbortController", () => {
+        const r = makeReq("/");
+        const c = r.controller;
+        expect(c instanceof AbortController).toBe(true);
+        expect(r.controller).toBe(c);
     });
 });

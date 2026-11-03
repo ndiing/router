@@ -116,6 +116,11 @@ class App extends Router {
         this.fallback(err, res);
     }
 
+    /**
+     *
+     * @param  {...any} args
+     * @returns
+     */
     listen(...args) {
         const server = createServer(
             {

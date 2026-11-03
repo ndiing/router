@@ -385,25 +385,24 @@ These are deliberate omissions: the core stays small and features come from midd
 
 ## Benchmark
 
-Benchmark: 40s, 100 connections, pipelining 10, Node.js v22.
+Benchmark: 10s, 100 connections, pipelining 10, Node.js v24, 66 routes, 3 middleware, no CORS.
 
-| Framework         | Req/Sec (avg) | Latency (avg) | Relative  |
-| ----------------- | ------------- | ------------- | --------- |
-| **http (native)** | 61,107        | 15.87 ms      | 1.00x     |
-| **fastify**       | 58,554        | 16.58 ms      | 0.96x     |
-| **this router**   | **50,387**    | **19.35 ms**  | **0.82x** |
-| **express**       | 28,163        | 35.03 ms      | 0.46x     |
+| Framework          | Static | Param  | Nested | Wildcard |
+| ------------------ | ------ | ------ | ------ | -------- |
+| **native** (regex) | 42,058 | 42,230 | 41,997 | 41,593   |
+| **fastify**        | 37,840 | 37,450 | 35,800 | 37,281   |
+| **this router**    | 38,468 | 36,254 | 33,282 | 37,459   |
+| **express**        | 18,910 | 15,154 | 15,281 | 14,453   |
 
-**This router is 1.79x faster than Express**, 0.82x of native HTTP, 0.86x of Fastify.
+**This router is:**
 
-A single-route hello world measures per-request overhead, not routing at scale, and the numbers move with hardware, Node.js version and load.
+- **~2-2.6x faster than Express** (radix tree vs linear matching).
+- **On par with Fastify** (0-7% difference, wins on static and wildcard).
+- **Only 9-21% slower than native HTTP** (with regex manual routing).
 
-To reproduce (each framework runs in its own process, results are the median of several runs, and a run is rejected if a response is not the expected one):
+The gap with Fastify is small because Fastify precompiles handlers, while this router collects middleware per request. The trade-off is flexibility: this router supports Express-style middleware, nested routers, and dynamic error handlers.
 
-```bash
-npm i -D autocannon express fastify
-node benchmark/run.js
-```
+> Benchmarks are noisy. Run `npm run bench` multiple times, reboot between runs, and disable background processes for stable results.
 
 ## Testing
 

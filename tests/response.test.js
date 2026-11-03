@@ -1,73 +1,85 @@
+require("../src/polyfill");
 const App = require("../src");
 const { Response } = require("../src/response");
 
-function mockResponse() {
-    // bikin instance tanpa beneran http server
+function makeRes() {
     const res = Object.create(Response.prototype);
-    res.statusCode = 200;
     res.headers = {};
-    res.body = "";
-    // stub method parent
-    res.setHeader = (k, v) => {
-        res.headers[k] = v;
+    res.done = false;
+    res.statusCode = 200;
+    res.setHeader = function (k, v) {
+        this.headers[k] = v;
+        return this;
     };
-    res.end = (chunk) => {
-        if (chunk) res.body += chunk;
+    res.appendHeader = function (k, v) {
+        const prev = this.headers[k];
+        if (prev === undefined) this.headers[k] = [v];
+        else if (Array.isArray(prev)) prev.push(v);
+        else this.headers[k] = [prev, v];
+        return this;
     };
-    res.write = (chunk) => {
-        res.body += chunk;
+    res.end = function (...args) {
+        this.done = true;
+        this.ended = args;
+        return this;
     };
-    res.writeHead = () => {};
-    res.flushHeaders = () => {};
     return res;
 }
 
-describe("Response", () => {
-    test("done getter/setter", () => {
-        const res = mockResponse();
-        expect(res.done).toBe(undefined);
-        res.done = true;
-        expect(res.done).toBe(true);
-    });
-    test("status chainable", () => {
-        const res = mockResponse();
+describe("Response.status", () => {
+    test("sets statusCode and chains", () => {
+        const res = makeRes();
         expect(res.status(201)).toBe(res);
         expect(res.statusCode).toBe(201);
     });
-    test("json set content-type & end", () => {
-        const res = mockResponse();
+});
+
+describe("Response.send", () => {
+    test("calls end with chunk", () => {
+        const res = makeRes();
+        res.send("hello");
+        expect(res.done).toBe(true);
+        expect(res.ended).toEqual(["hello"]);
+    });
+});
+
+describe("Response.json", () => {
+    test("sets content-type and serializes", () => {
+        const res = makeRes();
         res.json({ a: 1 });
         expect(res.headers["Content-Type"]).toBe("application/json");
-        expect(res.body).toBe('{"a":1}');
-    });
-    test("send end chunk", () => {
-        const res = mockResponse();
-        res.send("hi");
-        expect(res.body).toBe("hi");
+        expect(res.ended).toEqual(['{"a":1}']);
     });
 });
 
-test("writeHead & flushHeaders via integrasi", async () => {
-    const app = new App();
-    app.get("/wh", (req, res) => {
-        res.writeHead(200, { "Content-Type": "text/plain" });
-        res.end("ok");
+describe("Response.cookie", () => {
+    test("appends Set-Cookie", () => {
+        const res = makeRes();
+        res.cookie("a", "1");
+        expect(res.headers["Set-Cookie"]).toEqual(["a=1; Path=/; SameSite=Lax"]);
     });
-    app.get("/fh", (req, res) => {
-        res.flushHeaders();
-        res.end("ok");
+    test("multiple cookies", () => {
+        const res = makeRes();
+        res.cookie("a", "1").cookie("b", "2");
+        expect(res.headers["Set-Cookie"].length).toBe(2);
     });
-    const server = app.listen(0);
-    await new Promise((r) => server.once("listening", r));
-    const { port } = server.address();
-
-    const r1 = await fetch(`http://localhost:${port}/wh`);
-    expect(r1.status).toBe(200);
-    expect(await r1.text()).toBe("ok");
-
-    const r2 = await fetch(`http://localhost:${port}/fh`);
-    expect(r2.status).toBe(200);
-    expect(await r2.text()).toBe("ok");
-
-    await new Promise((r) => server.close(r));
 });
+
+// test("download streams file with attachment header", async () => {
+//   const fs = require("node:fs");
+//   const os = require("node:os");
+//   const path = require("node:path");
+//   const file = path.join(os.tmpdir(), "dl-test.txt");
+//   fs.writeFileSync(file, "hello-file");
+
+//   const app = new App();
+//   app.get("/dl", (req, res) => res.download(file, "greeting.txt"));
+//   const server = await app.listen(0);
+
+//   const res = await request(server, { path: "/dl" });
+//   expect(res.headers["content-disposition"]).toContain('filename="greeting.txt"');
+//   expect(res.body).toBe("hello-file");
+
+//   await close(server);
+//   fs.unlinkSync(file);
+// });

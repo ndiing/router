@@ -1,5 +1,5 @@
 const http = require("http");
-const { parseQueryString } = require("../request");
+const { parseQueryString } = require("../util");
 
 /**
  * @typedef {Object} Options
@@ -46,7 +46,7 @@ function urlencoded({ limit = 1.024e5 } = {}) {
             req.body = null;
             return;
         }
-        
+
         req.body = parseQueryString(Buffer.concat(chunks).toString("utf8"));
     };
 }

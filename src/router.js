@@ -1,19 +1,5 @@
 const { Node } = require("./node");
-
-/**
- *
- * @param {String} raw
- * @returns {String}
- */
-function decodeParam(raw) {
-    try {
-        return decodeURIComponent(raw);
-    } catch (error) {
-        return raw;
-    }
-}
-
-exports.decodeParam = decodeParam;
+const { decodeParam } = require("./util");
 
 /**
  * @typedef Options
