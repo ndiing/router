@@ -1,5 +1,5 @@
 const { Node } = require("./node");
-const { decodeParam } = require("./util");
+const { decodeParam, decodeParams } = require("./util");
 
 /**
  * @typedef Options
@@ -277,7 +277,7 @@ class Router {
             if (value.length) {
                 const rest = slashIndex === -1 ? "" : path.slice(slashIndex);
                 for (const child of node.params.values()) {
-                    const next = { ...params, [child.name]: decodeParam(value) };
+                    const next = { ...params, [child.name]: value };
                     const res = this.search(method, rest, child, nodes, next, state);
                     if (res.matched) return res;
                 }
@@ -286,7 +286,7 @@ class Router {
 
         if (node.wildcard && (node.wildcard.handlers.has(method) || node.wildcard.handlers.has("ALL"))) {
             nodes.push(node.wildcard);
-            return { nodes, params: { ...params, wildcard: decodeParam(path) }, matched: true };
+            return { nodes, params: { ...params, wildcard: path }, matched: true };
         }
 
         if (nodes.length > state.nodes.length) {
@@ -338,7 +338,11 @@ class Router {
             this.collect(node, "CATCH", errorHandlers);
         }
 
-        return { params: res.params, handlers: handlers, errorHandlers: errorHandlers };
+        return {
+            params: decodeParams(res.params),
+            handlers: handlers,
+            errorHandlers: errorHandlers,
+        };
     }
 }
 

@@ -16,6 +16,18 @@ function decodeParam(raw) {
 }
 exports.decodeParam = decodeParam;
 
+function decodeParams(obj) {
+    const params = Object.create(null);
+    const keys = Object.keys(obj);
+    if (keys.length) {
+        for (const key of keys) {
+            params[key] = decodeParam(obj[key]);
+        }
+    }
+    return params;
+}
+exports.decodeParams = decodeParams;
+
 // =========================
 // url
 // =========================
@@ -145,10 +157,10 @@ function parseCookie(str) {
 exports.parseCookie = parseCookie;
 
 /**
- * 
+ *
  * @see {@link https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie#cookie-namecookie-value} <cookie-name>=<cookie-value>
- * @param {*} name 
- * @returns 
+ * @param {*} name
+ * @returns
  */
 function isValidCookieName(name) {
     return /^[^\x00-\x20\x7F()<>@,;:\\"\/\[\]?={}]+$/.test(name);

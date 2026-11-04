@@ -2,7 +2,6 @@ const { STATUS_CODES, createServer } = require("node:http");
 const { Router } = require("./router");
 const { Request } = require("./request");
 const { Response } = require("./response");
-
 const { json } = require("./middleware/json.js");
 const { urlencoded } = require("./middleware/urlencoded.js");
 const { cors } = require("./middleware/cors.js");
