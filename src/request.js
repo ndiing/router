@@ -7,24 +7,13 @@ class Request extends IncomingMessage {
     _query;
     _controller;
     _cookies;
+    _body;
 
-    /**
-     *
-     * @readonly
-     * @type {AbortController}
-     */
     get controller() {
-        if (!this._controller) {
-            this._controller = new AbortController();
-        }
+        if (!this._controller) this._controller = new AbortController();
         return this._controller;
     }
 
-    /**
-     *
-     * @readonly
-     * @type {String}
-     */
     get path() {
         if (!this._path) {
             const result = parseUrl(this.url);
@@ -34,23 +23,11 @@ class Request extends IncomingMessage {
         return this._path;
     }
 
-    /**
-     *
-     * @readonly
-     * @type {Object}
-     */
     get query() {
-        if (!this._query) {
-            this._query = parseQueryString(this._queryString);
-        }
+        if (!this._query) this._query = parseQueryString(this._queryString);
         return this._query;
     }
 
-    /**
-     *
-     * @readonly
-     * @type {Object}
-     */
     get cookies() {
         if (!this._cookies) {
             const cookie = this.headers.cookie;

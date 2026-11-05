@@ -15,7 +15,6 @@ class Response extends ServerResponse {
     }
 
     /**
-     *
      * @param {Number} code
      * @returns {this}
      */
@@ -25,7 +24,6 @@ class Response extends ServerResponse {
     }
 
     /**
-     *
      * @param {String} chunk
      */
     send(chunk) {
@@ -33,7 +31,6 @@ class Response extends ServerResponse {
     }
 
     /**
-     *
      * @param {Object} value
      */
     json(value) {
@@ -42,7 +39,6 @@ class Response extends ServerResponse {
     }
 
     /**
-     *
      * @param {String} filePath
      * @param {String} [fileName]
      */
@@ -50,10 +46,8 @@ class Response extends ServerResponse {
         if (!fileName) {
             fileName = path.basename(filePath);
         }
-
         this.setHeader("Content-Type", "application/octet-stream");
         this.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
-
         const stream = fs.createReadStream(filePath);
         stream.on("error", () => {
             if (!this.headersSent) {
@@ -65,12 +59,10 @@ class Response extends ServerResponse {
             stream.destroy();
         });
         stream.pipe(this);
-
         this.done = true;
     }
 
     /**
-     *
      * @param {String|import('./util').CookieOptions} name
      * @param {String} value
      * @returns {this}

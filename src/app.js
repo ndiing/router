@@ -8,7 +8,6 @@ const { cors } = require("./middleware/cors.js");
 
 class App extends Router {
     /**
-     *
      * @param {*} req
      * @param {*} res
      * @param {*} handlerPromise
@@ -19,24 +18,19 @@ class App extends Router {
             handleAbort = () => reject(req.controller.signal.reason);
             req.controller.signal.addEventListener("abort", handleAbort, { once: true });
         });
-
         const timeout = setTimeout(() => {
             res.statusCode = 504;
             req.controller.abort(new Error(STATUS_CODES[res.statusCode]));
         }, this.requestTimeout);
-
         const promise = handlerPromise().catch((error) => {
             if (!req.controller.signal.aborted) {
                 req.controller.abort(error);
             } else {
-                // error setelah timeout — request udah selesai
-                // log untuk debugging (opsional)
                 if (process.env.NODE_ENV === "development") {
                     console.error("Error after timeout:", error);
                 }
             }
         });
-
         try {
             await Promise.race([promise, timeoutPromise]);
         } finally {
@@ -46,7 +40,6 @@ class App extends Router {
     }
 
     /**
-     *
      * @param {*} err
      * @param {*} res
      * @returns
@@ -57,35 +50,28 @@ class App extends Router {
                 res.status(404);
                 err = new Error(STATUS_CODES[res.statusCode]);
             }
-
             if (res.statusCode < 400) {
-                res.status(500);
+                res.status(err.status || 500);
             }
-
             const error = {
                 message: err.message,
             };
             if (process.env.NODE_ENV === "development") {
                 error.stack = err.stack;
             }
-
             res.json({ error });
         }
         return err;
     }
 
     /**
-     *
      * @param {Request} req
      * @param {Response} res
      */
     async handle(req, res) {
         const result = this.find(req.method, req.path);
         req.params = result.params;
-
-        /**
-         * @type {Error}
-         */
+        /**@type {Error}*/
         let err;
         try {
             const handlerPromise = async () => {
@@ -101,7 +87,6 @@ class App extends Router {
             }
         } catch (error) {
             err = error;
-
             try {
                 for (const handler of Object.values(result.errorHandlers)) {
                     if (res.done) break;
@@ -111,12 +96,10 @@ class App extends Router {
                 err = new Error(error.message, { cause: err });
             }
         }
-
         this.fallback(err, res);
     }
 
     /**
-     *
      * @param  {...any} args
      * @returns
      */
@@ -128,9 +111,7 @@ class App extends Router {
             },
             (req, res) => this.handle(req, res),
         );
-
         server.listen(...args);
-
         return server;
     }
 }

@@ -7,18 +7,15 @@ const { decodeParam, decodeParams } = require("./util");
  */
 class Router {
     /**
-     *
      * @param {Options} options
      */
     constructor(options = {}) {
         this.requestTimeout = options.requestTimeout ?? 0;
-
         this.root = new Node();
         this.seq = 0;
     }
 
     /**
-     *
      * @param {String} a
      * @param {String} b
      * @returns {Number}
@@ -30,7 +27,6 @@ class Router {
     }
 
     /**
-     *
      * @param {String} path
      * @param {Node} node
      * @returns {Node}
@@ -42,33 +38,28 @@ class Router {
             if (!child) {
                 return node.add(path.slice(i));
             }
-
             const lcp = this.lcp(child.label, path.slice(i));
             if (lcp === child.label.length) {
                 i += lcp;
                 node = child;
                 continue;
             }
-
             const split = new Node(child.label.slice(0, lcp));
             child.label = child.label.slice(lcp);
             split.children.set(child.label[0], child);
             node.children.set(split.label[0], split);
-
             const rest = path.slice(i + lcp);
             if (rest.length) {
                 const leaf = new Node(rest);
                 split.children.set(rest[0], leaf);
                 return leaf;
             }
-
             return split;
         }
         return node;
     }
 
     /**
-     *
      * @param {String} method
      * @param {String|Callback|Router} path
      * @param  {Callback[]} handlers
@@ -78,9 +69,7 @@ class Router {
             handlers = [path, ...handlers];
             path = null;
         }
-
         let node = this.root;
-
         if (path) {
             let i = 0;
             while (i < path.length) {
@@ -100,21 +89,18 @@ class Router {
                 }
             }
         }
-
         for (const handler of handlers) {
             if (handler.root) {
                 node.merge(handler.root, this.seq);
-                this.seq += handler.root.getMaxSeq() + 1;
+                this.seq += handler.root.maxSeq() + 1;
             } else {
                 const m = handler.length === 3 ? "CATCH" : method;
-                node.handlers.getOrInsert(m, []).push({ handler, seq: this.seq++ });
+                (node.handlers[m] ??= []).push({ handler, seq: this.seq++ });
             }
         }
     }
 
-    /* HTTP request methods */
     /**
-     *
      * @param {String} [path]
      * @param  {Callback[]|Router} handlers
      * @returns {Router}
@@ -125,7 +111,6 @@ class Router {
     }
 
     /**
-     *
      * @param {String} [path]
      * @param  {Callback[]|Router} handlers
      * @returns {Router}
@@ -136,7 +121,6 @@ class Router {
     }
 
     /**
-     *
      * @param {String} [path]
      * @param  {Callback[]|Router} handlers
      * @returns {Router}
@@ -147,7 +131,6 @@ class Router {
     }
 
     /**
-     *
      * @param {String} [path]
      * @param  {Callback[]|Router} handlers
      * @returns {Router}
@@ -158,7 +141,6 @@ class Router {
     }
 
     /**
-     *
      * @param {String} [path]
      * @param  {Callback[]|Router} handlers
      * @returns {Router}
@@ -169,7 +151,6 @@ class Router {
     }
 
     /**
-     *
      * @param {String} [path]
      * @param  {Callback[]|Router} handlers
      * @returns {Router}
@@ -180,7 +161,6 @@ class Router {
     }
 
     /**
-     *
      * @param {String} [path]
      * @param  {Callback[]|Router} handlers
      * @returns {Router}
@@ -191,7 +171,6 @@ class Router {
     }
 
     /**
-     *
      * @param {String} [path]
      * @param  {Callback[]|Router} handlers
      * @returns {Router}
@@ -202,7 +181,6 @@ class Router {
     }
 
     /**
-     *
      * @param {String} [path]
      * @param  {Callback[]|Router} handlers
      * @returns {Router}
@@ -213,7 +191,6 @@ class Router {
     }
 
     /**
-     *
      * @param {String} [path]
      * @param  {Callback[]|Router} handlers
      * @returns {Router}
@@ -224,7 +201,6 @@ class Router {
     }
 
     /**
-     *
      * @param {String} [path]
      * @param  {Callback[]|Router} handlers
      * @returns {Router}
@@ -235,7 +211,6 @@ class Router {
     }
 
     /**
-     *
      * @param {String} method
      * @param {String} path
      * @param {Node} node
@@ -246,22 +221,17 @@ class Router {
      */
     search(method, path, node = this.root, nodes = [], params = {}, state = { nodes: [], params: {} }) {
         nodes.push(node);
-
         if (path.length === 0) {
-            if (node.handlers.has(method) || node.handlers.has("ALL")) {
+            if (node.handlers[method] || node.handlers["ALL"]) {
                 return { nodes, params, matched: true };
             }
-
             if (nodes.length > state.nodes.length) {
                 state.nodes = nodes.slice();
                 state.params = { ...params };
             }
-
             nodes.pop();
-
             return { nodes: state.nodes, params: state.params, matched: false };
         }
-
         const child = node.children.get(path[0]);
         if (child) {
             const lcp = this.lcp(child.label, path);
@@ -270,7 +240,6 @@ class Router {
                 if (res.matched) return res;
             }
         }
-
         if (node.params.size) {
             const slashIndex = path.indexOf("/");
             const value = slashIndex === -1 ? path : path.slice(0, slashIndex);
@@ -283,38 +252,32 @@ class Router {
                 }
             }
         }
-
-        if (node.wildcard && (node.wildcard.handlers.has(method) || node.wildcard.handlers.has("ALL"))) {
+        if (node.wildcard && (node.wildcard.handlers[method] || node.wildcard.handlers["ALL"])) {
             nodes.push(node.wildcard);
             return { nodes, params: { ...params, wildcard: path }, matched: true };
         }
-
         if (nodes.length > state.nodes.length) {
             state.nodes = nodes.slice();
             state.params = { ...params };
         }
-
         nodes.pop();
-
         return { nodes: state.nodes, params: state.params, matched: false };
     }
 
     /**
-     *
      * @param {Node} node
      * @param {String} method
      * @param {Object} target
      */
     collect(node, method, target) {
-        if (node.handlers.has(method)) {
-            for (const entry of node.handlers.get(method)) {
+        if (node.handlers[method]) {
+            for (const entry of node.handlers[method]) {
                 target[entry.seq] = entry.handler;
             }
         }
     }
 
     /**
-     *
      * @param {String} method
      * @param {String} path
      * @returns {{params: {};handlers: {};errorHandlers: {};}}
@@ -325,19 +288,15 @@ class Router {
             const alt = path.endsWith("/") ? path.slice(0, -1) : path + "/";
             res = this.search(method, alt);
         }
-
         const handlers = {};
         const errorHandlers = {};
-
         if (res.matched) {
             this.collect(res.nodes.at(-1), method, handlers);
         }
-
         for (const node of res.nodes) {
             this.collect(node, "ALL", handlers);
             this.collect(node, "CATCH", errorHandlers);
         }
-
         return {
             params: decodeParams(res.params),
             handlers: handlers,

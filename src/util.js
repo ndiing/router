@@ -1,9 +1,4 @@
-// =========================
-// params
-// =========================
-
 /**
- *
  * @param {String} raw
  * @returns {String}
  */
@@ -14,6 +9,7 @@ function decodeParam(raw) {
         return raw;
     }
 }
+
 exports.decodeParam = decodeParam;
 
 function decodeParams(obj) {
@@ -26,14 +22,10 @@ function decodeParams(obj) {
     }
     return params;
 }
+
 exports.decodeParams = decodeParams;
 
-// =========================
-// url
-// =========================
-
 /**
- *
  * @param {String} queryString
  * @returns {Object}
  */
@@ -49,10 +41,10 @@ function parseQueryString(queryString) {
     }
     return query;
 }
+
 exports.parseQueryString = parseQueryString;
 
 /**
- *
  * @param {String} url
  * @returns {{path:string;queryString:string;hash:string;}}
  */
@@ -74,11 +66,8 @@ function parseUrl(url) {
     }
     return { path, queryString, hash };
 }
-exports.parseUrl = parseUrl;
 
-// =========================
-// cookie
-// =========================
+exports.parseUrl = parseUrl;
 
 function decodeCookie(val) {
     try {
@@ -87,6 +76,7 @@ function decodeCookie(val) {
         return val;
     }
 }
+
 exports.decodeCookie = decodeCookie;
 
 function encodeCookie(val) {
@@ -96,49 +86,37 @@ function encodeCookie(val) {
         return val;
     }
 }
+
 exports.encodeCookie = encodeCookie;
 
 function parseCookie(str) {
     const cookies = Object.create(null);
     if (!str) return cookies;
-
     let i = 0;
     const len = str.length;
-
     while (i < len) {
-        // 32 space ( )
         while (i < len && str.charCodeAt(i) === 32) i++;
-
         let eqIdx = i;
-        // 61 equals sign (=)
         while (eqIdx < len && str.charCodeAt(eqIdx) !== 61) {
-            // 59 semicolon (;)
             if (str.charCodeAt(eqIdx) === 59) break;
             eqIdx++;
         }
-
         let semiIdx;
-        // 61 equals sign (=)
         if (eqIdx >= len || str.charCodeAt(eqIdx) !== 61) {
             semiIdx = eqIdx;
-            // 59 semicolon (;)
             while (semiIdx < len && str.charCodeAt(semiIdx) !== 59) semiIdx++;
             i = semiIdx + 1;
             continue;
         }
-
         semiIdx = eqIdx + 1;
-        // 59 semicolon (;)
         while (semiIdx < len && str.charCodeAt(semiIdx) !== 59) {
             semiIdx++;
         }
-
         const name = str.substring(i, eqIdx).trim();
         if (name.length === 0) {
             i = semiIdx + 1;
             continue;
         }
-
         const val = str.substring(eqIdx + 1, semiIdx).trim();
         const key = decodeCookie(name);
         const value = decodeCookie(val);
@@ -148,17 +126,14 @@ function parseCookie(str) {
         } else {
             cookies[key] = value;
         }
-
         i = semiIdx + 1;
     }
-
     return cookies;
 }
+
 exports.parseCookie = parseCookie;
 
 /**
- *
- * @see {@link https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie#cookie-namecookie-value} <cookie-name>=<cookie-value>
  * @param {*} name
  * @returns
  */
@@ -181,24 +156,20 @@ exports.isValidCookieName = isValidCookieName;
  */
 
 /**
- *
  * @param {String|CookieOptions} name
  * @param {String} [value]
  * @returns {String}
  */
 function buildCookie(name, value) {
     const options = typeof name === "object" ? name : { name, value };
-
     if (!isValidCookieName(options.name)) {
         throw new Error("Invalid Cookie Name");
     }
     if (options.value === undefined || options.value === null) {
         throw new Error("Cookie value is required");
     }
-
     const { domain = null, expires = null, maxAge = null, partitioned = false, path = "/", sameSite = "Lax", httpOnly = false, secure = false } = options;
     const cookie = [`${encodeCookie(options.name)}=${encodeCookie(options.value)}`];
-
     if (domain !== null) cookie.push(`Domain=${domain}`);
     if (expires !== null) cookie.push(`Expires=${new Date(expires).toUTCString()}`);
     if (maxAge !== null) cookie.push(`Max-Age=${maxAge}`);
@@ -207,7 +178,7 @@ function buildCookie(name, value) {
     if (sameSite) cookie.push(`SameSite=${sameSite}`);
     if (httpOnly) cookie.push(`HttpOnly`);
     if (secure) cookie.push(`Secure`);
-
     return cookie.join("; ");
 }
+
 exports.buildCookie = buildCookie;

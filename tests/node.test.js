@@ -8,7 +8,7 @@ describe("Node", () => {
         expect(n.name).toBe(undefined);
         expect(n.children instanceof Map).toBe(true);
         expect(n.params instanceof Map).toBe(true);
-        expect(n.handlers instanceof Map).toBe(true);
+        expect(n.handlers instanceof Object).toBe(true);
         expect(n.wildcard).toBe(null);
     });
     test("constructor param label", () => {
@@ -30,21 +30,21 @@ describe("Node", () => {
         expect(p1).toBe(n.add(":id"));
         expect(p1.name).toBe("id");
     });
-    test("getMaxSeq empty = -1", () => {
-        expect(new Node().getMaxSeq()).toBe(-1);
+    test("maxSeq empty = -1", () => {
+        expect(new Node().maxSeq()).toBe(-1);
     });
-    test("getMaxSeq with handlers", () => {
+    test("maxSeq with handlers", () => {
         const n = new Node();
-        n.handlers.set("GET", [{ seq: 5 }, { seq: 3 }]);
-        expect(n.getMaxSeq()).toBe(5);
+        n.handlers["GET"] = [{ seq: 5 }, { seq: 3 }];
+        expect(n.maxSeq()).toBe(5);
     });
     test("merge handlers with offset", () => {
         const src = new Node();
-        src.handlers.set("GET", [{ handler: 1, seq: 0 }]);
+        src.handlers["GET"] = [{ handler: 1, seq: 0 }];
         const dst = new Node();
-        dst.handlers.set("GET", [{ handler: 0, seq: 5 }]);
+        dst.handlers["GET"] = [{ handler: 0, seq: 5 }];
         dst.merge(src, 10);
-        const entries = dst.handlers.get("GET");
+        const entries = dst.handlers["GET"];
         expect(entries.length).toBe(2);
         expect(entries[1].seq).toBe(10);
     });
@@ -52,12 +52,12 @@ describe("Node", () => {
 
 test("merge wildcard, params, children", () => {
     const src = new Node();
-    src.add("*").handlers.set("GET", [{ handler: 1, seq: 0 }]);
-    src.add(":id").handlers.set("GET", [{ handler: 2, seq: 1 }]);
-    src.add("x").handlers.set("GET", [{ handler: 3, seq: 2 }]);
+    src.add("*").handlers["GET"] = [{ handler: 1, seq: 0 }];
+    src.add(":id").handlers["GET"] = [{ handler: 2, seq: 1 }];
+    src.add("x").handlers["GET"] = [{ handler: 3, seq: 2 }];
     const dst = new Node();
     dst.merge(src, 100);
     // expect(dst.wildcard).toBeTruthy();
-    expect(dst.wildcard.handlers.get("GET")[0].seq).toBe(100);
-    expect(dst.getMaxSeq() >= 102).toBe(true);
+    expect(dst.wildcard.handlers["GET"][0].seq).toBe(100);
+    expect(dst.maxSeq() >= 102).toBe(true);
 });
