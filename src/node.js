@@ -15,18 +15,18 @@
 class Node {
     /**
      *
-     * @param {String} prefix
+     * @param {String} label
      */
-    constructor(prefix = "") {
+    constructor(label = "") {
         /**
          * @type {String}
          */
-        this.prefix = prefix;
-        if (prefix.startsWith(":")) {
+        this.label = label;
+        if (label.startsWith(":")) {
             /**
              * @type {String}
              */
-            this.name = prefix.slice(1);
+            this.name = label.slice(1);
         }
         /**
          * @type {Map<string, Node>}
@@ -48,11 +48,11 @@ class Node {
 
     /**
      *
-     * @param {String} prefix
+     * @param {String} label
      * @returns {Node}
      */
-    add(prefix) {
-        if (prefix === "*") {
+    add(label) {
+        if (label === "*") {
             if (!this.wildcard) {
                 this.wildcard = new Node("*");
             }
@@ -60,11 +60,11 @@ class Node {
             return this.wildcard;
         }
 
-        if (prefix.startsWith(":")) {
-            return this.params.getOrInsertComputed(prefix, () => new Node(prefix));
+        if (label.startsWith(":")) {
+            return this.params.getOrInsertComputed(label, () => new Node(label));
         }
 
-        return this.children.getOrInsertComputed(prefix[0], () => new Node(prefix));
+        return this.children.getOrInsertComputed(label[0], () => new Node(label));
     }
 
     /**
@@ -84,11 +84,11 @@ class Node {
         }
 
         for (const [, child] of node.params) {
-            this.add(child.prefix).merge(child, offset);
+            this.add(child.label).merge(child, offset);
         }
 
         for (const [, child] of node.children) {
-            this.add(child.prefix).merge(child, offset);
+            this.add(child.label).merge(child, offset);
         }
     }
 

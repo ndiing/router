@@ -36,6 +36,6 @@ describe("Map.getOrInsertComputed", () => {
 
     test("throws when callback not function", () => {
         const m = new Map();
-        expect(() => m.getOrInsertComputed("k", 123)).toThrow("must be a function");
+        expect(() => m.getOrInsertComputed("k", 123)).toThrow("is not a function");
     });
 });

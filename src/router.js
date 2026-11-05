@@ -35,7 +35,7 @@ class Router {
      * @param {Node} node
      * @returns {Node}
      */
-    walk(path, node) {
+    add(path, node) {
         let i = 0;
         while (i < path.length) {
             const child = node.children.get(path[i]);
@@ -43,17 +43,17 @@ class Router {
                 return node.add(path.slice(i));
             }
 
-            const lcp = this.lcp(child.prefix, path.slice(i));
-            if (lcp === child.prefix.length) {
+            const lcp = this.lcp(child.label, path.slice(i));
+            if (lcp === child.label.length) {
                 i += lcp;
                 node = child;
                 continue;
             }
 
-            const split = new Node(child.prefix.slice(0, lcp));
-            child.prefix = child.prefix.slice(lcp);
-            split.children.set(child.prefix[0], child);
-            node.children.set(split.prefix[0], split);
+            const split = new Node(child.label.slice(0, lcp));
+            child.label = child.label.slice(lcp);
+            split.children.set(child.label[0], child);
+            node.children.set(split.label[0], split);
 
             const rest = path.slice(i + lcp);
             if (rest.length) {
@@ -73,7 +73,7 @@ class Router {
      * @param {String|Callback|Router} path
      * @param  {Callback[]} handlers
      */
-    add(method, path, ...handlers) {
+    set(method, path, ...handlers) {
         if (typeof path === "function") {
             handlers = [path, ...handlers];
             path = null;
@@ -95,7 +95,7 @@ class Router {
                 } else {
                     let j = i + 1;
                     while (j < path.length && path[j] !== "/" && path[j] !== ":" && path[j] !== "*") j++;
-                    node = this.walk(path.slice(i, j), node);
+                    node = this.add(path.slice(i, j), node);
                     i = j;
                 }
             }
@@ -120,7 +120,7 @@ class Router {
      * @returns {Router}
      */
     use(path, ...handlers) {
-        this.add("ALL", path, ...handlers);
+        this.set("ALL", path, ...handlers);
         return this;
     }
 
@@ -131,7 +131,7 @@ class Router {
      * @returns {Router}
      */
     get(path, ...handlers) {
-        this.add("GET", path, ...handlers);
+        this.set("GET", path, ...handlers);
         return this;
     }
 
@@ -142,7 +142,7 @@ class Router {
      * @returns {Router}
      */
     query(path, ...handlers) {
-        this.add("QUERY", path, ...handlers);
+        this.set("QUERY", path, ...handlers);
         return this;
     }
 
@@ -153,7 +153,7 @@ class Router {
      * @returns {Router}
      */
     head(path, ...handlers) {
-        this.add("HEAD", path, ...handlers);
+        this.set("HEAD", path, ...handlers);
         return this;
     }
 
@@ -164,7 +164,7 @@ class Router {
      * @returns {Router}
      */
     options(path, ...handlers) {
-        this.add("OPTIONS", path, ...handlers);
+        this.set("OPTIONS", path, ...handlers);
         return this;
     }
 
@@ -175,7 +175,7 @@ class Router {
      * @returns {Router}
      */
     trace(path, ...handlers) {
-        this.add("TRACE", path, ...handlers);
+        this.set("TRACE", path, ...handlers);
         return this;
     }
 
@@ -186,7 +186,7 @@ class Router {
      * @returns {Router}
      */
     put(path, ...handlers) {
-        this.add("PUT", path, ...handlers);
+        this.set("PUT", path, ...handlers);
         return this;
     }
 
@@ -197,7 +197,7 @@ class Router {
      * @returns {Router}
      */
     delete(path, ...handlers) {
-        this.add("DELETE", path, ...handlers);
+        this.set("DELETE", path, ...handlers);
         return this;
     }
 
@@ -208,7 +208,7 @@ class Router {
      * @returns {Router}
      */
     post(path, ...handlers) {
-        this.add("POST", path, ...handlers);
+        this.set("POST", path, ...handlers);
         return this;
     }
 
@@ -219,7 +219,7 @@ class Router {
      * @returns {Router}
      */
     patch(path, ...handlers) {
-        this.add("PATCH", path, ...handlers);
+        this.set("PATCH", path, ...handlers);
         return this;
     }
 
@@ -230,7 +230,7 @@ class Router {
      * @returns {Router}
      */
     connect(path, ...handlers) {
-        this.add("CONNECT", path, ...handlers);
+        this.set("CONNECT", path, ...handlers);
         return this;
     }
 
@@ -264,8 +264,8 @@ class Router {
 
         const child = node.children.get(path[0]);
         if (child) {
-            const lcp = this.lcp(child.prefix, path);
-            if (lcp === child.prefix.length) {
+            const lcp = this.lcp(child.label, path);
+            if (lcp === child.label.length) {
                 const res = this.search(method, path.slice(lcp), child, nodes, params, state);
                 if (res.matched) return res;
             }

@@ -4,14 +4,14 @@ const { Node } = require("../src/node");
 describe("Node", () => {
     test("constructor default", () => {
         const n = new Node();
-        expect(n.prefix).toBe("");
+        expect(n.label).toBe("");
         expect(n.name).toBe(undefined);
         expect(n.children instanceof Map).toBe(true);
         expect(n.params instanceof Map).toBe(true);
         expect(n.handlers instanceof Map).toBe(true);
         expect(n.wildcard).toBe(null);
     });
-    test("constructor param prefix", () => {
+    test("constructor param label", () => {
         expect(new Node(":id").name).toBe("id");
     });
     test("add static child reuses by first char", () => {
@@ -22,7 +22,7 @@ describe("Node", () => {
         const n = new Node();
         const w1 = n.add("*");
         expect(w1).toBe(n.add("*"));
-        expect(w1.prefix).toBe("*");
+        expect(w1.label).toBe("*");
     });
     test("add param", () => {
         const n = new Node();
