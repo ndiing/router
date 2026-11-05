@@ -7,21 +7,43 @@ const { urlencoded } = require("./middleware/urlencoded.js");
 const { cors } = require("./middleware/cors.js");
 
 class App {
-    constructor(){
-        this.router=new Router()
+    constructor() {
+        this.router = new Router();
     }
 
-    use(path,...handlers){return this.router.use(path,...handlers);}
-    get(path,...handlers){return this.router.get(path,...handlers);}
-    query(path,...handlers){return this.router.query(path,...handlers);}
-    head(path,...handlers){return this.router.head(path,...handlers);}
-    options(path,...handlers){return this.router.options(path,...handlers);}
-    trace(path,...handlers){return this.router.trace(path,...handlers);}
-    put(path,...handlers){return this.router.put(path,...handlers);}
-    delete(path,...handlers){return this.router.delete(path,...handlers);}
-    post(path,...handlers){return this.router.post(path,...handlers);}
-    patch(path,...handlers){return this.router.patch(path,...handlers);}
-    connect(path,...handlers){return this.router.connect(path,...handlers);}
+    use(path, ...handlers) {
+        return this.router.use(path, ...handlers);
+    }
+    get(path, ...handlers) {
+        return this.router.get(path, ...handlers);
+    }
+    query(path, ...handlers) {
+        return this.router.query(path, ...handlers);
+    }
+    head(path, ...handlers) {
+        return this.router.head(path, ...handlers);
+    }
+    options(path, ...handlers) {
+        return this.router.options(path, ...handlers);
+    }
+    trace(path, ...handlers) {
+        return this.router.trace(path, ...handlers);
+    }
+    put(path, ...handlers) {
+        return this.router.put(path, ...handlers);
+    }
+    delete(path, ...handlers) {
+        return this.router.delete(path, ...handlers);
+    }
+    post(path, ...handlers) {
+        return this.router.post(path, ...handlers);
+    }
+    patch(path, ...handlers) {
+        return this.router.patch(path, ...handlers);
+    }
+    connect(path, ...handlers) {
+        return this.router.connect(path, ...handlers);
+    }
 
     /**
      * @param {*} req
@@ -55,7 +77,6 @@ class App {
         }
     }
 
-    
     /**
      * @param {Request} req
      * @param {Response} res

@@ -7,7 +7,7 @@ class Request extends IncomingMessage {
     _query;
     _controller;
     _cookies;
- 
+
     get controller() {
         if (!this._controller) this._controller = new AbortController();
         return this._controller;
@@ -35,12 +35,12 @@ class Request extends IncomingMessage {
         return this._cookies;
     }
 
-    get secure(){
-        return this.socket.encrypted?true:false
+    get secure() {
+        return this.socket.encrypted ? true : false;
     }
 
-    get ip(){
-        return this.socket.remoteAddress
+    get ip() {
+        return this.socket.remoteAddress;
     }
 }
 
