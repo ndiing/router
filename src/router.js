@@ -9,8 +9,7 @@ class Router {
     /**
      * @param {Options} options
      */
-    constructor(options = {}) {
-        this.requestTimeout = options.requestTimeout ?? 0;
+    constructor() {
         this.root = new Node();
         this.seq = 0;
     }

@@ -7,7 +7,8 @@ const { urlencoded } = require("./middleware/urlencoded.js");
 const { cors } = require("./middleware/cors.js");
 
 class App {
-    constructor() {
+    constructor(options = {}) {
+        this.requestTimeout = options.requestTimeout ?? 0;
         this.router = new Router();
     }
 
@@ -115,7 +116,7 @@ class App {
                 err = new Error(STATUS_CODES[res.statusCode]);
             }
             if (res.statusCode < 400) {
-                res.status(err.status || 500);
+                res.status(500);
             }
             const error = {
                 message: err.message,
